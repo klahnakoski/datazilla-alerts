@@ -1,0 +1,1 @@
+"C:\Program Files\MySQL\MySQL Server 5.5\bin\mysql.exe" -u root -p${password} ekyle_perftest_1 < jeads_perftest_1.sql

@@ -1,0 +1,8 @@
+*.iml
+*.pyc
+src
+settings.json
+raw_json_blobs.tab
+good_talos.tab
+talos_summary*
+data/*
