@@ -2,6 +2,35 @@
 DELIMITER ;;
 use ekyle_objectstore_1;;
 
+
+CREATE TABLE IF NOT EXISTS util_uid_next(
+	id 		BIGINT
+);;
+
+DROP FUNCTION IF EXISTS util_newID;;
+CREATE FUNCTION util_newID ()
+	RETURNS BIGINT
+	READS SQL DATA
+BEGIN
+	IF @util_curr_id IS NULL THEN
+		SELECT max(id) INTO @util_curr_id FROM util_uid_next;
+		IF @util_curr_id IS NULL THEN
+			INSERT INTO util_uid_next VALUES (0);
+			SET @util_curr_id=0;
+		END IF;
+		UPDATE util_uid_next SET id=@util_curr_id+1000;
+	ELSEIF @util_curr_id%1000=0 THEN
+		SELECT max(id) INTO @util_curr_id FROM util_uid_next;
+		UPDATE util_uid_next SET id=@util_curr_id+1000;
+	END IF;
+
+	SET @util_curr_id=@util_curr_id+1;
+	RETURN @util_curr_id-1;
+END;;
+
+
+
+
 DROP FUNCTION IF EXISTS string_between;;
 CREATE FUNCTION string_between(
 	value		VARCHAR(60000) character set latin1,
