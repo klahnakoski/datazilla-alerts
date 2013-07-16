@@ -126,29 +126,35 @@ def extract_from_datazilla_using_id(settings):
     with DB(settings.database) as db:
         existing_ids = get_existing_ids(db)
 
-        #MAKE THREADS
-        threads=[]
-        for t in range(settings.production.threads):
-            thread=Prod2Local("ETL"+str(t), db, settings)
-            threads.append(thread)
+        try:
+            #MAKE THREADS
+            threads=[]
+            for t in range(settings.production.threads):
+                thread=Prod2Local("ETL"+str(t), db, settings)
+                threads.append(thread)
 
-        #FILL QUEUES WITH WORK
-        curr=0
-        for blob_id in range(settings.production.min, settings.production.max):
-            if blob_id in existing_ids: continue
-            try:
-                success=threads[curr].send(blob_id)
-                if not success: blob_id-=1  #try again
-                curr=(curr+1)%settings.production.threads
-            except Exception, e:
-                D.warning("Problem sending ${id} to thread", {"id":blob_id})
+            #FILL QUEUES WITH WORK
+            curr=0
+            for blob_id in range(settings.production.min, settings.production.max):
+                if blob_id in existing_ids: continue
+                try:
+                    success=threads[curr].send(blob_id)
+                    if not success: blob_id-=1  #try again
+                    curr=(curr+1)%settings.production.threads
+                except Exception, e:
+                    D.warning("Problem sending ${id} to thread", {"id":blob_id})
 
-        #SEND STOP, AND WAIT FOR FINISH
-        for t in threads:
-            t.send("stop")
+            #SEND STOP, AND WAIT FOR FINISH
+            for t in threads:
+                t.send("stop")
+
+        except BaseException, e:
+            D.println("Shutdow Started, please be patient")
+            for t in threads:
+                 t.keep_running=False
+
         for t in threads:
             t.join()
-
 
 
 

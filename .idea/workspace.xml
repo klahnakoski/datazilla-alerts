@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="" />
+    <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/scripts/production_copy.bat" />
+      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\scripts\transfer_production_data.bat" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/datazilla/daemons/production_copy.py" afterPath="$PROJECT_DIR$/datazilla/daemons/production_copy.py" />
+    </list>
     <ignored path="datazilla-alerts.iws" />
     <ignored path=".idea/workspace.xml" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -59,10 +63,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="production_copy.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="production_copy.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/datazilla/daemons/production_copy.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="130" column="52" selection-start="3600" selection-end="3600" vertical-scroll-proportion="0.0">
+            <state line="151" column="57" selection-start="4432" selection-end="4432" vertical-scroll-proportion="0.65163934">
               <folding />
             </state>
           </provider>
@@ -95,10 +99,19 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="query.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="query.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/../pyLibrary/util/query.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="111" column="36" selection-start="3478" selection-end="3478" vertical-scroll-proportion="0.022368422">
+            <state line="111" column="36" selection-start="3478" selection-end="3478" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="production_copy.bat" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/scripts/production_copy.bat">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="2" column="22" selection-start="104" selection-end="104" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -143,6 +156,7 @@
         <option value="$PROJECT_DIR$/../pyLibrary/util/query.py" />
         <option value="$PROJECT_DIR$/datazilla/migration/v1.4 upgrade_objectstore.sql" />
         <option value="$PROJECT_DIR$/../pyLibrary/util/db.py" />
+        <option value="$PROJECT_DIR$/scripts/production_copy.bat" />
         <option value="$PROJECT_DIR$/datazilla/daemons/production_copy.py" />
       </list>
     </option>
@@ -217,6 +231,20 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scripts" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -397,7 +425,6 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
-        <env name="PYTHONPATH" value="C:\Users\klahnakoski\git\pyLibrary" />
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="C:/Python27/python.exe" />
@@ -439,19 +466,19 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="54" y="-8" width="1554" height="916" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.34561625" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.34561625" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Script Monkey" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="JSON Formatter" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24681422" sideWeight="0.6543837" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24681422" sideWeight="0.6543837" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -509,11 +536,6 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/scripts/db_extract.bat">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/scripts/update_pushlog.bat">
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
@@ -554,11 +576,6 @@
         <state line="979" column="0" selection-start="36539" selection-end="36539" vertical-scroll-proportion="0.35682818" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/datazilla/daemons/production_copy.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="130" column="52" selection-start="3600" selection-end="3600" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
     <entry file="file://C:/Python27/Lib/site-packages/MySQLdb/connections.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="186" column="0" selection-start="5477" selection-end="5477" vertical-scroll-proportion="0.0" />
@@ -576,7 +593,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/../pyLibrary/util/query.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="111" column="36" selection-start="3478" selection-end="3478" vertical-scroll-proportion="0.022368422">
+        <state line="111" column="36" selection-start="3478" selection-end="3478" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
@@ -589,6 +606,20 @@
     <entry file="file://$PROJECT_DIR$/../pyLibrary/util/debug.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="42" column="0" selection-start="1374" selection-end="1374" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/scripts/production_copy.bat">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="2" column="22" selection-start="104" selection-end="104" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/datazilla/daemons/production_copy.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="151" column="57" selection-start="4432" selection-end="4432" vertical-scroll-proportion="0.65163934">
+          <folding />
+        </state>
       </provider>
     </entry>
   </component>
