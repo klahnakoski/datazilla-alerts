@@ -1,4 +1,6 @@
+from Queue import Full
 from math import floor
+from multiprocessing import Queue
 import threading
 import requests
 from util.basic import nvl
@@ -15,45 +17,62 @@ from util.map import Map
 file_lock=threading.Lock()
 db_lock=threading.Lock()
 
-## RETURN TRUE IF LOADED
-def etl(blob_id, db, settings):
-    try:
-        with Timer("read from prod "+str(blob_id)):
-            content = requests.get(settings.production.blob_url + "/" + str(blob_id)).content
-            data=CNV.JSON2object(content)
-#            revision=data.json_blob.test_build.revision
+class Prod2Local(threading.Thread):
+
+    ## RETURN TRUE IF LOADED
+
+    def __init__(self, db, settings):
+        self.db=db
+        self.settings=settings
+        self.queue=Queue()
+        threading.Thread.__init__(self)
+        self.start()
+
+    def etl(self, blob_id):
+        try:
+            with Timer("read from prod "+str(blob_id)):
+                content = requests.get(self.settings.production.blob_url + "/" + str(blob_id)).content
+                data=CNV.JSON2object(content)
+    #            revision=data.json_blob.test_build.revision
 
 
-        with Timer("push to local "+str(blob_id)):
-            with db_lock:
-                db.insert("objectstore", {
-                    "id":blob_id,
-                    "test_run_id":data.test_run_id,
-                    "date_loaded":data.date_loaded,
-                    "error_flag":"N",
-                    "error_msg":None,
-                    "json_blob":CNV.object2JSON(data.json_blob),
-                    "worker_id":None,
-                    "revision":data.json_blob.test_build.revision
-                })
-                db.flush()
-                return True
-    except Exception, e:
-        D.warning("Can not load "+str(blob_id), e)
-        return False
+            with Timer("push to local "+str(blob_id)):
+                with db_lock:
+                    self.db.insert("objectstore", {
+                        "id":blob_id,
+                        "test_run_id":data.test_run_id,
+                        "date_loaded":data.date_loaded,
+                        "error_flag":"N",
+                        "error_msg":None,
+                        "json_blob":CNV.object2JSON(data.json_blob),
+                        "worker_id":None,
+                        "revision":data.json_blob.test_build.revision
+                    })
+                    self.db.flush()
+                    return True
+        except Exception, e:
+            D.warning("Can not load "+str(blob_id), e)
+            return False
 
 
-def etl_main_loop(db, VAL, existing_ids, settings):
-    try:
-        for blob_id in range(settings.production.min, settings.production.max):
-            if blob_id % settings.production.threads != VAL: continue
-            if blob_id in existing_ids: continue
+    #RETURN TRUE IF GOOD
+    def send(self, message):
+        try:
+            self.queue.put(message, False)
+            return True
+        except Full, f:
+            return False
+
+    def run(self):
+        while True:
+            blob_id=self.queue.get()
+            if blob_id=="stop": return
             try:
-                success=etl(blob_id, db, settings)
+                success=self.etl(blob_id)
             except Exception, e:
                 D.warning("Can not load data for id ${id}", {"id": blob_id})
-    finally:
-        db.set_refresh_interval(1)
+            finally:
+                self.queue.task_done()
 
 
 def get_existing_ids(db):
@@ -105,12 +124,25 @@ def extract_from_datazilla_using_id(settings):
     with DB(settings.database) as db:
         existing_ids = get_existing_ids(db)
 
+        #MAKE THREADS
         threads=[]
         for t in range(settings.production.threads):
-            thread=threading.Thread(target=etl_main_loop, args=(db, t, existing_ids, settings))
-            thread.start()
+            thread=Prod2Local(db, settings)
             threads.append(thread)
 
+        #FILL QUEUES WITH WORK
+        curr=0
+        for blob_id in range(settings.production.min, settings.production.max):
+            if blob_id in existing_ids: continue
+            try:
+                success=threads[curr].send(blob_id)
+                if not success: blob_id-=1  #try again
+            except Exception, e:
+                D.warning("Problem sending ${id} to thread", {"id":blob_id})
+
+        #SEND STOP, AND WAIT FOR FINISH
+        for t in threads:
+            t.send("stop")
         for t in threads:
             t.join()
 
