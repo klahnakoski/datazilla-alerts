@@ -21,22 +21,24 @@ class Prod2Local(threading.Thread):
 
     ## RETURN TRUE IF LOADED
 
-    def __init__(self, db, settings):
+    def __init__(self, name, db, settings):
+        threading.Thread.__init__(self)
+        self.name=name
         self.db=db
         self.settings=settings
         self.queue=Queue()
-        threading.Thread.__init__(self)
+        self.keep_running=True
         self.start()
 
     def etl(self, blob_id):
         try:
-            with Timer("read from prod "+str(blob_id)):
+            with Timer(str(self.name)+" read from prod "+str(blob_id)):
                 content = requests.get(self.settings.production.blob_url + "/" + str(blob_id)).content
                 data=CNV.JSON2object(content)
     #            revision=data.json_blob.test_build.revision
 
 
-            with Timer("push to local "+str(blob_id)):
+            with Timer(str(self.name)+" push to local "+str(blob_id)):
                 with db_lock:
                     self.db.insert("objectstore", {
                         "id":blob_id,
@@ -64,15 +66,15 @@ class Prod2Local(threading.Thread):
             return False
 
     def run(self):
-        while True:
+        while self.keep_running:
             blob_id=self.queue.get()
             if blob_id=="stop": return
             try:
                 success=self.etl(blob_id)
             except Exception, e:
                 D.warning("Can not load data for id ${id}", {"id": blob_id})
-            finally:
-                self.queue.task_done()
+#            finally:
+#                self.queue.task_done()
 
 
 def get_existing_ids(db):
@@ -127,7 +129,7 @@ def extract_from_datazilla_using_id(settings):
         #MAKE THREADS
         threads=[]
         for t in range(settings.production.threads):
-            thread=Prod2Local(db, settings)
+            thread=Prod2Local("ETL"+str(t), db, settings)
             threads.append(thread)
 
         #FILL QUEUES WITH WORK
@@ -137,6 +139,7 @@ def extract_from_datazilla_using_id(settings):
             try:
                 success=threads[curr].send(blob_id)
                 if not success: blob_id-=1  #try again
+                curr=(curr+1)%settings.production.threads
             except Exception, e:
                 D.warning("Problem sending ${id} to thread", {"id":blob_id})
 
