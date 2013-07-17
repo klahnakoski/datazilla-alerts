@@ -5,10 +5,10 @@
 ################################################################################
 from datetime import datetime, timedelta
 from datazilla.daemons.alert_threshold import page_threshold_limit, REASON
-from datazilla.util.cnv import CNV
-from datazilla.util.db import SQL, DB
-from datazilla.util.debug import D
-from datazilla.util.map import Map
+from util.cnv import CNV
+from util.db import SQL, DB
+from util.debug import D
+from util.map import Map
 from tests.util.testing import settings, make_test_database
 
 

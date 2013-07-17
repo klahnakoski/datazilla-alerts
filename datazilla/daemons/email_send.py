@@ -1,13 +1,22 @@
-# Source Code is subject to the terms of the Mozilla Public License
-# version 2.0 (the "License"). You can obtain a copy of the License at
-# http://mozilla.org/MPL/2.0/.
+################################################################################
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this file,
+## You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
+
 from datetime import datetime
-
-from datazilla.util.debug import D
-
+from util.debug import D
 
 #if there are emails, then send them
-from datazilla.util.map import Map
+from util.map import Map
+from util.db import DB
+from util.emailer import Emailer
+from util.startup import startup
+
+
 
 def email_send(**env):
     env=Map(**env)
@@ -70,3 +79,16 @@ def email_send(**env):
         D.error("Could not send emails", e)
 
 
+        
+settings=startup.read_settings()
+
+try:
+    D.println("Running email in schema ${schema}", {"schema":settings.database.schema})
+    with DB(settings.database) as db:
+        email_send(
+            db=db,
+            emailer=Emailer(settings.email),
+            debug=settings.debug is not None
+        )
+except Exception, e:
+    D.warning("Failure to send emails", cause=e)

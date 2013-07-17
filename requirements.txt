@@ -1,5 +1,6 @@
 requests==1.2.3
 MySQL-python
 numpy
+scipy
 python-dateutil
 pandas

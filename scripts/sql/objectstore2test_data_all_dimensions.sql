@@ -314,11 +314,24 @@ END;;
 SELECT math_stats("[32,56,38,45,30]") FROM dual;;
 
 
+
 ALTER TABLE test_data_all_dimensions DROP FOREIGN KEY fk_test_run_id_tdad;;
-
-
 SELECT count(1) FROM test_data_all_dimensions;;
 DELETE FROM test_data_all_dimensions;;
+
+
+
+
+-- ONGOING
+
+USE ekyle_perftest_1;;
+
+
+UPDATE ekyle_objectstore_1.objectstore
+SET test_run_id=ekyle_perftest_1.util_newid()
+WHERE test_run_id IS NULL
+;;
+
 
 -- SELECT string_between(json_blob, "results",  FROM objectstore
 INSERT INTO test_data_all_dimensions (
@@ -370,7 +383,7 @@ SELECT STRAIGHT_JOIN
 	      json_an(math_stats(json_substring(concat(string_get_word(results, "]", d1.digit*10+d2.digit), "]"),5,100)), 0) `n_replicates`
 FROM ( #RECORDS FOR THE BATTERY OF TESTS
 	SELECT STRAIGHT_JOIN 
-		util_newid() `test_run_id`, 
+		tdad.test_run_id `test_run_id`,
 	-- 	b.product_id `product_id`, 
 	-- 	o.id `operating_system_id`, 
 	-- 	tr.test_id `test_id`, 
@@ -394,9 +407,11 @@ FROM ( #RECORDS FOR THE BATTERY OF TESTS
 		string_word_count(json(json_blob, "results"), "],") num_results,
 		json(json_blob, "results") results
 	FROM
-		ekyle_objectstore_1.objectstore
+		ekyle_objectstore_1.objectstore o
+	LEFt JOIN
+		ekyle_perftest_1.test_data_all_dimensions AS tdad ON tdad.test_run_id=o.test_run_id
 	LEFT JOIN 
-		pushlog_hgmozilla_1.changesets AS ch ON ch.revision=json_s(json(json_blob, "test_build"), "revision")
+		pushlog_hgmozilla_1.changesets AS ch ON ch.revision=json_s(json(o.json_blob, "test_build"), "revision")
 	LEFT JOIN
 		pushlog_hgmozilla_1.pushlogs AS pl ON pl.id = ch.pushlog_id 
 	LEFT JOIN 
@@ -404,6 +419,8 @@ FROM ( #RECORDS FOR THE BATTERY OF TESTS
 	LEFT JOIN 
 		pushlog_hgmozilla_1.branch_map AS bm ON br.name = bm.name 
 	WHERE
+		o.test_run_id IS NOT NULL AND 
+		tdad.test_run_id IS NULL AND
 		left(json_s(json(json_blob, "testrun"), "suite"), 3)="tp5"
 	) a
 JOIN

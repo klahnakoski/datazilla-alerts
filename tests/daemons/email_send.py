@@ -4,8 +4,8 @@
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
 from datazilla.daemons.email_send import email_send
-from datazilla.util.db import DB
-from datazilla.util.query import Q
+from util.db import DB
+from util.query import Q
 from tests.util.emailer import Emailer
 from tests.util.testing import settings, make_test_database
 

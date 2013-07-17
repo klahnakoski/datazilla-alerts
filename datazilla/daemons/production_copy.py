@@ -1,4 +1,13 @@
-from Queue import Full
+################################################################################
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this file,
+## You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
+
+
 from math import floor
 from multiprocessing import Queue
 import threading
@@ -9,9 +18,8 @@ from util.query import Q
 from util.startup import startup
 
 from util.timer import Timer
-from util.db import DB
+from util.db import DB, SQL
 from util.cnv import CNV
-from util.map import Map
 
 
 file_lock=threading.Lock()
@@ -19,7 +27,7 @@ db_lock=threading.Lock()
 
 class Prod2Local(threading.Thread):
 
-    ## RETURN TRUE IF LOADED
+
 
     def __init__(self, name, queue, db, settings):
         threading.Thread.__init__(self)
@@ -30,19 +38,23 @@ class Prod2Local(threading.Thread):
         self.keep_running=True
         self.start()
 
+    ## RETURN TRUE IF LOADED
     def etl(self, blob_id):
         try:
             with Timer(str(self.name)+" read from prod "+str(blob_id)):
                 content = requests.get(self.settings.production.blob_url + "/" + str(blob_id)).content
+                if content.startswith("Id not found:"):
+                    D.println("Id not found: "+str(blob_id))
+                    with db_lock:
+                        self.settings.num_not_found+=1
+                    return
                 data=CNV.JSON2object(content)
-    #            revision=data.json_blob.test_build.revision
-
 
             with Timer(str(self.name)+" push to local "+str(blob_id)):
                 with db_lock:
                     self.db.insert("objectstore", {
                         "id":blob_id,
-                        "test_run_id":data.test_run_id,
+                        "test_run_id":SQL("util_newid()"),
                         "date_loaded":data.date_loaded,
                         "error_flag":"N",
                         "error_msg":None,
@@ -57,20 +69,15 @@ class Prod2Local(threading.Thread):
             return False
 
 
-    #RETURN TRUE IF GOOD
-    def send(self, message):
-        try:
-            self.queue.put(message, False)
-            return True
-        except Full, f:
-            return False
-
     def run(self):
         while self.keep_running:
             blob_id=self.queue.get()
             if blob_id=="stop": return
             try:
-                success=self.etl(blob_id)
+                self.etl(blob_id)
+                with db_lock:
+                    if self.settings.num_not_found>=100:
+                        return   #GIVE UP
             except Exception, e:
                 D.warning("Can not load data for id ${id}", {"id": blob_id})
 #            finally:
@@ -92,7 +99,8 @@ def get_existing_ids(db):
             LEFT JOIN
                 objectstore b ON b.id=a.id+1
             WHERE
-                b.id IS NULL
+                b.id IS NULL AND
+                a.id BETWEEN ${min} AND ${max}
 		UNION ALL
             SELECT
                 a.id,
@@ -102,12 +110,13 @@ def get_existing_ids(db):
             LEFT JOIN
                 objectstore c ON c.id=a.id-1
             WHERE
-                c.id IS NULL
+                c.id IS NULL AND
+                a.id BETWEEN ${min} AND ${max}
 		) a
 		ORDER BY
 			id,
 			`end` desc
-    """)
+    """, {"min":settings.production.min, "max":settings.production.max})
     #RESULT COMES IN min/max PAIRS, IN ORDER
     for i, r in enumerate(ranges):
         r.index=int(floor(i/2))
@@ -125,6 +134,7 @@ def get_existing_ids(db):
 def extract_from_datazilla_using_id(settings):
     with DB(settings.database) as db:
         existing_ids = get_existing_ids(db)
+        settings.num_not_found=0
 
         threads=[]
         try:
@@ -139,10 +149,11 @@ def extract_from_datazilla_using_id(settings):
                 if blob_id in existing_ids: continue
                 queue.put(blob_id, False)
 
-            #SEND ENOUGH STOPS, AND WAIT FOR FINISH
+            #SEND ENOUGH STOPS
             for t in threads:
                 queue.put("stop")
 
+            #WAIT FOR FINISH
             for t in threads:
                 t.join()
         except Exception, e:
@@ -161,8 +172,6 @@ def extract_from_datazilla_using_id(settings):
 
 settings=startup.read_settings()
 settings.production.threads=nvl(settings.production.threads, 1)
-
-
 
 extract_from_datazilla_using_id(settings)
 

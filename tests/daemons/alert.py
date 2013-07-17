@@ -8,13 +8,13 @@ from datetime import datetime, timedelta
 from string import Template
 from datazilla import daemons
 from datazilla.daemons.alert import send_alerts
-from datazilla.util.cnv import CNV
-from datazilla.util.db import DB
-from datazilla.util.debug import D
-from datazilla.util.map import Map
-from datazilla.util.maths import bayesian_add
-from datazilla.util.query import Q
-from datazilla.util.strings import between
+from util.cnv import CNV
+from util.db import DB
+from util.debug import D
+from util.map import Map
+from util.maths import bayesian_add
+from util.query import Q
+from util.strings import between
 from tests.util.testing import settings, make_test_database
 
 

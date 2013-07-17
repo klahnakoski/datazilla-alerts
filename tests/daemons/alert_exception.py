@@ -7,12 +7,12 @@ from datetime import datetime, timedelta
 from math import sqrt
 from datazilla.daemons.alert_exception import exception_point, REASON, MIN_CONFIDENCE
 
-from datazilla.util.cnv import CNV
-from datazilla.util.db import SQL, DB
-from datazilla.util.debug import D
-from datazilla.util.map import Map
-from datazilla.util.query import Q
-from datazilla.util.stats import closeEnough
+from util.cnv import CNV
+from util.db import SQL, DB
+from util.debug import D
+from util.map import Map
+from util.query import Q
+from util.stats import closeEnough
 from tests.util.testing import settings, make_test_database
 
 

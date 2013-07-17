@@ -58,12 +58,20 @@ END;;
 
 ALTER TABLE objectstore ADD COLUMN revision VARCHAR(12);;
 
+#THE OBJECTSTORE WILL DICTATE THE test_run_id
+UPDATE objectstore
+SET test_run_id=ekyle_perftest_1.util_newid()
+WHERE test_run_id IS NULL
+;;
+
 
 UPDATE objectstore 
 SET revision=string_between(substring(json_blob, locate("revision\": \"", json_blob), 40), "revision\": \"", "\",", 1)
 WHERE revision IS NULL
 ;;
 
+
+
 CREATE INDEX objectstore_revision ON objectstore(revision);;
 
-select count(1) from objectstore where revision IS NULL
+select count(1) from objectstore where revision IS NULL;;

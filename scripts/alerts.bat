@@ -1,5 +1,5 @@
-CALL manage.py run_alert_exception --project ekyle  --debug  --settings_file "../datazilla_settings.json"
+python datazilla.daemons.alert_exception.py  --settings_file "./alert_settings.json"
 
-CALL manage.py run_alerts --project ekyle  --debug  --settings_file ../datazilla_settings.json
+python datazilla.daemons.alert.py  --settings_file ./alert_settings.json
 
-CALL manage.py run_email_send --project ekyle  --debug  --settings_file "../datazilla_settings.json"
+python datazilla.daemons.email_send.py  --settings_file "./alert_settings.json"

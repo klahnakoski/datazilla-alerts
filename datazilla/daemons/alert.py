@@ -1,10 +1,21 @@
+################################################################################
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this file,
+## You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
+
 from datetime import datetime, timedelta
-import json
 from string import Template
-from datazilla.util.cnv import CNV
-from datazilla.util.map import Map
-from datazilla.util.maths import bayesian_add
-from datazilla.util.debug import D
+from util.cnv import CNV
+from util.map import Map
+from util.maths import bayesian_add
+from util.debug import D
+from util.db import DB
+from util.startup import startup
+
 
 
 ALERT_LIMIT = bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
@@ -79,7 +90,7 @@ def send_alerts(**env):
         for alert in new_alerts:
             details=CNV.JSON2object(alert.details)
             #EXPAND THE MESSAGE
-            if alert.confidence>=1: alert.confidence=0.999999999
+            if alert.confidence>=1: alert.confidence=0.999999
             body.append(TEMPLATE.substitute({
                 "score":str(round(bayesian_add(alert.severity, alert.confidence)*100, 0))+"%",  #AS A PERCENT
                 "revision":alert.revision,
@@ -136,4 +147,21 @@ def update_h0_rejected(db, start_date):
             ) a ON a.test_series=t.id
         SET t.h0_rejected=a.h0
     """)
-    
+
+
+
+
+
+
+settings=startup.read_settings()
+
+try:
+    D.println("Running alerts off of schema ${schema}", {"schema":settings.database.schema})
+
+    with DB(settings.database) as db:
+        send_alerts(
+            db=db,
+            debug=settings.debug is not None
+        )
+except Exception, e:
+    D.warning("Failure to run alerts", cause=e)

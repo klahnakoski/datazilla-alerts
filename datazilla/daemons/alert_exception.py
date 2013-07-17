@@ -3,18 +3,23 @@
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
+
 from datetime import timedelta, datetime
 from numpy.lib.scimath import power, sqrt
 import scipy
-from datazilla.daemons.alert import update_h0_rejected
-from datazilla.util.basic import nvl
-from datazilla.util.cnv import CNV
-from datazilla.util.db import SQL
-from datazilla.util.debug import D
-from datazilla.util.map import Map
-from datazilla.util.query import Q
-from datazilla.util.stats import Z_moment, stats2z_moment, Stats, z_moment2stats
-
+from daemons.alert import update_h0_rejected
+from util.basic import nvl
+from util.cnv import CNV
+from util.db import SQL
+from util.debug import D
+from util.map import Map
+from util.query import Q
+from util.stats import Z_moment, stats2z_moment, Stats, z_moment2stats
+from util.db import DB
+from util.startup import startup
 
 
 SEVERITY = 0.9
@@ -277,3 +282,19 @@ def single_ttest(point, stats):
     t_distribution = scipy.stats.distributions.t(n1-1)
     return t_distribution.cdf(tt), tt
 
+
+
+
+
+settings=startup.read_settings()
+
+try:
+    D.println("Finding exceptions in schema ${schema}", {"schema":settings.database.schema})
+
+    with DB(settings.database) as db:
+        exception_point(
+            db=db,
+            debug=settings.debug is not None
+        )
+except Exception, e:
+    D.warning("Failure to find exceptions", cause=e)

@@ -3,14 +3,17 @@
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
 
 from datetime import timedelta, datetime
-from datazilla.daemons.alert import update_h0_rejected
-from datazilla.util.basic import nvl
-from datazilla.util.cnv import CNV
-from datazilla.util.db import SQL
-from datazilla.util.debug import D
-from datazilla.util.map import Map
+from daemons.alert import update_h0_rejected
+from util.basic import nvl
+from util.cnv import CNV
+from util.db import SQL
+from util.debug import D
+from util.map import Map
 
 
 
