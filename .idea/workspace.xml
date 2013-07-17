@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/scripts/production_copy.bat" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\scripts\transfer_production_data.bat" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/datazilla-alerts.iml" afterPath="$PROJECT_DIR$/datazilla-alerts.iml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/datazilla/daemons/production_copy.py" afterPath="$PROJECT_DIR$/datazilla/daemons/production_copy.py" />
     </list>
     <ignored path="datazilla-alerts.iws" />
@@ -56,7 +55,24 @@
       </breakpoint>
     </breakpoint_any>
     <breakpoint_rules />
-    <ui_properties />
+    <ui_properties>
+      <property name="line_breakpoints_groupByMethods" value="false" />
+      <property name="line_breakpoints_viewId" value="TABLE" />
+      <property name="exception_breakpoints_flattenPackages" value="true" />
+      <property name="method_breakpoints_flattenPackages" value="true" />
+      <property name="field_breakpoints_flattenPackages" value="true" />
+      <property name="exception_breakpoints_groupByMethods" value="false" />
+      <property name="line_breakpoints_groupByClasses" value="true" />
+      <property name="method_breakpoints_viewId" value="TABLE" />
+      <property name="field_breakpoints_groupByMethods" value="false" />
+      <property name="line_breakpoints_flattenPackages" value="true" />
+      <property name="field_breakpoints_groupByClasses" value="true" />
+      <property name="method_breakpoints_groupByClasses" value="true" />
+      <property name="exception_breakpoints_viewId" value="TABLE" />
+      <property name="exception_breakpoints_groupByClasses" value="true" />
+      <property name="field_breakpoints_viewId" value="TABLE" />
+      <property name="method_breakpoints_groupByMethods" value="false" />
+    </ui_properties>
   </component>
   <component name="FavoritesManager">
     <favorites_list name="datazilla-alerts" />
@@ -66,7 +82,16 @@
       <file leaf-file-name="production_copy.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/datazilla/daemons/production_copy.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="151" column="57" selection-start="4432" selection-end="4432" vertical-scroll-proportion="0.65163934">
+            <state line="148" column="32" selection-start="4223" selection-end="4223" vertical-scroll-proportion="0.50614756">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="debug.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -191,7 +216,9 @@
       <sortByType />
     </navigator>
     <panes>
+      <pane id="PackagesPane" />
       <pane id="Scope" />
+      <pane id="Favorites" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -199,11 +226,27 @@
               <option name="myItemId" value="datazilla-alerts" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
             </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="External Libraries" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ExternalLibrariesNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="&lt; Python 2.7.4 (C:/Python27/python.exe) &gt;" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.NamedLibraryElementNode" />
+            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
               <option name="myItemId" value="datazilla-alerts" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="External Libraries" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ExternalLibrariesNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="&lt; Python 2.7.4 (C:/Python27/python.exe) &gt;" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.NamedLibraryElementNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="pyLibrary" />
@@ -214,6 +257,14 @@
             <PATH_ELEMENT>
               <option name="myItemId" value="datazilla-alerts" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="External Libraries" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ExternalLibrariesNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="&lt; Python 2.7.4 (C:/Python27/python.exe) &gt;" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.NamedLibraryElementNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="pyLibrary" />
@@ -248,10 +299,40 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="daemons" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
         </subPane>
       </pane>
-      <pane id="Favorites" />
-      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -541,11 +622,6 @@
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../Datazilla2ElasticSearch/src/library/util/query.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="42" column="0" selection-start="1588" selection-end="1588" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/scripts/sql/Update test_data_all_dimensions.sql">
       <provider selected="true" editor-type-id="text-editor">
         <state line="9" column="24" selection-start="260" selection-end="260" vertical-scroll-proportion="0.35091743" />
@@ -593,7 +669,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/../pyLibrary/util/query.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="111" column="36" selection-start="3478" selection-end="3478" vertical-scroll-proportion="0.0">
+        <state line="111" column="36" selection-start="3478" selection-end="3478" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/scripts/production_copy.bat">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="2" column="22" selection-start="104" selection-end="104" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
@@ -608,16 +689,16 @@
         <state line="42" column="0" selection-start="1374" selection-end="1374" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/scripts/production_copy.bat">
+    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="2" column="22" selection-start="104" selection-end="104" vertical-scroll-proportion="0.0">
+        <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/datazilla/daemons/production_copy.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="151" column="57" selection-start="4432" selection-end="4432" vertical-scroll-proportion="0.65163934">
+        <state line="148" column="32" selection-start="4223" selection-end="4223" vertical-scroll-proportion="0.50614756">
           <folding />
         </state>
       </provider>

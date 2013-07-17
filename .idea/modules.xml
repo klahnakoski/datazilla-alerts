@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/datazilla-alerts.iml" filepath="$PROJECT_DIR$/datazilla-alerts.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../pyLibrary/pyLibrary.iml" filepath="$PROJECT_DIR$/../pyLibrary/pyLibrary.iml" />
     </modules>
   </component>
 </project>

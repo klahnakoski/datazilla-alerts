@@ -21,12 +21,12 @@ class Prod2Local(threading.Thread):
 
     ## RETURN TRUE IF LOADED
 
-    def __init__(self, name, db, settings):
+    def __init__(self, name, queue, db, settings):
         threading.Thread.__init__(self)
         self.name=name
+        self.queue=nvl(queue, Queue())
         self.db=db
         self.settings=settings
-        self.queue=Queue()
         self.keep_running=True
         self.start()
 
@@ -126,35 +126,35 @@ def extract_from_datazilla_using_id(settings):
     with DB(settings.database) as db:
         existing_ids = get_existing_ids(db)
 
+        threads=[]
         try:
             #MAKE THREADS
-            threads=[]
+            queue=Queue()
             for t in range(settings.production.threads):
-                thread=Prod2Local("ETL"+str(t), db, settings)
+                thread=Prod2Local("ETL"+str(t), queue, db, settings)
                 threads.append(thread)
 
-            #FILL QUEUES WITH WORK
-            curr=0
+            #FILL QUEUE WITH WORK
             for blob_id in range(settings.production.min, settings.production.max):
                 if blob_id in existing_ids: continue
-                try:
-                    success=threads[curr].send(blob_id)
-                    if not success: blob_id-=1  #try again
-                    curr=(curr+1)%settings.production.threads
-                except Exception, e:
-                    D.warning("Problem sending ${id} to thread", {"id":blob_id})
+                queue.put(blob_id, False)
 
-            #SEND STOP, AND WAIT FOR FINISH
+            #SEND ENOUGH STOPS, AND WAIT FOR FINISH
             for t in threads:
-                t.send("stop")
+                queue.put("stop")
 
-        except BaseException, e:
+            for t in threads:
+                t.join()
+        except Exception, e:
+            D.error("Unusual shutdown!", e)
+        except BaseException, be:
             D.println("Shutdow Started, please be patient")
+        finally:
             for t in threads:
-                 t.keep_running=False
+                t.keep_running=False
+            for t in threads:
+                t.join()
 
-        for t in threads:
-            t.join()
 
 
 
