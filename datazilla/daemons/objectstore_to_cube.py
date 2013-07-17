@@ -1,19 +1,11 @@
 from util.db import SQL, DB
 from util.startup import startup
+from util.timer import Timer
 
-BATCH_SIZE=100
+BATCH_SIZE=100  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG 
 
 
 def etl(db, settings, batch_size):
-    db.execute("""
-        UPDATE ${objectstore}.objectstore
-        SET test_run_id=${perftest}.util_newid()
-        WHERE test_run_id IS NULL
-        """, {
-        "objectstore":SQL(settings.objectstore.schema),
-        "perftest":SQL(settings.database.schema)
-    })
-
 
     db.execute("""
         INSERT INTO ${perftest}.test_data_all_dimensions (
@@ -125,6 +117,16 @@ def etl(db, settings, batch_size):
 
 
 def main_loop(db, settings):
+    #ENSURE objectstore HAS test_run_ids SET
+    db.execute("""
+        UPDATE ${objectstore}.objectstore
+        SET test_run_id=${perftest}.util_newid()
+        WHERE test_run_id IS NULL
+        """, {
+        "objectstore":SQL(settings.objectstore.schema),
+        "perftest":SQL(settings.database.schema)
+    })
+
     #GET SIZE OF JOB
     num=db.query("""
         SELECT
@@ -142,8 +144,9 @@ def main_loop(db, settings):
     })[0].num
 
     #UPDATE IN BATCHES
-    for i in range(0, num+settings.batch_size, settings.batch_size):
-        etl(db, settings, BATCH_SIZE)
+    for i in range(0, num+BATCH_SIZE, BATCH_SIZE):
+        with Timer("update test_data_all_dimensions ("+str(BATCH_SIZE)+")"):
+            etl(db, settings, BATCH_SIZE)
 
 
 

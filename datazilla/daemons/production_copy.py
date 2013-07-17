@@ -54,7 +54,7 @@ class Prod2Local(threading.Thread):
                 with db_lock:
                     self.db.insert("objectstore", {
                         "id":blob_id,
-                        "test_run_id":SQL("util_newid()"),
+                        "test_run_id":SQL(self.settings.perftest.schema+".util_newid()"),
                         "date_loaded":data.date_loaded,
                         "error_flag":"N",
                         "error_msg":None,
