@@ -158,7 +158,7 @@ def extract_from_datazilla_using_id(settings):
                 t.join()
         except Exception, e:
             D.error("Unusual shutdown!", e)
-        except BaseException, be:
+        except BaseException, f:
             D.println("Shutdow Started, please be patient")
         finally:
             for t in threads:
