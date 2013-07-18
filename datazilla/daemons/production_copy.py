@@ -38,6 +38,12 @@ class Prod2Local(threading.Thread):
         self.keep_running=True
         self.start()
 
+
+    #REQUIRED TO DETECT KEYBOARD, AND OTHER, INTERRUPTS
+    def join(self, timeout=None):
+        while self.isAlive():
+            threading.Thread.join(self, nvl(timeout, 0.5))
+
     ## RETURN TRUE IF LOADED
     def etl(self, blob_id):
         try:
@@ -156,10 +162,10 @@ def extract_from_datazilla_using_id(settings):
             #WAIT FOR FINISH
             for t in threads:
                 t.join()
+        except (KeyboardInterrupt, SystemExit):
+            D.println("Shutdow Started, please be patient")
         except Exception, e:
             D.error("Unusual shutdown!", e)
-        except BaseException, f:
-            D.println("Shutdow Started, please be patient")
         finally:
             for t in threads:
                 t.keep_running=False
