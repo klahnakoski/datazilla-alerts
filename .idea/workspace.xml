@@ -4,8 +4,6 @@
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyLibrary" afterPath="$PROJECT_DIR$/pyLibrary" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py" afterPath="$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/datazilla/migration/v1.4 upgrade_objectstore.sql" afterPath="$PROJECT_DIR$/datazilla/migration/v1.4 upgrade_objectstore.sql" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/sql/objectstore2test_data_all_dimensions.sql" afterPath="$PROJECT_DIR$/scripts/sql/objectstore2test_data_all_dimensions.sql" />
     </list>
     <ignored path="datazilla-alerts.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -84,7 +82,7 @@
       <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="214" column="0" selection-start="7617" selection-end="7617" vertical-scroll-proportion="-1.7748184">
+            <state line="89" column="0" selection-start="3194" selection-end="3194" vertical-scroll-proportion="0.5633803">
               <folding />
             </state>
           </provider>
@@ -111,7 +109,7 @@
       <file leaf-file-name="db.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="153" column="33" selection-start="4827" selection-end="4827" vertical-scroll-proportion="0.0">
+            <state line="168" column="4" selection-start="5202" selection-end="5202" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -200,8 +198,8 @@
         <option value="$PROJECT_DIR$/datazilla/migration/v1.4 upgrade_objectstore.sql" />
         <option value="$PROJECT_DIR$/scripts/sql/objectstore2test_data_all_dimensions.sql" />
         <option value="$PROJECT_DIR$/../pyLibrary/util/db.py" />
-        <option value="$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py" />
         <option value="$PROJECT_DIR$/pyLibrary/util/db.py" />
+        <option value="$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py" />
       </list>
     </option>
   </component>
@@ -633,7 +631,7 @@
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32147396" sideWeight="0.9892905" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.36975858" sideWeight="0.99073464" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.36975858" sideWeight="0.99073464" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Script Monkey" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -710,7 +708,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py</url>
-          <line>213</line>
+          <line>45</line>
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -806,14 +804,14 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="153" column="33" selection-start="4827" selection-end="4827" vertical-scroll-proportion="0.0">
+        <state line="168" column="4" selection-start="5202" selection-end="5202" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/datazilla/daemons/objectstore_to_cube.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="214" column="0" selection-start="7617" selection-end="7617" vertical-scroll-proportion="-1.7748184">
+        <state line="89" column="0" selection-start="3194" selection-end="3194" vertical-scroll-proportion="0.5633803">
           <folding />
         </state>
       </provider>
