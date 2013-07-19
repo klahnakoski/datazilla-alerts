@@ -13,6 +13,37 @@ BATCH_SIZE=100  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
 def objectstore_to_cube(db, r):
     try:
         json=CNV.JSON2object(r.json_blob)
+
+        if len(json.results)==0:
+            db.insert("test_data_all_dimensions", {
+                "test_run_id":r.test_run_id,
+                "product_id":0,
+                "operating_system_id":0,
+                "test_id":0,
+                "page_id":0,
+                "date_received":json.testrun.date,
+                "revision":json.test_build.revision,
+
+                "product":json.test_build.name,
+                "branch":json.test_build.branch,
+                "branch_version":json.test_build.version,
+                "operating_system_name":json.test_machine.os,
+                "operating_system_version":json.test_machine.osversion,
+                "processor":json.test_machine.platform,
+
+                "build_type":r.build_type,
+                "machine_name":json.test_machine.name,
+                "pushlog_id":r.pushlog_id,
+                "push_date":r.push_date,
+                "test_name":json.testrun.suite,
+                "page_url":None,
+                "mean":None,
+                "std":None,
+                "n_replicates":None
+            })
+            return
+
+
         for p,m in json.results.items():
             S=z_moment2stats(Z_moment.new_instance(m[5:]))
             db.insert("test_data_all_dimensions", {
