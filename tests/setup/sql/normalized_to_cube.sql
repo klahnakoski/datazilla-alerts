@@ -1,7 +1,14 @@
-
+################################################################################
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this file,
+## You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
 
 
 use ekyle_perftest_1;
+
 DROP index tdad ON test_data_all_dimensions;
 #TOO SELECTIVE
 #CREATE UNIQUE INDEX tdad ON test_data_all_dimensions(test_run_id, page_id);
