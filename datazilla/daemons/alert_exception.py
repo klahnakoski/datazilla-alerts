@@ -25,7 +25,7 @@ from util.startup import startup
 SEVERITY = 0.9
 MIN_CONFIDENCE = 0.999
 REASON="exception_point"     #name of the reason in alert_reason
-LOOK_BACK=timedelta(weeks=30)
+LOOK_BACK=timedelta(weeks=10)
 WINDOW_SIZE=10
 
 def exception_point (**env):
@@ -70,7 +70,7 @@ def exception_point (**env):
             n_replicates IS NOT NULL
         ORDER BY
             test_run_id,
-            page_id,
+            page_url,
             coalesce(push_date, date_received)
         """,
         {"begin_time":start_time}
@@ -88,7 +88,7 @@ def exception_point (**env):
         "operating_system_name",
         "operating_system_version",
         "processor",
-        "page_id"
+        "page_url"
     ]):
         total=Z_moment()                #total ROLLING STATS ACCUMULATION
         if len(values)<=1: continue     #CAN DO NOTHING WITH THIS ONE SAMPLE
@@ -97,11 +97,11 @@ def exception_point (**env):
         for count, v in enumerate(values):
             s=Stats(
                 count=1,  #THE INTER-TEST VARIANCE IS SIGNIFICANT AND CAN
-                          #NOT BE EXPLAINED.  WE SIMPLY USE CONSIDER TEST SERIES
+                          #NOT BE EXPLAINED.  WE SIMPLY CONSIDER TEST SERIES
                           #A SINGLE SAMPLE
                 #count=v.count,
                 mean=v.mean,
-                std=0, #v.std,
+                std=None, #v.std,
                 biased=True
             )
             if count>1: #NEED AT LEAST 2 SAMPLES TO GET A VARIANCE

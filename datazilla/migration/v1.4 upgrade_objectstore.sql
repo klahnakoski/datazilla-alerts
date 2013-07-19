@@ -57,6 +57,7 @@ END;;
 
 
 ALTER TABLE objectstore ADD COLUMN revision VARCHAR(12);;
+ALTER TABLE objectstore ADD COLUMN branch VARCHAR(40);;
 ALTER TABLE objectstore MODIFY page_url varchar(255) NULL DEFAULT NULL;;
 ALTER TABLE objectstore MODIFY mean double NULL DEFAULT NULL;;
 ALTER TABLE objectstore MODIFY std double NULL DEFAULT NULL;;
@@ -74,8 +75,13 @@ SET revision=string_between(substring(json_blob, locate("revision\": \"", json_b
 WHERE revision IS NULL
 ;;
 
+UPDATE objectstore
+SET branch=string_between(substring(json_blob, locate("branch\": \"", json_blob), 40), "branch\": \"", "\",", 1)
+WHERE branch IS NULL
+;;
 
 
-CREATE INDEX objectstore_revision ON objectstore(revision);;
+CREATE INDEX objectstore_revision_branch ON objectstore(revision, branch);;
 
-select count(1) from objectstore where revision IS NULL;;
+
+

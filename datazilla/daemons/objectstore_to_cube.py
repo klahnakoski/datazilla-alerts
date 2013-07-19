@@ -72,7 +72,6 @@ def objectstore_to_cube(db, r):
                 "std":S.std,
                 "n_replicates":S.count
             })
-        db.flush()
     except Exception, e:
         D.error("Conversion failed", e)
 
@@ -81,7 +80,7 @@ def main_loop(db, settings):
 
     while True:
 
-        with Timer("Process objectstore"):
+        with Timer("Process objectstore") as t:
             ## GET EVERYTHING MISSING FROM tdad (AND JOIN IN PUSHLOG)
             num=db.foreach("""
                 SELECT STRAIGHT_JOIN
@@ -95,7 +94,7 @@ def main_loop(db, settings):
                 LEFT JOIN
                     ${perftest}.test_data_all_dimensions AS tdad ON tdad.test_run_id=o.test_run_id
                 LEFT JOIN
-                    ${pushlog}.changesets AS ch ON ch.revision=o.revision
+                    ${pushlog}.changesets AS ch ON ch.revision=o.revision AND ch.branch=o.branch
                 LEFT JOIN
                     ${pushlog}.pushlogs AS pl ON pl.id = ch.pushlog_id
                 LEFT JOIN
@@ -115,6 +114,7 @@ def main_loop(db, settings):
                 },
                 execute=lambda x: objectstore_to_cube(db, x)
             )
+            db.flush()
 
         if num==0: return
 
