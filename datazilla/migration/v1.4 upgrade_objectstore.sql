@@ -57,6 +57,10 @@ END;;
 
 
 ALTER TABLE objectstore ADD COLUMN revision VARCHAR(12);;
+ALTER TABLE objectstore MODIFY page_url varchar(255) NULL DEFAULT NULL;;
+ALTER TABLE objectstore MODIFY mean double NULL DEFAULT NULL;;
+ALTER TABLE objectstore MODIFY std double NULL DEFAULT NULL;;
+
 
 #THE OBJECTSTORE WILL DICTATE THE test_run_id
 UPDATE objectstore

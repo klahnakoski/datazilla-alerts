@@ -59,37 +59,77 @@ INSERT INTO util_digits VALUES (9);;
 
 
 
-# JSON GET OBJECT 
+
+
+# JSON GET OBJECT
 # RETURN THE JSON OBJECT REFERENCED BY TAG NAME
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json;;
 CREATE FUNCTION json (
-	value		BLOB,
+	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
-) RETURNS varchar(60000) 
-	CHARSET latin1
+) RETURNS
+	varchar(65000) CHARSET latin1
     NO SQL
     DETERMINISTIC
 BEGIN
-	DECLARE s INTEGER;
+	DECLARE s DECIMAL(10,0);
+	DECLARE i DECIMAL(10,0);
+	DECLARE c CHAR;
+	DECLARE d INTEGER; # DEPTH
 	DECLARE begin_tag VARCHAR(50);
-	
+
 	SET begin_tag=concat("\"", tag, "\":");
-	IF instr(value, begin_tag)=0 THEN 
-		RETURN NULL;
-	ELSE 
-		RETURN substring(value, instr(value, begin_tag)+length(begin_tag), 60000);
+	SET s=locate(begin_tag, value);
+	IF s=0 THEN
+		RETURN begin_tag;
+	ELSE
+		SET s=locate("{", value, s+length(begin_tag));
+		SET i=s+1;
+		SET d=1;
+		DD: LOOP
+			SET c=substring(value, i, 1);
+			IF c="\"" THEN
+				SET i=i+1;
+				QQ: LOOP
+					SET c=substring(value, i, 1);
+					IF c="\\" THEN
+						SET i=i+1;
+					ELSEIF c="\"" THEN
+						LEAVE QQ;
+					END IF;
+					SET i=i+1;
+					IF i>length(value) OR i-s>65000 THEN LEAVE DD; END IF;
+				END LOOP QQ;
+			ELSEIF c="{" OR c="[" THEN
+				SET d=d+1;
+			ELSEIF c="}" OR c="]" THEN
+				SET d=d-1;
+			END IF;
+			SET i=i+1;
+			IF d=0 OR i>length(value) OR i-s>65000 THEN LEAVE DD; END IF;
+		END LOOP DD;
+		RETURN substring(value, s, i-s);
 	END IF;
-END;;	
+END;;
+
+
+SELECT json(" [\"results\": {}, junk]", "results") from dual;;
+SELECT json(" [\"results\": {\"hi\":20}, junk]", "results") from dual;;
+SELECT json(" \"results\": {\"hi\":20}, junk]", "results") from dual;;
+SELECT json(" [\"results\": {\"some thing\":[324,987]}, junk]", "results") from dual;;
+SELECT json(" \"results\": {\"some thing\":[324,987], {\"other\":\"99\\\"\"}}, jumk", "results") from dual;;
+SELECT json(" \"results\": {\"some thing\":[324,987], {\"other\":\"99\\\"}}, jumk", "results") from dual;;
+
 
 # JSON GET STRING
 # RETURN STRING REFERENCED BY TAG VALUE 
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json_s;;
 CREATE FUNCTION json_s (
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
-) RETURNS varchar(60000) CHARSET latin1
+) RETURNS varchar(65000) CHARSET latin1
     NO SQL
     DETERMINISTIC
 BEGIN
@@ -100,7 +140,7 @@ BEGIN
 	IF instr(value, begin_tag)=0 THEN 
 		RETURN NULL;
 	ELSE 
-		RETURN string_between(substring(value, instr(value, begin_tag)+length(begin_tag), 60000), "\"", "\"", 1);
+		RETURN string_between(substring(value, instr(value, begin_tag)+length(begin_tag), 65000), "\"", "\"", 1);
 	END IF;	
 END;;	
 
@@ -109,9 +149,9 @@ END;;
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json_n;;
 CREATE FUNCTION json_n (
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
-) RETURNS varchar(60000) CHARSET latin1
+) RETURNS varchar(65000) CHARSET latin1
     NO SQL
     DETERMINISTIC
 BEGIN
@@ -122,7 +162,7 @@ BEGIN
 	IF instr(value, begin_tag)=0 THEN 
 		RETURN NULL;
 	ELSE 
-		RETURN string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 60000), ":", ",", 1);
+		RETURN string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 65000), ":", ",", 1);
 	END IF;	
 END;;	
 
@@ -132,10 +172,10 @@ END;;
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json_a;;
 CREATE FUNCTION json_a (
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
 ) RETURNS 
-	varchar(60000) CHARSET latin1
+	varchar(65000) CHARSET latin1
     NO SQL
     DETERMINISTIC
 BEGIN
@@ -146,7 +186,7 @@ BEGIN
 	IF instr(value, begin_tag)=0 THEN 
 		RETURN NULL;
 	ELSE 
-		RETURN concat("[", string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 60000), "[", "]"), "]");
+		RETURN concat("[", string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 65000), "[", "]"), "]");
 	END IF;	
 END;;	
 
@@ -155,9 +195,9 @@ END;;
 # FINDS FIRST INSTANCE OF AN ARRAY WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json_an;;
 CREATE FUNCTION json_an (
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	index_		INTEGER
-) RETURNS varchar(60000) CHARSET latin1
+) RETURNS varchar(65000) CHARSET latin1
     NO SQL
     DETERMINISTIC
 BEGIN
@@ -168,7 +208,7 @@ END;;
 
 DROP FUNCTION IF EXISTS string_word_count;;
 CREATE FUNCTION string_word_count(
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	delimiter	VARCHAR(300)
 ) 
 	RETURNS INTEGER
@@ -193,11 +233,11 @@ END;;
 
 DROP FUNCTION IF EXISTS string_get_word;;
 CREATE FUNCTION string_get_word(
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	delimiter	VARCHAR(300),
 	num			INTEGER
 ) 
-	RETURNS VARCHAR(60000) character set latin1
+	RETURNS VARCHAR(65000) character set latin1
 	NO SQL
 	DETERMINISTIC
 BEGIN
@@ -225,11 +265,11 @@ END;;
 
 DROP FUNCTION IF EXISTS json_substring;;
 CREATE FUNCTION json_substring(
-	value		VARCHAR(60000) character set latin1,
+	value		VARCHAR(65000) character set latin1,
 	start_		INTEGER,
 	end_		INTEGER
 ) 
-	RETURNS VARCHAR(60000) character set latin1
+	RETURNS VARCHAR(65000) character set latin1
 	NO SQL
 	DETERMINISTIC
 BEGIN
@@ -277,7 +317,7 @@ SELECT json_substring("[23, 45, 32, 44, 99]", 0,9) from dual;;
 # TAKE JSON ARRAY OF NUMBERS AND RETURN ARRAY OF CENTERED STATS
 DROP FUNCTION IF EXISTS math_stats;;
 CREATE FUNCTION math_stats(
-	value		VARCHAR(60000) character set latin1
+	value		VARCHAR(65000) character set latin1
 ) 
 	RETURNS VARCHAR(200)
 	NO SQL
@@ -318,6 +358,11 @@ SELECT math_stats("[32,56,38,45,30]") FROM dual;;
 
 
 ALTER TABLE test_data_all_dimensions DROP FOREIGN KEY fk_test_run_id_tdad;;
+ALTER TABLE test_data_all_dimensions MODIFY page_url varchar(255) NULL DEFAULT NULL;
+ALTER TABLE test_data_all_dimensions MODIFY mean double NULL DEFAULT NULL;
+ALTER TABLE test_data_all_dimensions MODIFY std double NULL DEFAULT NULL;
+
+
 SELECT count(1) FROM test_data_all_dimensions;;
 DELETE FROM test_data_all_dimensions;;
 
