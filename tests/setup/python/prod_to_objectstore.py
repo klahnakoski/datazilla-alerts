@@ -93,20 +93,18 @@ class Prod2Local(threading.Thread):
 def get_existing_ids(db):
     #FIND WHAT'S MISSING IN LOCAL ALREADY
     ranges = db.query("""
-		SELECT
+
+	SELECT
 			id,
 			`end`
 		FROM (
 			SELECT STRAIGHT_JOIN
                 a.id,
-				"max" `end`
+				"min" `end`
             FROM
                 objectstore a
-            LEFT JOIN
-                objectstore b ON b.id=a.id+1
             WHERE
-                b.id IS NULL AND
-                a.id BETWEEN ${min} AND ${max}
+                a.id=${min}
 		UNION ALL
             SELECT
                 a.id,
@@ -118,6 +116,25 @@ def get_existing_ids(db):
             WHERE
                 c.id IS NULL AND
                 a.id BETWEEN ${min} AND ${max}
+		UNION ALL
+			SELECT STRAIGHT_JOIN
+                a.id,
+				"max" `end`
+            FROM
+                objectstore a
+            LEFT JOIN
+                objectstore b ON b.id=a.id+1
+            WHERE
+                b.id IS NULL AND
+                a.id BETWEEN ${min} AND ${max}
+		UNION ALL
+			SELECT STRAIGHT_JOIN
+                a.id,
+				"max" `end`
+            FROM
+                objectstore a
+            WHERE
+                a.id=${max}
 		) a
 		ORDER BY
 			id,
