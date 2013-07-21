@@ -103,8 +103,7 @@ def main_loop(db, settings):
                     ${pushlog}.branch_map AS bm ON br.name = bm.name
                 WHERE
                     o.test_run_id IS NOT NULL AND
-                    tdad.test_run_id IS NULL AND
-                    instr(json_blob, "\\"suite\\": \\"tp5")>0
+                    tdad.test_run_id IS NULL
                 LIMIT
                     ${limit}
                 """, {

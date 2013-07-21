@@ -91,7 +91,7 @@
       <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="15" column="0" selection-start="336" selection-end="336" vertical-scroll-proportion="0.25238097">
+            <state line="105" column="44" selection-start="3889" selection-end="3889" vertical-scroll-proportion="4.061905">
               <folding />
             </state>
           </provider>
@@ -145,7 +145,7 @@
       <file leaf-file-name="db.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="157" column="0" selection-start="4866" selection-end="4866" vertical-scroll-proportion="0.0">
+            <state line="148" column="12" selection-start="4540" selection-end="4540" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -184,7 +184,6 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/datazilla/migration/v1.4 upgrade_objectstore.sql" />
         <option value="$PROJECT_DIR$/scripts/sql/Update test_data_all_dimensions.sql" />
         <option value="$PROJECT_DIR$/datazilla/migration/v1.3 test_data_all_dimensions.sql" />
         <option value="$PROJECT_DIR$/tests/setup/sql/Setup test_data_all_dimensions.sql" />
@@ -199,6 +198,7 @@
         <option value="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" />
         <option value="$PROJECT_DIR$/talos_prod_settings.json" />
         <option value="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" />
+        <option value="$PROJECT_DIR$/pyLibrary/util/db.py" />
         <option value="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
       </list>
     </option>
@@ -690,7 +690,7 @@
     <myIsUseDefaultProxy>false</myIsUseDefaultProxy>
   </component>
   <component name="ToolWindowManager">
-    <frame x="62" y="0" width="1538" height="900" extended-state="0" />
+    <frame x="60" y="0" width="1540" height="900" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -704,7 +704,7 @@
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="JSON Formatter" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32474577" sideWeight="0.6031128" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.324306" sideWeight="0.6031128" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -864,14 +864,14 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="157" column="0" selection-start="4866" selection-end="4866" vertical-scroll-proportion="0.0">
+        <state line="148" column="12" selection-start="4540" selection-end="4540" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="15" column="0" selection-start="336" selection-end="336" vertical-scroll-proportion="0.25238097">
+        <state line="105" column="44" selection-start="3889" selection-end="3889" vertical-scroll-proportion="4.061905">
           <folding />
         </state>
       </provider>
