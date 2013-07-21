@@ -94,7 +94,7 @@ def main_loop(db, settings):
                 LEFT JOIN
                     ${perftest}.test_data_all_dimensions AS tdad ON tdad.test_run_id=o.test_run_id
                 LEFT JOIN
-                    ${pushlog}.changesets AS ch ON ch.revision=o.revision AND ch.branch=o.branch
+                    ${pushlog}.changesets AS ch ON ch.revision=o.revision
                 LEFT JOIN
                     ${pushlog}.pushlogs AS pl ON pl.id = ch.pushlog_id
                 LEFT JOIN
@@ -102,6 +102,7 @@ def main_loop(db, settings):
                 LEFT JOIN
                     ${pushlog}.branch_map AS bm ON br.name = bm.name
                 WHERE
+                    br.name=o.branch AND
                     o.test_run_id IS NOT NULL AND
                     tdad.test_run_id IS NULL
                 LIMIT

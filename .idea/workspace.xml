@@ -91,7 +91,7 @@
       <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="105" column="44" selection-start="3889" selection-end="3889" vertical-scroll-proportion="4.061905">
+            <state line="96" column="73" selection-start="3461" selection-end="3461" vertical-scroll-proportion="0.31190476">
               <folding />
             </state>
           </provider>
@@ -841,13 +841,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="176" column="33" selection-start="5395" selection-end="5395" vertical-scroll-proportion="-1.1">
@@ -871,7 +864,14 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="105" column="44" selection-start="3889" selection-end="3889" vertical-scroll-proportion="4.061905">
+        <state line="96" column="73" selection-start="3461" selection-end="3461" vertical-scroll-proportion="0.31190476">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
