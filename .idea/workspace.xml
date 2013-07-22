@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyLibrary" afterPath="$PROJECT_DIR$/pyLibrary" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" afterPath="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
     </list>
     <ignored path="datazilla-alerts.iws" />
@@ -82,7 +81,7 @@
       <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="82" column="0" selection-start="2777" selection-end="2777" vertical-scroll-proportion="0.33333334">
+            <state line="105" column="46" selection-start="3881" selection-end="3881" vertical-scroll-proportion="0.6940639">
               <folding />
             </state>
           </provider>
@@ -673,13 +672,13 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="60" y="0" width="1540" height="900" extended-state="0" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.43579766" sideWeight="0.9986459" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.37354085" sideWeight="0.99073464" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.37354085" sideWeight="0.99073464" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Script Monkey" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -756,7 +755,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py</url>
-          <line>82</line>
+          <line>148</line>
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -822,13 +821,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="222" column="27" selection-start="7132" selection-end="7132" vertical-scroll-proportion="0.0">
@@ -871,9 +863,16 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="82" column="0" selection-start="2777" selection-end="2777" vertical-scroll-proportion="0.33333334">
+        <state line="105" column="46" selection-start="3881" selection-end="3881" vertical-scroll-proportion="0.6940639">
           <folding />
         </state>
       </provider>

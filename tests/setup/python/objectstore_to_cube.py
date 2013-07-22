@@ -102,7 +102,7 @@ def main_loop(db, settings):
                 LEFT JOIN
                     ${pushlog}.branch_map AS bm ON br.name = bm.name
                 WHERE
-                    br.name=o.branch AND
+                    (bm.alt_name=o.branch OR br.name=o.branch) AND
                     o.test_run_id IN ${values}
                 """, {
                     "objectstore":SQL(settings.objectstore.schema),
@@ -134,7 +134,7 @@ def get_missing_ids(db, settings):
         LEFT JOIN
             ${pushlog}.branch_map AS bm ON br.name = bm.name
         WHERE
-            br.name=o.branch AND
+            (bm.alt_name=o.branch OR br.name=o.branch) AND
             o.test_run_id IS NOT NULL AND
             tdad.test_run_id IS NULL 
         """, {
@@ -144,7 +144,9 @@ def get_missing_ids(db, settings):
             "limit":BATCH_SIZE
         })
 
-    return Q.select(missing, field_name="test_run_id")
+    missing_ids=Q.select(missing, field_name="test_run_id")
+    D.println(str(missing_ids)+" objectstore records to be processed into cube")
+    return missing_ids
 
 
 
