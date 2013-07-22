@@ -4,7 +4,6 @@
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyLibrary" afterPath="$PROJECT_DIR$/pyLibrary" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" afterPath="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" afterPath="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" />
     </list>
     <ignored path="datazilla-alerts.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -80,10 +79,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="17" column="0" selection-start="362" selection-end="362" vertical-scroll-proportion="0.0">
+            <state line="82" column="0" selection-start="2777" selection-end="2777" vertical-scroll-proportion="0.33333334">
               <folding />
             </state>
           </provider>
@@ -161,10 +160,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="alert_settings.json" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="alert_settings.json" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/alert_settings.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="6" column="35" selection-start="154" selection-end="154" vertical-scroll-proportion="0.23287672">
+            <state line="6" column="35" selection-start="154" selection-end="154" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -198,9 +197,9 @@
         <option value="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" />
         <option value="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" />
         <option value="$PROJECT_DIR$/pyLibrary/util/query.py" />
-        <option value="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
         <option value="$PROJECT_DIR$/pyLibrary/util/db.py" />
         <option value="$PROJECT_DIR$/alert_settings.json" />
+        <option value="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
       </list>
     </option>
   </component>
@@ -674,7 +673,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="60" y="0" width="1540" height="900" extended-state="0" />
-    <editor active="true" />
+    <editor active="false" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -755,6 +754,10 @@
           <url>file://$PROJECT_DIR$/../pyLibrary/util/query.py</url>
           <line>25</line>
         </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py</url>
+          <line>82</line>
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
@@ -819,20 +822,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="157" column="10" selection-start="4731" selection-end="4731" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="17" column="0" selection-start="362" selection-end="362" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="67" column="0" selection-start="2291" selection-end="2291" vertical-scroll-proportion="0.0">
@@ -870,7 +859,21 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/alert_settings.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="6" column="35" selection-start="154" selection-end="154" vertical-scroll-proportion="0.23287672">
+        <state line="6" column="35" selection-start="154" selection-end="154" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="157" column="10" selection-start="4731" selection-end="4731" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="82" column="0" selection-start="2777" selection-end="2777" vertical-scroll-proportion="0.33333334">
           <folding />
         </state>
       </provider>
