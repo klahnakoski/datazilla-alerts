@@ -9,7 +9,13 @@
 
 from datetime import timedelta, datetime
 from numpy.lib.scimath import power, sqrt
+
+## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
 import scipy
+from scipy import stats
+scipy.stats=stats
+
+from util.timer import Timer
 from daemons.alert import update_h0_rejected
 from util.basic import nvl
 from util.cnv import CNV
@@ -25,7 +31,7 @@ from util.startup import startup
 SEVERITY = 0.9
 MIN_CONFIDENCE = 0.999
 REASON="exception_point"     #name of the reason in alert_reason
-LOOK_BACK=timedelta(weeks=10)
+LOOK_BACK=timedelta(days=30)
 WINDOW_SIZE=10
 
 def exception_point (**env):
@@ -58,7 +64,7 @@ def exception_point (**env):
             page_id,
             page_url,
             test_run_id,
-            date_received,
+            coalesce(push_date, date_received) push_date,
             n_replicates `count`,
             mean,
             std
@@ -68,8 +74,14 @@ def exception_point (**env):
             test_name="tp5o" AND
             coalesce(push_date, date_received)>unix_timestamp(${begin_time}) AND
             n_replicates IS NOT NULL
-        ORDER BY
-            test_run_id,
+        ORDER BY   #THE ONLY IMPORTANT ORDERING IS THE push_date, THE REST JUST CLUSTER THE RESULTS
+            test_name,
+            product,
+            branch,
+            branch_version,
+            operating_system_name,
+            operating_system_version,
+            processor,
             page_url,
             coalesce(push_date, date_received)
         """,
@@ -78,6 +90,7 @@ def exception_point (**env):
 
     alerts=[]   #PUT ALL THE EXCEPTION ITEM HERE
 
+    D.println("${num} test results found", {"num":len(test_results)})
     if debug: D.println("Find exceptions")
 
     for keys, values in Q.groupby(test_results, [
@@ -93,51 +106,46 @@ def exception_point (**env):
         total=Z_moment()                #total ROLLING STATS ACCUMULATION
         if len(values)<=1: continue     #CAN DO NOTHING WITH THIS ONE SAMPLE
         num_new=0
-                
-        for count, v in enumerate(values):
-            s=Stats(
-                count=1,  #THE INTER-TEST VARIANCE IS SIGNIFICANT AND CAN
-                          #NOT BE EXPLAINED.  WE SIMPLY CONSIDER TEST SERIES
-                          #A SINGLE SAMPLE
-                #count=v.count,
-                mean=v.mean,
-                std=None, #v.std,
-                biased=True
-            )
-            if count>1: #NEED AT LEAST 2 SAMPLES TO GET A VARIANCE
-                #SEE HOW MUCH THE CURRENT STATS DEVIATES FROM total
-                t=z_moment2stats(total, unbiased=False)
-                confidence, diff=single_ttest(s.mean, t)
-                if MIN_CONFIDENCE < confidence and diff>0:
-                    num_new+=1
-                    alerts.append(Map(
-                        status="new",
-                        create_time=datetime.utcnow(),
-                        test_series=v.test_series,
-                        reason=REASON,
-                        details=CNV.object2JSON({
-                            "stddev":diff,
-                            "confidence":confidence,
-                            "url":v.page_url,
-                            "product":v.product,
-                            "branch":v.branch,
-                            "branch_version":v.branch_version,
-                            "revision":v.revision
-                        }),
-                        severity=SEVERITY,
-                        confidence=confidence
-                    ))
-            #accumulate v
-            m=stats2z_moment(s)
-            v.m=m
-            total=total+m
-            if count>=WINDOW_SIZE:
-                total=total-values[count-WINDOW_SIZE].m  #WINDOW LIMITED TO 5 SAMPLES
 
-        if debug: D.println(
-            "Testing ${key} with ${num_tests} samples, ${num_alerts} alerts",
-            {"key":keys, "num_tests":len(values), "num_alerts":num_new}
-        )
+        with Timer("stats on revisions"):
+            for count, v in enumerate(values):
+                s=Stats(
+                    count=1,  #THE INTER-TEST VARIANCE IS SIGNIFICANT AND CAN
+                              #NOT BE EXPLAINED.  WE SIMPLY CONSIDER TEST SERIES
+                              #A SINGLE SAMPLE
+                    mean=v.mean,
+                    biased=True
+                )
+                if count>1: #NEED AT LEAST 2 SAMPLES TO GET A VARIANCE
+                    #SEE HOW MUCH THE CURRENT STATS DEVIATES FROM total
+                    t=z_moment2stats(total, unbiased=False)
+                    confidence, diff=single_ttest(s.mean, t, min_variance=1.0/12.0) #ASSUME UNIFORM DISTRIBUTION IF VARIANCE IS TOO SMALL
+                    if MIN_CONFIDENCE < confidence and diff>0:
+                        num_new+=1
+                        v.stddev=diff
+                        v.confidence=confidence
+                        v.push_date_min=values[max(0, count-WINDOW_SIZE)].push_date #FOR VISUALIZATION 
+
+                        alerts.append(Map(
+                            status="new",
+                            create_time=datetime.utcnow(),
+                            test_series=v.test_series,
+                            reason=REASON,
+                            details=CNV.object2JSON(v),
+                            severity=SEVERITY,
+                            confidence=confidence
+                        ))
+                #accumulate v
+                m=stats2z_moment(s)
+                v.m=m
+                total=total+m
+                if count>=WINDOW_SIZE:
+                    total=total-values[count-WINDOW_SIZE].m  #WINDOW LIMITED TO 5 SAMPLES
+
+            if debug: D.println(
+                "Testing ${key} with ${num_tests} samples, ${num_alerts} alerts",
+                {"key":keys, "num_tests":len(values), "num_alerts":num_new}
+            )
 
     if debug: D.println("Get Current Alerts")
 
@@ -150,6 +158,7 @@ def exception_point (**env):
             a.last_updated,
             a.severity,
             a.confidence,
+            a.details,
             a.solution
         FROM
             alert_mail a
@@ -204,9 +213,12 @@ def exception_point (**env):
             if len(nvl(a.solution, "").strip())!=0: continue  # DO NOT TOUCH SOLVED ALERTS
 
             c=lookup_current[a.test_series]
-            if round(a.severity, 5)!=round(c.severity, 5) or round(a.confidence, 5)!=round(c.confidence, 5):
+            if round(a.severity, 5)!=round(c.severity, 5) or \
+                round(a.confidence, 5)!=round(c.confidence, 5) or \
+                a.reason!=c.reason \
+            :
                 a.last_updated=datetime.utcnow()
-                db.update("alert_mail", {"id":a.id}, a)
+                db.update("alert_mail", {"id":c.id}, a)
         else:
             a.id=SQL("util_newid()")
             a.last_updated=datetime.utcnow()
@@ -214,7 +226,7 @@ def exception_point (**env):
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     for c in current_alerts:
-        if c.test_series not in lookup_alert:
+        if c.test_series not in lookup_alert and c.status!="obsolete":
             c.status="obsolete"
             c.last_updated=datetime.utcnow()
             db.update("alert_mail", {"id":c.id}, c)
@@ -256,11 +268,11 @@ def welchs_ttest(stats1, stats2):
     df_denominator = power(v1/n1, 2)/(n1-1) + power(v2/n2, 2)/(n2-1)
     df             = df_numerator / df_denominator
 
-    t_distribution = t(df)
+    t_distribution = scipy.stats.distributions.t(df)
     return t_distribution.cdf(tt), tt
 
 
-def single_ttest(point, stats):
+def single_ttest(point, stats, min_variance=0):
     n1=stats.count
     m1=stats.mean
     v1=stats.variance
@@ -278,10 +290,12 @@ def single_ttest(point, stats):
 #    g=scipy.stats.gamma(k, scale=1/theta)
 #    return abs(g.cdf(point)-0.5)+0.5, abs(point-m1)/sqrt(v1)
 
-    tt=abs(point-m1)/sqrt(v1)
-    t_distribution = scipy.stats.distributions.t(n1-1)
-    return t_distribution.cdf(tt), tt
-
+    try:
+        tt=abs(point-m1)/max(min_variance, sqrt(v1))    #WE WILL
+        t_distribution = scipy.stats.distributions.t(n1-1)
+        return t_distribution.cdf(tt), tt
+    except Exception, e:
+        D.error("error with t-test", e)
 
 
 

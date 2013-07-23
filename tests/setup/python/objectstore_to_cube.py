@@ -145,7 +145,7 @@ def get_missing_ids(db, settings):
         })
 
     missing_ids=Q.select(missing, field_name="test_run_id")
-    D.println(str(missing_ids)+" objectstore records to be processed into cube")
+    D.println(str(len(missing_ids))+" objectstore records to be processed into cube")
     return missing_ids
 
 

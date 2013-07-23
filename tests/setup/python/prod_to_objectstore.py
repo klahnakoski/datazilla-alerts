@@ -7,7 +7,6 @@
 ################################################################################
 
 
-
 from math import floor
 from multiprocessing import Queue
 import threading
@@ -16,7 +15,6 @@ from util.basic import nvl
 from util.debug import D
 from util.query import Q
 from util.startup import startup
-
 from util.timer import Timer
 from util.db import DB, SQL
 from util.cnv import CNV
@@ -93,8 +91,7 @@ class Prod2Local(threading.Thread):
 def get_existing_ids(db):
     #FIND WHAT'S MISSING IN LOCAL ALREADY
     ranges = db.query("""
-
-	SELECT
+	    SELECT
 			id,
 			`end`
 		FROM (

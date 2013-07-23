@@ -30,10 +30,12 @@ HEADER = "<h2>This is for testing only.  It may be misleading.</h2><br><br>"
 #                            "branch_version":v.branch_version,
 #                            "revision":v.revision
 TEMPLATE = Template("<div><h2>${score} - ${revision}</h2>${reason}<br>\n"+
+                    "On page ${page_url}<br>\n"+
                     "<a href=\"https://tbpl.mozilla.org/?tree=${branch}&rev=${revision}\">TBPL</a><br>\n"+
-                    "<a href=\"https://hg.mozilla.org/rev/${revision}\">Mercurial - ${hg_description}</a><br>\n"+
+                    "<a href=\"https://hg.mozilla.org/rev/${revision}\">Mercurial</a><br>\n"+
                     "<a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id=${bug_id}\">Bugzilla - ${bug_description}</a><br>\n"+
-                    "<a href=\"https://datazilla.mozilla.org/talos/summary/${branch}/${revision}?product=${product}&branch_version=${branch_version}\">Datazilla</a><br>\n"+
+                    "<a href=\"https://datazilla.mozilla.org/talos/summary/${branch}/${revision}\">Datazilla</a><br>\n"+
+                    "<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page=${page_url}&sampleMax=${push_date}000&sampleMin=${push_date_min}000&branch=${branch}\">Kyle's ES</a><br>\n"+
                     "Raw data: ${raw_data}"+
                     "</div>\n")
 SEPARATOR = "<hr>\n"
@@ -59,7 +61,8 @@ def send_alerts(**env):
                 a.details,
                 a.severity,
                 a.confidence,
-                t.revision
+                t.revision,
+                t.branch
             FROM
                 alert_mail a
             JOIN
@@ -88,14 +91,15 @@ def send_alerts(**env):
 
         body=[HEADER]
         for alert in new_alerts:
-            details=CNV.JSON2object(alert.details)
-            #EXPAND THE MESSAGE
             if alert.confidence>=1: alert.confidence=0.999999
-            body.append(TEMPLATE.substitute({
-                "score":str(round(bayesian_add(alert.severity, alert.confidence)*100, 0))+"%",  #AS A PERCENT
-                "revision":alert.revision,
-                "reason":Template(alert.description).substitute(details)
-                }))
+            
+            details=CNV.JSON2object(alert.details)
+            for k,v in alert.items():
+                if k not in details:
+                    details[k]=v
+            details.score=str(round(bayesian_add(alert.severity, alert.confidence)*100, 0))+"%",  #AS A PERCENT
+            details.reason=Template(alert.description).substitute(details)
+            body.append(TEMPLATE.safe_substitute(details))
         body=SEPARATOR.join(body)
 
 #        listeners = SQLQuery.run({
@@ -151,17 +155,16 @@ def update_h0_rejected(db, start_date):
 
 
 
+if __name__ == '__main__':
+    settings=startup.read_settings()
 
+    try:
+        D.println("Running alerts off of schema ${schema}", {"schema":settings.database.schema})
 
-settings=startup.read_settings()
-
-try:
-    D.println("Running alerts off of schema ${schema}", {"schema":settings.database.schema})
-
-    with DB(settings.database) as db:
-        send_alerts(
-            db=db,
-            debug=settings.debug is not None
-        )
-except Exception, e:
-    D.warning("Failure to run alerts", cause=e)
+        with DB(settings.database) as db:
+            send_alerts(
+                db=db,
+                debug=settings.debug is not None
+            )
+    except Exception, e:
+        D.warning("Failure to run alerts", cause=e)
