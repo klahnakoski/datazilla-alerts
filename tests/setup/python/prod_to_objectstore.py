@@ -5,10 +5,9 @@
 ################################################################################
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
-
+import functools
 
 from math import floor
-from multiprocessing import Queue
 import threading
 import requests
 from util.basic import nvl
@@ -18,74 +17,40 @@ from util.startup import startup
 from util.timer import Timer
 from util.db import DB, SQL
 from util.cnv import CNV
+from util.multithread import Multithread
 
 
-file_lock=threading.Lock()
 db_lock=threading.Lock()
 
-class Prod2Local(threading.Thread):
+
+def etl(name, db, settings, id):
+    try:
+        with Timer(str(name)+" read from prod "+str(id)):
+            content = requests.get(settings.production.blob_url + "/" + str(id)).content
+            if content.startswith("Id not found:"):
+                D.println("Id not found: "+str(id))
+                return False
+            data=CNV.JSON2object(content)
+
+        with Timer(str(name)+" push to local "+str(id)):
+            with db_lock:
+                db.insert("objectstore", {
+                    "id":id,
+                    "test_run_id":SQL(settings.perftest.schema+".util_newid()"),
+                    "date_loaded":data.date_loaded,
+                    "error_flag":"N",
+                    "error_msg":None,
+                    "json_blob":CNV.object2JSON(data.json_blob),
+                    "worker_id":None,
+                    "revision":data.json_blob.test_build.revision
+                })
+                db.flush()
+                return True
+    except Exception, e:
+        D.warning("Can not load "+str(id), e)
+        return False
 
 
-
-    def __init__(self, name, queue, db, settings):
-        threading.Thread.__init__(self)
-        self.name=name
-        self.queue=nvl(queue, Queue())
-        self.db=db
-        self.settings=settings
-        self.keep_running=True
-        self.start()
-
-
-    #REQUIRED TO DETECT KEYBOARD, AND OTHER, INTERRUPTS
-    def join(self, timeout=None):
-        while self.isAlive():
-            threading.Thread.join(self, nvl(timeout, 0.5))
-
-    ## RETURN TRUE IF LOADED
-    def etl(self, blob_id):
-        try:
-            with Timer(str(self.name)+" read from prod "+str(blob_id)):
-                content = requests.get(self.settings.production.blob_url + "/" + str(blob_id)).content
-                if content.startswith("Id not found:"):
-                    D.println("Id not found: "+str(blob_id))
-                    with db_lock:
-                        self.settings.num_not_found+=1
-                    return
-                data=CNV.JSON2object(content)
-
-            with Timer(str(self.name)+" push to local "+str(blob_id)):
-                with db_lock:
-                    self.db.insert("objectstore", {
-                        "id":blob_id,
-                        "test_run_id":SQL(self.settings.perftest.schema+".util_newid()"),
-                        "date_loaded":data.date_loaded,
-                        "error_flag":"N",
-                        "error_msg":None,
-                        "json_blob":CNV.object2JSON(data.json_blob),
-                        "worker_id":None,
-                        "revision":data.json_blob.test_build.revision
-                    })
-                    self.db.flush()
-                    return True
-        except Exception, e:
-            D.warning("Can not load "+str(blob_id), e)
-            return False
-
-
-    def run(self):
-        while self.keep_running:
-            blob_id=self.queue.get()
-            if blob_id=="stop": return
-            try:
-                self.etl(blob_id)
-                with db_lock:
-                    if self.settings.num_not_found>=100:
-                        return   #GIVE UP
-            except Exception, e:
-                D.warning("Can not load data for id ${id}", {"id": blob_id})
-#            finally:
-#                self.queue.task_done()
 
 
 def get_existing_ids(db):
@@ -153,45 +118,29 @@ def get_existing_ids(db):
 
 def extract_from_datazilla_using_id(settings):
     with DB(settings.database) as db:
-        existing_ids = get_existing_ids(db)
-        settings.num_not_found=0
-
-        threads=[]
         try:
-            #MAKE THREADS
-            queue=Queue()
-            for t in range(settings.production.threads):
-                thread=Prod2Local("ETL"+str(t), queue, db, settings)
-                threads.append(thread)
+            functions=[functools.partial(etl, *["ETL"+str(t), db, settings]) for t in range(settings.production.threads)]
 
-            #FILL QUEUE WITH WORK
-            for blob_id in range(settings.production.min, settings.production.max):
-                if blob_id in existing_ids: continue
-                queue.put(blob_id, False)
+            existing_ids = get_existing_ids(db)
+            missing_ids=set(range(settings.production.min, settings.production.max)) - existing_ids
+            settings.num_not_found=0
 
-            #SEND ENOUGH STOPS
-            for t in threads:
-                queue.put("stop")
-
-            #WAIT FOR FINISH
-            for t in threads:
-                t.join()
+            with Multithread(functions) as many:
+                for result in many.execute([{"id":id} for id in missing_ids]):
+                    if not result:
+                        settings.num_not_found+=1
+                        if settings.num_not_found>100:
+                            many.stop()
+                            break
         except (KeyboardInterrupt, SystemExit):
             D.println("Shutdow Started, please be patient")
         except Exception, e:
             D.error("Unusual shutdown!", e)
-        finally:
-            for t in threads:
-                t.keep_running=False
-            for t in threads:
-                t.join()
-
-
 
 
 
 settings=startup.read_settings()
 settings.production.threads=nvl(settings.production.threads, 1)
-
+D.settings(settings.debug)
 extract_from_datazilla_using_id(settings)
 

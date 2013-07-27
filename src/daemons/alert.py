@@ -157,6 +157,7 @@ def update_h0_rejected(db, start_date):
 
 if __name__ == '__main__':
     settings=startup.read_settings()
+    D.setings(settings.debug)
 
     try:
         D.println("Running alerts off of schema ${schema}", {"schema":settings.database.schema})
