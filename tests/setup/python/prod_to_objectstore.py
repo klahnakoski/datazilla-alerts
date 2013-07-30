@@ -36,13 +36,11 @@ def etl(name, db, settings, id):
             with db_lock:
                 db.insert("objectstore", {
                     "id":id,
-                    "test_run_id":SQL(settings.perftest.schema+".util_newid()"),
+                    "test_run_id":data.test_run_id,
                     "date_loaded":data.date_loaded,
-                    "error_flag":"N",
-                    "error_msg":None,
+                    "revision":data.json_blob.test_build.revision,
+                    "branch":data.json_blob.test_build.branch,
                     "json_blob":CNV.object2JSON(data.json_blob),
-                    "worker_id":None,
-                    "revision":data.json_blob.test_build.revision
                 })
                 db.flush()
                 return True
@@ -56,7 +54,7 @@ def etl(name, db, settings, id):
 def get_existing_ids(db):
     #FIND WHAT'S MISSING IN LOCAL ALREADY
     ranges = db.query("""
-	    SELECT
+	    SELECT DISTINCT
 			id,
 			`end`
 		FROM (
@@ -121,8 +119,12 @@ def extract_from_datazilla_using_id(settings):
         try:
             functions=[functools.partial(etl, *["ETL"+str(t), db, settings]) for t in range(settings.production.threads)]
 
-            existing_ids = get_existing_ids(db)
-            missing_ids=set(range(settings.production.min, settings.production.max)) - existing_ids
+            if settings.production.max-settings.production.min<=100:
+                #FOR SMALL NUMBERS, JUST LOAD THEM ALL AGAIN
+                missing_ids=set(range(settings.production.min, settings.production.max))
+            else:
+                existing_ids = get_existing_ids(db)
+                missing_ids=set(range(settings.production.min, settings.production.max)) - existing_ids
             settings.num_not_found=0
 
             with Multithread(functions) as many:

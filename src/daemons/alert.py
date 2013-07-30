@@ -68,7 +68,7 @@ def send_alerts(**env):
             JOIN
                 alert_reasons r on r.code=a.reason
             JOIN
-                test_data_all_dimensions t ON t.id=a.test_series
+                test_data_all_dimensions t ON t.id=a.tdad_id
             WHERE
                 (
                     a.last_sent IS NULL OR
@@ -142,13 +142,13 @@ def update_h0_rejected(db, start_date):
             test_data_all_dimensions t
         JOIN (
             SELECT
-                test_series,
+                tdad_id,
                 max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
             FROM
                 alert_mail
             GROUP BY
-                test_series
-            ) a ON a.test_series=t.id
+                tdad_id
+            ) a ON a.tdad_id=t.id
         SET t.h0_rejected=a.h0
     """)
 
@@ -157,7 +157,7 @@ def update_h0_rejected(db, start_date):
 
 if __name__ == '__main__':
     settings=startup.read_settings()
-    D.setings(settings.debug)
+    D.settings(settings.debug)
 
     try:
         D.println("Running alerts off of schema ${schema}", {"schema":settings.database.schema})

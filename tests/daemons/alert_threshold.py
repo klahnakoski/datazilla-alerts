@@ -38,7 +38,7 @@ class test_alert_threshold:
                 id,
                 status,
                 create_time,
-                test_series,
+                tdad_id,
                 reason,
                 details,
                 severity,
@@ -73,7 +73,7 @@ class test_alert_threshold:
             FROM
                 test_data_all_dimensions t
             JOIN
-                alert_mail a ON a.test_series=t.id
+                alert_mail a ON a.tdad_id=t.id
             WHERE
                 a.id=${alert_id}
             """,
@@ -121,7 +121,7 @@ class test_alert_threshold:
             FROM
                 test_data_all_dimensions t
             JOIN
-                alert_mail a ON a.test_series=t.id
+                alert_mail a ON a.tdad_id=t.id
             WHERE
                 a.id=${alert_id}
             """,

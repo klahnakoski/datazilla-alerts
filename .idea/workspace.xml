@@ -2,19 +2,18 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\daemons\__init__.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\daemons\alert.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\daemons\alert_exception.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\daemons\alert_threshold.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\daemons\alert_ttest.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\daemons\email_send.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\migration\v1.1 alerts.sql" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\migration\v1.2 email.sql" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyLibrary" afterPath="$PROJECT_DIR$/pyLibrary" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/datazilla-alerts.iml" afterPath="$PROJECT_DIR$/datazilla-alerts.iml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/alert.py" afterPath="$PROJECT_DIR$/src/daemons/alert.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/alert_exception.py" afterPath="$PROJECT_DIR$/src/daemons/alert_exception.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/alert_threshold.py" afterPath="$PROJECT_DIR$/src/daemons/alert_threshold.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/email_send.py" afterPath="$PROJECT_DIR$/src/daemons/email_send.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/migration/v1.1 alerts.sql" afterPath="$PROJECT_DIR$/src/migration/v1.1 alerts.sql" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/talos_prod.log" afterPath="$PROJECT_DIR$/talos_prod.log" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/alert.py" afterPath="$PROJECT_DIR$/tests/daemons/alert.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/alert_exception.py" afterPath="$PROJECT_DIR$/tests/daemons/alert_exception.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/alert_threshold.py" afterPath="$PROJECT_DIR$/tests/daemons/alert_threshold.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" afterPath="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" afterPath="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/scripts/objectstore_to_cube.bat" afterPath="$PROJECT_DIR$/tests/setup/scripts/objectstore_to_cube.bat" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" afterPath="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" />
     </list>
     <ignored path="datazilla-alerts.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -90,19 +89,73 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="debug.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
+      <file leaf-file-name="v1.1 alerts.sql" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/migration/v1.1 alerts.sql">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="74" column="0" selection-start="2502" selection-end="2502" vertical-scroll-proportion="0.0">
+            <state line="176" column="24" selection-start="4388" selection-end="4388" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="connections.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://C:/Python27/Lib/site-packages/MySQLdb/connections.py">
+      <file leaf-file-name="alert_exception.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/daemons/alert_exception.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="186" column="0" selection-start="5477" selection-end="5477" vertical-scroll-proportion="0.0">
+            <state line="129" column="41" selection-start="4440" selection-end="4440" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="db.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="86" column="0" selection-start="2650" selection-end="2650" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Upgrade objectstore.sql" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="48" column="0" selection-start="1267" selection-end="1404" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="prod_to_objectstore.bat" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tests/setup/scripts/prod_to_objectstore.bat">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="prod_to_objectstore.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="131" column="0" selection-start="4163" selection-end="4198" vertical-scroll-proportion="0.6380208">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="objectstore_to_cube.bat" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tests/setup/scripts/objectstore_to_cube.bat">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="objectstore_to_cube.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -111,52 +164,16 @@
       <file leaf-file-name="talos_prod_settings.json" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/talos_prod_settings.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="15" column="47" selection-start="462" selection-end="462" vertical-scroll-proportion="0.0">
+            <state line="26" column="15" selection-start="687" selection-end="687" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="alert_exception.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/daemons/alert_exception.py">
+      <file leaf-file-name="alert_settings.json" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/alert_settings.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="54" column="27" selection-start="1631" selection-end="1631" vertical-scroll-proportion="0.2821577">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="queues.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://C:/Python27/Lib/multiprocessing/queues.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="110" column="0" selection-start="3830" selection-end="3830" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="connectionpool.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://C:/Python27/Lib/site-packages/requests/packages/urllib3/connectionpool.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="97" column="0" selection-start="2494" selection-end="2494" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="prod_to_objectstore.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="13" column="0" selection-start="595" selection-end="595" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="map.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyLibrary/util/map.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="25" column="0" selection-start="878" selection-end="878" vertical-scroll-proportion="0.0">
+            <state line="14" column="19" selection-start="366" selection-end="366" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -177,22 +194,22 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/cnv.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/stats.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/emailer.py" />
-        <option value="$PROJECT_DIR$/scripts/alerts.bat" />
-        <option value="$PROJECT_DIR$/datazilla/daemons/alert_exception.py" />
-        <option value="$PROJECT_DIR$/datazilla/daemons/alert.py" />
-        <option value="$PROJECT_DIR$/tests/setup/python/multithread.py" />
-        <option value="$PROJECT_DIR$/tests/setup/scripts/objectstore_to_cube.bat" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/db.py" />
-        <option value="$PROJECT_DIR$/src/daemons/alert.py" />
-        <option value="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/map.py" />
         <option value="$PROJECT_DIR$/pyLibrary/util/debug.py" />
-        <option value="$PROJECT_DIR$/talos_prod_settings.json" />
+        <option value="$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py" />
+        <option value="$PROJECT_DIR$/alert_settings.json" />
+        <option value="$PROJECT_DIR$/src/daemons/email_send.py" />
+        <option value="$PROJECT_DIR$/../Bugzilla Anthropology/html/es/Util-SingleRecord.html" />
+        <option value="$PROJECT_DIR$/alert.log" />
+        <option value="$PROJECT_DIR$/src/daemons/alert.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/alert.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/alert_exception.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/alert_threshold.py" />
+        <option value="$PROJECT_DIR$/src/daemons/alert_threshold.py" />
+        <option value="$PROJECT_DIR$/src/migration/v1.1 alerts.sql" />
         <option value="$PROJECT_DIR$/src/daemons/alert_exception.py" />
+        <option value="$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql" />
+        <option value="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" />
+        <option value="$PROJECT_DIR$/talos_prod_settings.json" />
       </list>
     </option>
   </component>
@@ -229,8 +246,9 @@
       <sortByType />
     </navigator>
     <panes>
-      <pane id="Favorites" />
       <pane id="PackagesPane" />
+      <pane id="Favorites" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -346,6 +364,10 @@
               <option name="myItemId" value="src" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="migration" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -431,7 +453,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -442,7 +463,7 @@
     <property name="recentsLimit" value="5" />
     <property name="MemberChooser.sorted" value="false" />
     <property name="options.lastSelected" value="preferences.externalResources" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Datazilla2ElasticSearch/src/python" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Bugzilla Anthropology/html/es" />
     <property name="project.structure.side.proportion" value="0.2" />
     <property name="MemberChooser.copyJavadoc" value="false" />
     <property name="GoToClass.toSaveIncludeLibraries" value="false" />
@@ -458,7 +479,7 @@
       <recent name="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\migration" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.alert_exception">
+  <component name="RunManager" selected="Python.prod_to_objectstore">
     <configuration default="true" type="PythonUnitTestConfigurationType" factoryName="Python's unittest">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -665,7 +686,7 @@
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <module name="datazilla-alerts" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/datazilla/daemons/alert.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/daemons/alert.py" />
       <option name="PARAMETERS" value="--settings_file &quot;./alert_settings.json&quot;" />
       <RunnerSettings RunnerId="PyDebugRunner" />
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
@@ -682,7 +703,7 @@
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <module name="datazilla-alerts" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/datazilla/daemons/email_send.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/daemons/email_send.py" />
       <option name="PARAMETERS" value="--settings_file &quot;./alert_settings.json&quot;" />
       <RunnerSettings RunnerId="PyDebugRunner" />
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
@@ -720,25 +741,25 @@
     <myIsUseDefaultProxy>false</myIsUseDefaultProxy>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1621" y="-897" width="1538" height="1151" extended-state="0" />
+    <frame x="63" y="1" width="1536" height="898" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33992583" sideWeight="0.99073464" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.44213265" sideWeight="0.99073464" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Script Monkey" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3293092" sideWeight="0.6594663" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="JSON Formatter" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2983051" sideWeight="0.6594663" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32926002" sideWeight="0.6594663" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="JSON Formatter" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32767624" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.29803124" sideWeight="0.55786735" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.43383744" sideWeight="0.9986459" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.43302992" sideWeight="0.9986459" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
@@ -807,8 +828,12 @@
           <line>297</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/pyLibrary/util/debug.py</url>
-          <line>184</line>
+          <url>file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py</url>
+          <line>17</line>
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/src/daemons/alert_exception.py</url>
+          <line>129</line>
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -818,86 +843,96 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://C:/Python27/Lib/string.py">
+    <entry file="file://$PROJECT_DIR$/tests/daemons/alert.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="173" column="0" selection-start="5933" selection-end="5933" vertical-scroll-proportion="0.0" />
+        <state line="86" column="91" selection-start="3754" selection-end="3754" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://C:/Python27/Lib/site-packages/MySQLdb/cursors.py">
+    <entry file="file://$PROJECT_DIR$/../pyLibrary/util/debug.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="307" column="0" selection-start="10057" selection-end="10057" vertical-scroll-proportion="0.0" />
+        <state line="20" column="6" selection-start="771" selection-end="771" vertical-scroll-proportion="0.33333334" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../pyLibrary/util/map.py">
+    <entry file="file://$PROJECT_DIR$/tests/daemons/alert_exception.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="16" column="30" selection-start="628" selection-end="628" vertical-scroll-proportion="-2.2130802" />
+        <state line="78" column="34" selection-start="2342" selection-end="2342" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://C:/Python27/Lib/inspect.py">
+    <entry file="file://$PROJECT_DIR$/tests/daemons/alert_threshold.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="814" column="0" selection-start="32444" selection-end="32444" vertical-scroll-proportion="0.35443038" />
+        <state line="116" column="65" selection-start="3204" selection-end="3204" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://C:/Python27/Lib/logging/__init__.py">
+    <entry file="file://$PROJECT_DIR$/src/daemons/alert_threshold.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="181" column="4" selection-start="5740" selection-end="5740" vertical-scroll-proportion="0.0" />
+        <state line="79" column="41" selection-start="2888" selection-end="2888" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/daemons/alert.py">
+    <entry file="file://$PROJECT_DIR$/tests/setup/sql/Upgrade perftest.sql">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="159" column="28" selection-start="6014" selection-end="6014" vertical-scroll-proportion="0.0" />
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://C:/Python27/Lib/ssl.py">
+    <entry file="file://$PROJECT_DIR$/src/migration/v1.1 alerts.sql">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="159" column="0" selection-start="5231" selection-end="5231" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.IntelliJIdea10/config/plugins/python/helpers/pydev/pydevd.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="958" column="0" selection-start="41277" selection-end="41277" vertical-scroll-proportion="13.754881" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="74" column="0" selection-start="2502" selection-end="2502" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Python27/Lib/site-packages/MySQLdb/connections.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="186" column="0" selection-start="5477" selection-end="5477" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/talos_prod_settings.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="15" column="47" selection-start="462" selection-end="462" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://C:/Python27/Lib/multiprocessing/queues.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="110" column="0" selection-start="3830" selection-end="3830" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://C:/Python27/Lib/site-packages/requests/packages/urllib3/connectionpool.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="97" column="0" selection-start="2494" selection-end="2494" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="13" column="0" selection-start="595" selection-end="595" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/map.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="25" column="0" selection-start="878" selection-end="878" vertical-scroll-proportion="0.0" />
+        <state line="176" column="24" selection-start="4388" selection-end="4388" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/daemons/alert_exception.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="54" column="27" selection-start="1631" selection-end="1631" vertical-scroll-proportion="0.2821577">
+        <state line="129" column="41" selection-start="4440" selection-end="4440" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/alert_settings.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="14" column="19" selection-start="366" selection-end="366" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyLibrary/util/db.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="86" column="0" selection-start="2650" selection-end="2650" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/scripts/objectstore_to_cube.bat">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/sql/Upgrade objectstore.sql">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="48" column="0" selection-start="1267" selection-end="1404" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/python/objectstore_to_cube.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/scripts/prod_to_objectstore.bat">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/talos_prod_settings.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="26" column="15" selection-start="687" selection-end="687" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="131" column="0" selection-start="4163" selection-end="4198" vertical-scroll-proportion="0.6380208">
           <folding />
         </state>
       </provider>

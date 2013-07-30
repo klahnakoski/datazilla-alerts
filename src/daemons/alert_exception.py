@@ -31,7 +31,7 @@ from util.startup import startup
 SEVERITY = 0.9
 MIN_CONFIDENCE = 0.999
 REASON="exception_point"     #name of the reason in alert_reason
-LOOK_BACK=timedelta(days=30)
+LOOK_BACK=timedelta(days=38)
 WINDOW_SIZE=10
 
 def exception_point (**env):
@@ -44,15 +44,15 @@ def exception_point (**env):
 #    db.debug=debug
 
     #LOAD CONFIG
-    start_time=datetime.utcnow()-LOOK_BACK
 
     #CALCULATE HOW FAR BACK TO LOOK
     #BRING IN ALL NEEDED DATA
+    start_time=datetime.utcnow()-LOOK_BACK
     if debug: D.println("Pull all data")
 
     test_results=db.query("""
         SELECT
-            id test_series,
+            id tdad_id,
             test_name,
             product,
             branch,
@@ -126,10 +126,13 @@ def exception_point (**env):
                         v.confidence=confidence
                         v.push_date_min=values[max(0, count-WINDOW_SIZE)].push_date #FOR VISUALIZATION 
 
+                        if v.branch=="Mozilla-Inbound" and v.revision=="6409ddd66eaa" and v.page_url=="page.renren.com":
+                            D.println("")
+
                         alerts.append(Map(
                             status="new",
                             create_time=datetime.utcnow(),
-                            test_series=v.test_series,
+                            tdad_id=v.tdad_id,
                             reason=REASON,
                             details=CNV.object2JSON(v),
                             severity=SEVERITY,
@@ -143,7 +146,7 @@ def exception_point (**env):
                     total=total-values[count-WINDOW_SIZE].m  #WINDOW LIMITED TO 5 SAMPLES
 
             if debug: D.println(
-                "Testing ${key} with ${num_tests} samples, ${num_alerts} alerts",
+                "Testing ${num_tests} samples, ${num_alerts} alerts, on group  ${key}",
                 {"key":keys, "num_tests":len(values), "num_alerts":num_new}
             )
 
@@ -153,7 +156,7 @@ def exception_point (**env):
     current_alerts=db.query("""
         SELECT
             a.id,
-            a.test_series,
+            a.tdad_id,
             a.status,
             a.last_updated,
             a.severity,
@@ -162,20 +165,22 @@ def exception_point (**env):
             a.solution
         FROM
             alert_mail a
+        LEFT JOIN
+            test_data_all_dimensions t on t.id=a.tdad_id
         WHERE
-            coalesce(last_updated, create_time)>${begin_time} AND
-            reason=${type} 
+            coalesce(t.push_date, t.date_received)>unix_timestamp(${begin_time}) AND
+            reason=${type}
         """, {
             "begin_time":start_time,
-            "list":[a.test_series for a in alerts],
+            "list":Q.select(alerts, "tdad_id"),
             "type":REASON
         }
     )
 
 # NEED BETTER WAY TO SAY THIS
-#      new_alerts=set(Q.select(alerts, "test_series")) #dict([(a.test_series, a) for a in alerts])
-#    current=set(Q.select(current_alerts, "test_series"))
-#    lookup_current=dict([(c.test_series, c) for c in current_alerts])
+#      new_alerts=set(Q.select(alerts, "tdad_id")) #dict([(a.tdad_id, a) for a in alerts])
+#    current=set(Q.select(current_alerts, "tdad_id"))
+#    lookup_current=dict([(c.tdad_id, c) for c in current_alerts])
 #
 #    if debug: D.println("Update alerts")
 #
@@ -187,7 +192,7 @@ def exception_point (**env):
 #    for existing_alert in new_alerts & current:
 #        if len(nvl(existing_alert.solution, "").trim())==0: continue  # DO NOT TOUCH SOLVED ALERTS
 #
-#        c=lookup_current[existing_alert.test_series]
+#        c=lookup_current[existing_alert.tdad_id]
 #        if round(existing_alert.severity, 5)!=round(c.severity, 5) or round(existing_alert.confidence, 5)!=round(c.confidence, 5):
 #            existing_alert.last_updated=datetime.utcnow()
 #            db.update("alert_mail", {"id":existing_alert.id}, existing_alert)
@@ -202,17 +207,17 @@ def exception_point (**env):
 
 
 
-    lookup_alert=dict([(a.test_series, a) for a in alerts])
-    lookup_current=dict([(c.test_series, c) for c in current_alerts])
+    lookup_alert=dict([(a.tdad_id, a) for a in alerts])
+    lookup_current=dict([(c.tdad_id, c) for c in current_alerts])
 
     if debug: D.println("Update alerts")
 
     for a in alerts:
         #CHECK IF ALREADY AN ALERT
-        if a.test_series in lookup_current:
+        if a.tdad_id in lookup_current:
             if len(nvl(a.solution, "").strip())!=0: continue  # DO NOT TOUCH SOLVED ALERTS
 
-            c=lookup_current[a.test_series]
+            c=lookup_current[a.tdad_id]
             if round(a.severity, 5)!=round(c.severity, 5) or \
                 round(a.confidence, 5)!=round(c.confidence, 5) or \
                 a.reason!=c.reason \
@@ -226,7 +231,7 @@ def exception_point (**env):
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     for c in current_alerts:
-        if c.test_series not in lookup_alert and c.status!="obsolete":
+        if c.tdad_id not in lookup_alert and c.status!="obsolete":
             c.status="obsolete"
             c.last_updated=datetime.utcnow()
             db.update("alert_mail", {"id":c.id}, c)
@@ -291,7 +296,7 @@ def single_ttest(point, stats, min_variance=0):
 #    return abs(g.cdf(point)-0.5)+0.5, abs(point-m1)/sqrt(v1)
 
     try:
-        tt=abs(point-m1)/max(min_variance, sqrt(v1))    #WE WILL
+        tt=(point-m1)/max(min_variance, sqrt(v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
         t_distribution = scipy.stats.distributions.t(n1-1)
         return t_distribution.cdf(tt), tt
     except Exception, e:
@@ -301,6 +306,7 @@ def single_ttest(point, stats, min_variance=0):
 
 
 settings=startup.read_settings()
+D.settings(settings.debug)
 
 try:
     D.println("Finding exceptions in schema ${schema}", {"schema":settings.database.schema})

@@ -43,7 +43,7 @@ def page_threshold_limit(**env):
         #BUT DO NOT ALREADY HAVE AN ALERTS EXISTING
         pages = db.query("""
             SELECT
-                t.id test_series_id,
+                t.id tdad_id,
                 t.n_replicates,
                 t.mean,
                 t.std,
@@ -56,7 +56,7 @@ def page_threshold_limit(**env):
             JOIN
                 test_data_all_dimensions t ON t.page_id=h.page
             LEFT JOIN
-                alert_mail m on m.test_series=t.test_run_id AND m.reason=${type}
+                alert_mail m on m.tdad_id=t.test_run_id AND m.reason=${type}
             WHERE
                 h.threshold<t.mean AND
                 t.push_date>${min_date} AND
@@ -74,7 +74,7 @@ def page_threshold_limit(**env):
     	        "status":"new",
                 "create_time":datetime.utcnow(),
                 "last_updated":datetime.utcnow(),
-                "test_series":page.test_series_id,
+                "tdad_id":page.tdad_id,
                 "reason":REASON,
                 "details":CNV.object2JSON({"expected":float(page.threshold), "actual":float(page.mean), "reason":page.reason}),
                 "severity":page.severity,
@@ -97,7 +97,7 @@ def page_threshold_limit(**env):
             FROM
                 alert_mail m
             JOIN
-                test_data_all_dimensions t ON m.test_series=t.id
+                test_data_all_dimensions t ON m.tdad_id=t.id
             JOIN
                 alert_page_thresholds h on t.page_id=h.page
             WHERE

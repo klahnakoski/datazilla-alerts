@@ -81,7 +81,6 @@ def main_loop(db, settings):
     missing_ids=get_missing_ids(db, settings)
 
     for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
-
         with Timer("Process objectstore") as t:
             ## GET EVERYTHING MISSING FROM tdad (AND JOIN IN PUSHLOG)
             num=db.foreach("""
@@ -145,7 +144,7 @@ def get_missing_ids(db, settings):
         })
 
     missing_ids=Q.select(missing, field_name="test_run_id")
-    D.println(str(len(missing_ids))+" objectstore records to be processed into cube")
+    D.println("${num} objectstore records to be processed into cube", {"num":len(missing_ids)})
     return missing_ids
 
 

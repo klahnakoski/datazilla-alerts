@@ -84,7 +84,7 @@ class test_alert:
         # WE CAN SEE THEM IN THE EMAIL DELIVERED
         test_data=Map(**{
             "header":
-                ("id",      "status",  "create_time", "last_updated", "last_sent",        "test_series", "reason",    "details",                 "severity",         "confidence",        "solution"),
+                ("id",      "status",  "create_time", "last_updated", "last_sent",        "tdad_id", "reason",    "details",                 "severity",         "confidence",        "solution"),
             "data":[
                 #TEST last_sent IS NOT TOO YOUNG
                 (self.uid+0,"new",      self.far_past, self.far_past,  self.recent_past, self.series,   self.reason, CNV.object2JSON({"id":0, "expect":"fail"}),  self.high_severity, self.high_confidence, None),

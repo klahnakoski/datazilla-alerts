@@ -14,13 +14,12 @@ use ekyle_objectstore_1;;
 
 DROP TABLE IF EXISTS objectstore2;;
 CREATE TABLE objectstore2 (
-	id INTEGER NOT NULL,
+	id INTEGER UNIQUE KEY NOT NULL,
 	test_run_id INTEGER PRIMARY KEY NOT NULL,
 	date_loaded int(11) NOT NULL,
 	revision VARCHAR(12),
 	branch VARCHAR(40),
 	json_blob mediumblob,
-	KEY objectstore_id (id),
 	KEY objectstore_revision_branch (revision, branch)
 ) DEFAULT CHARSET=utf8;;
 
@@ -44,8 +43,8 @@ FROM
 ;;
 
 
-DROP TABLE IF EXISTS objectstore_backup;;
-RENAME TABLE objectstore TO objectstore_backup;;
+DROP TABLE IF EXISTS objectstore_backup2;;
+RENAME TABLE objectstore TO objectstore_backup2;;
 RENAME TABLE objectstore2 TO objectstore;;
 
 

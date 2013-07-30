@@ -83,7 +83,7 @@ def email_send(**env):
 settings=startup.read_settings()
 
 try:
-    D.println("Running email in schema ${schema}", {"schema":settings.database.schema})
+    D.println("Running email using schema ${schema}", {"schema":settings.database.schema})
     with DB(settings.database) as db:
         email_send(
             db=db,
