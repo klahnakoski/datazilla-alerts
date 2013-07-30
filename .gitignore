@@ -1,5 +1,5 @@
+*.log
 *.pyc
 *settings.json
-raw_json_blobs.tab
-good_talos.tab
+*.tab
 talos_summary*
