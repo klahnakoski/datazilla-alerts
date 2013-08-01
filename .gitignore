@@ -1,4 +1,5 @@
 *.log
+*.log.*
 *.pyc
 *settings.json
 *.tab
