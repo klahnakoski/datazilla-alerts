@@ -15,7 +15,7 @@ use ekyle_objectstore_1;;
 DROP TABLE IF EXISTS objectstore2;;
 CREATE TABLE objectstore2 (
 	id INTEGER UNIQUE KEY NOT NULL,
-	test_run_id INTEGER PRIMARY KEY NOT NULL,
+	test_run_id INTEGER UNIQUE KEY NULL,
 	date_loaded int(11) NOT NULL,
 	revision VARCHAR(12),
 	branch VARCHAR(40),

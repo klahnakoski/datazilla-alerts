@@ -8,7 +8,6 @@
 import functools
 
 from math import floor
-import threading
 import requests
 from util.basic import nvl
 from util.debug import D
@@ -18,15 +17,16 @@ from util.timer import Timer
 from util.db import DB, SQL
 from util.cnv import CNV
 from util.multithread import Multithread
+from util.threads import Lock
 
 
-db_lock=threading.Lock()
+db_lock=Lock("db lock")
 
 
 def etl(name, db, settings, id):
     try:
         with Timer(str(name)+" read from prod "+str(id)):
-            content = requests.get(settings.production.blob_url + "/" + str(id)).content
+            content = requests.get(settings.production.blob_url + "/" + str(id), timeout=30).content
             if content.startswith("Id not found:"):
                 D.println("Id not found: "+str(id))
                 return False
@@ -45,7 +45,7 @@ def etl(name, db, settings, id):
                 db.flush()
                 return True
     except Exception, e:
-        D.warning("Can not load "+str(id), e)
+        D.warning("Can not load ${id}", {"id":id}, e)
         return False
 
 
@@ -134,15 +134,17 @@ def extract_from_datazilla_using_id(settings):
                         if settings.num_not_found>100:
                             many.stop()
                             break
+#                    else:
+#                        settings.num_not_found=0
         except (KeyboardInterrupt, SystemExit):
             D.println("Shutdow Started, please be patient")
         except Exception, e:
             D.error("Unusual shutdown!", e)
-
+        D.println("Done")
 
 
 settings=startup.read_settings()
 settings.production.threads=nvl(settings.production.threads, 1)
-D.settings(settings.debug)
+D.start(settings.debug)
 extract_from_datazilla_using_id(settings)
-
+D.stop()

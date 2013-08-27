@@ -11,7 +11,7 @@ from datetime import datetime
 from util.debug import D
 
 #if there are emails, then send them
-from util.map import Map
+from util.struct import Struct
 from util.db import DB
 from util.emailer import Emailer
 from util.startup import startup
@@ -19,7 +19,7 @@ from util.startup import startup
 
 
 def email_send(**env):
-    env=Map(**env)
+    env=Struct(**env)
     assert env.db is not None               #EXPECTING db WITH EMAIL SCHEMA
     assert env.emailer is not None          #EXPECTING SMTP CONNECTION INFO
 

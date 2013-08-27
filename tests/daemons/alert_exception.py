@@ -10,7 +10,7 @@ from datazilla.daemons.alert_exception import exception_point, REASON, MIN_CONFI
 from util.cnv import CNV
 from util.db import SQL, DB
 from util.debug import D
-from util.map import Map
+from util.struct import Struct
 from util.query import Q
 from util.stats import closeEnough
 from tests.util.testing import settings, make_test_database
@@ -170,7 +170,7 @@ class test_alert_exception:
 
 
 ## DEFINE SOME TEST DATA
-test_data1=Map(**{
+test_data1=Struct(**{
     "header":("date", "count", "mean-std", "mean", "mean+std", "reject"),
     "rows":[
         ("2013-Apr-05 13:55:00", "23", "655.048136994614", "668.5652173913044", "682.0822977879948"),
@@ -195,7 +195,7 @@ test_data1=Map(**{
     ]
 })
 test_data1=[
-    Map(**{
+    Struct(**{
         "timestamp":CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
         "datetime":CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
         "count":int(t.count),
@@ -208,7 +208,7 @@ test_data1=[
 
 
 
-test_data2=Map(**{
+test_data2=Struct(**{
     "header":("timestamp", "mean", "std", "h0_rejected", "count"),
     "rows":[
         (1366388389, 295.36, 32.89741631, 0, 25),
@@ -228,7 +228,7 @@ test_data2=Map(**{
     ]
 })
 test_data2=[
-    Map(**{
+    Struct(**{
         "timestamp":t.timestamp,
         "datetime":CNV.unix2datetime(t.timestamp),
         "count":t.count,

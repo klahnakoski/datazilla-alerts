@@ -8,7 +8,7 @@ from datazilla.daemons.alert_threshold import page_threshold_limit, REASON
 from util.cnv import CNV
 from util.db import SQL, DB
 from util.debug import D
-from util.map import Map
+from util.struct import Struct
 from tests.util.testing import settings, make_test_database
 
 
@@ -238,7 +238,7 @@ class test_alert_threshold:
 
 
 ## DEFINE SOME TEST DATA
-test_data=Map(**{
+test_data=Struct(**{
     "header":("date", "count", "mean-std", "mean", "mean+std"),
     "rows":[
         ("2013-Apr-05 13:53:00", "23", "458.4859477694967", "473.30434782608694", "488.1227478826772"),

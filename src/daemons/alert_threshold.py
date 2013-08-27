@@ -13,7 +13,7 @@ from util.basic import nvl
 from util.cnv import CNV
 from util.db import SQL
 from util.debug import D
-from util.map import Map
+from util.struct import Struct
 
 
 
@@ -24,7 +24,7 @@ LOOK_BACK=timedelta(weeks=4)
 #may prove slightly useful also!
 ##point out any pages that are breaking human-set threshold limits
 def page_threshold_limit(**env):
-    env=Map(**env)
+    env=Struct(**env)
     assert env.db is not None
     
     REASON="page_threshold_limit"     #name of the reason in alert_reason

@@ -21,22 +21,22 @@ from util.basic import nvl
 from util.cnv import CNV
 from util.db import SQL
 from util.debug import D
-from util.map import Map
+from util.struct import Struct
 from util.query import Q
 from util.stats import Z_moment, stats2z_moment, Stats, z_moment2stats
 from util.db import DB
 from util.startup import startup
 
 
-SEVERITY = 0.9
+SEVERITY = 0.6              #THERE ARE MANY FALSE POSITIVES
 MIN_CONFIDENCE = 0.999
 REASON="exception_point"     #name of the reason in alert_reason
-LOOK_BACK=timedelta(days=38)
+LOOK_BACK=timedelta(days=41)
 WINDOW_SIZE=10
 
 def exception_point (**env):
 ##find single points that deviate from the trend
-    env=Map(**env)
+    env=Struct(**env)
     assert env.db is not None
     debug=env.debug
     db=env.db
@@ -126,10 +126,10 @@ def exception_point (**env):
                         v.confidence=confidence
                         v.push_date_min=values[max(0, count-WINDOW_SIZE)].push_date #FOR VISUALIZATION 
 
-                        if v.branch=="Mozilla-Inbound" and v.revision=="6409ddd66eaa" and v.page_url=="page.renren.com":
+                        if count>10 and v.branch=="Mozilla-Inbound" and v.revision=='e92898159905':
                             D.println("")
 
-                        alerts.append(Map(
+                        alerts.append(Struct(
                             status="new",
                             create_time=datetime.utcnow(),
                             tdad_id=v.tdad_id,

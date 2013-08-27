@@ -11,7 +11,7 @@ from datazilla.daemons.alert import send_alerts
 from util.cnv import CNV
 from util.db import DB
 from util.debug import D
-from util.map import Map
+from util.struct import Struct
 from util.maths import bayesian_add
 from util.query import Q
 from util.strings import between
@@ -70,7 +70,7 @@ class test_alert:
 
 
         #MAKE SOME TEST DATA (AND GET ID)
-        all_dim=Map(**{
+        all_dim=Struct(**{
             "header":
                 ("id","test_run_id","product_id","operating_system_id","test_id","page_id","date_received","revision","product","branch","branch_version","operating_system_name","operating_system_version","processor","build_type","machine_name","pushlog_id","push_date","test_name","page_url","mean","std","h0_rejected","p","n_replicates","fdr","trend_mean","trend_std","test_evaluation","status"),
             "data":[
@@ -82,7 +82,7 @@ class test_alert:
 
         # WE INJECT THE EXPECTED TEST RESULTS RIGHT INTO THE DETAILS, THAT WAY
         # WE CAN SEE THEM IN THE EMAIL DELIVERED
-        test_data=Map(**{
+        test_data=Struct(**{
             "header":
                 ("id",      "status",  "create_time", "last_updated", "last_sent",        "tdad_id", "reason",    "details",                 "severity",         "confidence",        "solution"),
             "data":[

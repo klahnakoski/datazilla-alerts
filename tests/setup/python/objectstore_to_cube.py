@@ -16,6 +16,7 @@ def objectstore_to_cube(db, r):
         json=CNV.JSON2object(r.json_blob)
 
         if len(json.results.keys())==0:
+            #DUMMY RECORD SO FUTURE QUERIES KNOW THIS objectstore HAS BEEN PROCESSED
             db.insert("test_data_all_dimensions", {
                 "test_run_id":r.test_run_id,
                 "product_id":0,
@@ -150,12 +151,11 @@ def get_missing_ids(db, settings):
 
 
 settings=startup.read_settings()
-
+D.start(settings.debug)
 with DB(settings.database) as db:
 #    db.debug=settings.debug is not None
     main_loop(db, settings)
-
-
+D.stop()
 
 
 

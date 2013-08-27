@@ -10,7 +10,7 @@
 from datetime import datetime, timedelta
 from string import Template
 from util.cnv import CNV
-from util.map import Map
+from util.struct import Struct
 from util.maths import bayesian_add
 from util.debug import D
 from util.db import DB
@@ -46,7 +46,7 @@ EPSILON = 0.0001
 
 
 def send_alerts(**env):
-    env=Map(**env)
+    env=Struct(**env)
     assert env.db is not None
 
     db = env.db
