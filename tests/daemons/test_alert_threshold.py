@@ -4,12 +4,12 @@
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
 from datetime import datetime, timedelta
-from datazilla.daemons.alert_threshold import page_threshold_limit, REASON
+from daemons.page_threshold_limit import page_threshold_limit, REASON
 from util.cnv import CNV
 from util.db import SQL, DB
 from util.debug import D
 from util.struct import Struct
-from tests.util.testing import settings, make_test_database
+from util.testing import settings, make_test_database
 
 
 

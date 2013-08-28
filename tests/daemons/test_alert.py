@@ -4,22 +4,36 @@
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
 
+import os
+import sys
+
+sys.stdout.write("pythonpath: "+os.environ['PYTHONPATH']+"\n")
+sys.stdout.write("cwd: "+os.getcwd()+"\n")
+sys.stdout.write("path: "+str(os.path)+"\n")
+
+#os.chdir("C:\\Users\\klahnakoski\\git\\datazilla-alerts\\pyLibrary")
+#sys.stdout.write(os.environ['PYTHONPATH']+"\n")
+#sys.stdout.write(os.getcwd()+"\n")
+
+#.\pyLibrary;.\src\python;.\tests
+#C:\Users\klahnakoski\git\datazilla-alerts
+
+from daemons.alert import send_alerts
 from datetime import datetime, timedelta
 from string import Template
-from datazilla import daemons
-from datazilla.daemons.alert import send_alerts
 from util.cnv import CNV
 from util.db import DB
 from util.debug import D
+from util.startup import startup
 from util.struct import Struct
-from util.maths import bayesian_add
 from util.query import Q
+from util.maths import Math
 from util.strings import between
-from tests.util.testing import settings, make_test_database
+from util.testing import settings, make_test_database
 
 
 class test_alert:
-# datazilla.daemons.alert.py IS A *FUNCTION* WITH DOMAIN alert_* AND CODOMAIN email_*
+# datazilla.daemons.test_alert.py IS A *FUNCTION* WITH DOMAIN alert_* AND CODOMAIN email_*
 # self.test_data HAS THE DOMAIN VALUES TO TEST
 #
 # self.test_data[].details INCLUDES THE pass/fail INDICATION SO THE VERIFICATION
@@ -38,7 +52,7 @@ class test_alert:
 
         self.high_severity=0.7
         self.high_confidence=0.9
-        self.important=bayesian_add(self.high_severity, self.high_confidence)
+        self.important=Math.bayesian_add(self.high_severity, self.high_confidence)
         self.low_severity=0.5
         self.low_confidence=0.7
 
@@ -208,9 +222,23 @@ class test_alert:
         return emails
 
 
-make_test_database(settings)
 
-with DB(settings.database) as db:
-    test_alert(db).test_send_zero_alerts()
-    test_alert(db).test_send_one_alert()
-    test_alert(db).test_send_many_alerts()
+def setup_module(module):
+    settings=startup.read_settings()
+    D.start(settings.debug)
+    make_test_database(settings)
+
+def teardown_module(module):
+    D.stop()
+
+def test_1():
+    with DB(settings.database) as db:
+        test_alert(db).test_send_zero_alerts()
+
+def test_2():
+    with DB(settings.database) as db:
+        test_alert(db).test_send_one_alert()
+
+def test_3():
+    with DB(settings.database) as db:
+        test_alert(db).test_send_many_alerts()

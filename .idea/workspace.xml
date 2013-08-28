@@ -5,15 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyLibrary" afterPath="$PROJECT_DIR$/pyLibrary" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/alert.py" afterPath="$PROJECT_DIR$/src/daemons/alert.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/alert_exception.py" afterPath="$PROJECT_DIR$/src/daemons/alert_exception.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/alert_revision.py" afterPath="$PROJECT_DIR$/src/daemons/alert_revision.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/daemons/page_threshold_limit.py" afterPath="$PROJECT_DIR$/src/daemons/page_threshold_limit.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/migration/v1.1 alerts.sql" afterPath="$PROJECT_DIR$/src/migration/v1.1 alerts.sql" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/alert.py" afterPath="$PROJECT_DIR$/tests/daemons/alert.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/alert_exception.py" afterPath="$PROJECT_DIR$/tests/daemons/alert_exception.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/alert_threshold.py" afterPath="$PROJECT_DIR$/tests/daemons/alert_threshold.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/daemons/test_alert.py" afterPath="$PROJECT_DIR$/tests/daemons/test_alert.py" />
     </list>
     <ignored path="datazilla-alerts.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -89,26 +81,17 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
+      <file leaf-file-name="alert_exception.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/python/daemons/alert_exception.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="80" column="27" selection-start="2518" selection-end="2518" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
       <file leaf-file-name="alert_revision.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/daemons/alert_revision.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="126" column="18" selection-start="3861" selection-end="3861" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="query.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyLibrary/util/query.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="403" column="0" selection-start="11067" selection-end="11067" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="strings.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyLibrary/util/strings.py">
+        <entry file="file://$PROJECT_DIR$/src/python/daemons/alert_revision.py">
           <provider selected="true" editor-type-id="text-editor">
             <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
               <folding />
@@ -116,64 +99,64 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="README.md" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/README.md">
+      <file leaf-file-name="multithread.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pyLibrary/util/multithread.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="8" column="35" selection-start="126" selection-end="126" vertical-scroll-proportion="0.0">
+            <state line="29" column="11" selection-start="1053" selection-end="1053" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="README.md" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyLibrary/README.md">
+      <file leaf-file-name="debug.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="requirements.txt" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/requirements.txt">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="1" column="7" selection-start="23" selection-end="23" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="page_threshold_limit.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/daemons/page_threshold_limit.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="22" column="17" selection-start="834" selection-end="834" vertical-scroll-proportion="0.0">
+            <state line="81" column="58" selection-start="2587" selection-end="2598" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
       <file leaf-file-name="alert.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tests/daemons/alert.py">
+        <entry file="file://$PROJECT_DIR$/src/python/daemons/alert.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+            <state line="179" column="12" selection-start="6564" selection-end="6564" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="alert_exception.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/daemons/alert_exception.py">
+      <file leaf-file-name="alerts.bat" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/scripts/alerts.bat">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="224" column="48" selection-start="7940" selection-end="7940" vertical-scroll-proportion="0.0">
+            <state line="5" column="23" selection-start="140" selection-end="140" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="alert.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/daemons/alert.py">
+      <file leaf-file-name="v1.1 alerts.sql" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/python/migration/v1.1 alerts.sql">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="85" column="14" selection-start="3640" selection-end="3640" vertical-scroll-proportion="0.5028517">
+            <state line="78" column="16" selection-start="1863" selection-end="1863" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="alert_settings.json" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/alert_settings.json">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="16" column="32" selection-start="432" selection-end="432" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="test_alert.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/tests/daemons/test_alert.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="12" column="0" selection-start="538" selection-end="538" vertical-scroll-proportion="0.016601562">
               <folding />
             </state>
           </provider>
@@ -194,22 +177,22 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/tests/daemons/alert_threshold.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/README.md" />
-        <option value="$PROJECT_DIR$/pyLibrary/requirements.txt" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/debug.py" />
-        <option value="$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/db.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/strings.py" />
-        <option value="$PROJECT_DIR$/../pyLibrary/util/timer.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/cnv.py" />
-        <option value="$PROJECT_DIR$/src/migration/v1.1 alerts.sql" />
-        <option value="$PROJECT_DIR$/alert.log" />
-        <option value="$PROJECT_DIR$/requirements.txt" />
-        <option value="$PROJECT_DIR$/src/daemons/alert_exception.py" />
-        <option value="$PROJECT_DIR$/pyLibrary/util/query.py" />
         <option value="$PROJECT_DIR$/src/daemons/alert_revision.py" />
         <option value="$PROJECT_DIR$/src/daemons/alert.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/alert_revision.py" />
+        <option value="$PROJECT_DIR$/tests/util/testing.py" />
+        <option value="$PROJECT_DIR$/tests/util/emailer.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/alert_exception.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/test_alert_exception.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/test_alert_threshold.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/test_email_send.py" />
+        <option value="$PROJECT_DIR$/src/python/daemons/alert_exception.py" />
+        <option value="$PROJECT_DIR$/settings.json" />
+        <option value="$PROJECT_DIR$/src/scripts/run_tests.bat" />
+        <option value="$PROJECT_DIR$/src/scripts/alerts.bat" />
+        <option value="$PROJECT_DIR$/src/python/daemons/alert.py" />
+        <option value="$PROJECT_DIR$/src/python/tests/daemons/test_alert.py" />
+        <option value="$PROJECT_DIR$/tests/daemons/test_alert.py" />
       </list>
     </option>
   </component>
@@ -246,7 +229,6 @@
       <sortByType />
     </navigator>
     <panes>
-      <pane id="Favorites" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -279,11 +261,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="setup" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="sql" />
+              <option name="myItemId" value="util" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -304,10 +282,6 @@
               <option name="myItemId" value="setup" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="scripts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
           </PATH>
           <PATH>
             <PATH_ELEMENT>
@@ -323,7 +297,35 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="setup" />
+              <option name="myItemId" value="daemons" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -341,111 +343,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="tests" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="daemons" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="migration" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="daemons" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="scripts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="scripts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="sql" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value="pyLibrary" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="datazilla-alerts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyLibrary" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="util" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -469,8 +367,9 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
       <pane id="Scope" />
+      <pane id="PackagesPane" />
+      <pane id="Favorites" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -492,13 +391,14 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\klahnakoski\git\datazilla-alerts\src\scripts" />
+      <recent name="C:\Users\klahnakoski\git\datazilla-alerts" />
       <recent name="C:\Users\klahnakoski\git\datazilla-alerts\pyLibrary\tests\util" />
       <recent name="C:\Users\klahnakoski\git\datazilla-alerts\scripts" />
-      <recent name="C:\Users\klahnakoski\git\datazilla-alerts" />
       <recent name="C:\Users\klahnakoski\git\datazilla-alerts\datazilla\migration" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.prod_to_objectstore">
+  <component name="RunManager" selected="py.test.tests">
     <configuration default="true" type="PythonUnitTestConfigurationType" factoryName="Python's unittest">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -545,6 +445,23 @@
       <module name="datazilla-alerts" />
       <option name="SCRIPT_NAME" value="" />
       <option name="PARAMETERS" value="" />
+      <method>
+        <option name="AntTarget" enabled="false" />
+        <option name="BuildArtifacts" enabled="false" />
+        <option name="Make" enabled="true" />
+        <option name="Maven.BeforeRunTask" enabled="false" />
+      </method>
+    </configuration>
+    <configuration default="true" type="py.test" factoryName="py.test">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <module name="datazilla-alerts" />
+      <option name="testToRun" value="" />
+      <option name="keywords" value="" />
       <method>
         <option name="AntTarget" enabled="false" />
         <option name="BuildArtifacts" enabled="false" />
@@ -728,12 +645,29 @@
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
       <method />
     </configuration>
-    <list size="5">
+    <configuration default="false" name="tests" type="py.test" factoryName="py.test">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONPATH" value=".\src\pyLibrary;.\src\python" />
+      </envs>
+      <option name="SDK_HOME" value="C:/Python27/python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <module name="datazilla-alerts" />
+      <option name="testToRun" value="tests" />
+      <option name="keywords" value="" />
+      <RunnerSettings RunnerId="PyDebugRunner" />
+      <ConfigurationWrapper RunnerId="PyDebugRunner" />
+      <method />
+    </configuration>
+    <list size="6">
       <item index="0" class="java.lang.String" itemvalue="Python.prod_to_objectstore" />
       <item index="1" class="java.lang.String" itemvalue="Python.alert_exception" />
       <item index="2" class="java.lang.String" itemvalue="Python.objectstore_to_cube" />
       <item index="3" class="java.lang.String" itemvalue="Python.alert" />
       <item index="4" class="java.lang.String" itemvalue="Python.email" />
+      <item index="5" class="java.lang.String" itemvalue="py.test.tests" />
     </list>
     <configuration name="&lt;template&gt;" type="WebApp" default="true" selected="false">
       <Host>localhost</Host>
@@ -760,25 +694,25 @@
     <myIsUseDefaultProxy>false</myIsUseDefaultProxy>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1625" y="-897" width="1833" height="1200" extended-state="0" />
+    <frame x="1614" y="-891" width="1677" height="1172" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3956044" sideWeight="0.9994497" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4027484" sideWeight="0.9994571" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32142857" sideWeight="0.9994571" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Script Monkey" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32881173" sideWeight="0.57949793" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32835025" sideWeight="0.6046931" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="JSON Formatter" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32740587" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2079096" sideWeight="0.6043956" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18091698" sideWeight="0.6785714" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.39530686" sideWeight="0.9994497" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
@@ -864,10 +798,6 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/pyLibrary/util/db.py</url>
-          <line>105</line>
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/pyLibrary/util/db.py</url>
           <line>142</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -902,96 +832,81 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/../pyLibrary/util/timer.py">
+    <entry file="file://$PROJECT_DIR$/tests/daemons/test_email_send.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="15" column="38" selection-start="371" selection-end="371" vertical-scroll-proportion="0.5448718" />
+        <state line="140" column="0" selection-start="4542" selection-end="4542" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tests/setup/python/prod_to_objectstore.py">
+    <entry file="file://$PROJECT_DIR$/tests/setup/scripts/db_load.bat">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="42" selection-start="1339" selection-end="1339" vertical-scroll-proportion="0.0" />
+        <state line="0" column="38" selection-start="38" selection-end="38" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../pyLibrary/util/cnv.py">
+    <entry file="file://$PROJECT_DIR$/tests/setup/scripts/objectstore_to_cube.bat">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="6" selection-start="708" selection-end="708" vertical-scroll-proportion="0.33254716" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/cnv.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="72" column="0" selection-start="2582" selection-end="2582" vertical-scroll-proportion="0.48139533">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/migration/v1.1 alerts.sql">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="141" column="0" selection-start="3500" selection-end="3500" vertical-scroll-proportion="0.7161716" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="8" column="35" selection-start="126" selection-end="126" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/README.md">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/requirements.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1" column="7" selection-start="23" selection-end="23" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests/daemons/alert.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/daemons/page_threshold_limit.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="22" column="17" selection-start="834" selection-end="834" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/daemons/alert_exception.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="224" column="48" selection-start="7940" selection-end="7940" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
+        <state line="2" column="0" selection-start="2" selection-end="49" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/pyLibrary/util/maths.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="15" column="20" selection-start="610" selection-end="622" vertical-scroll-proportion="0.34228188">
+        <state line="15" column="8" selection-start="610" selection-end="610" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/settings.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="19" column="35" selection-start="435" selection-end="435" vertical-scroll-proportion="0.5023328" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/scripts/run_tests.bat">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="2" column="10" selection-start="39" selection-end="39" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/python/daemons/alert_exception.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="80" column="27" selection-start="2518" selection-end="2518" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/python/daemons/alert_revision.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyLibrary/util/multithread.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="29" column="11" selection-start="1053" selection-end="1053" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyLibrary/util/debug.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="81" column="58" selection-start="2587" selection-end="2598" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/strings.py">
+    <entry file="file://$PROJECT_DIR$/src/python/daemons/alert.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
+        <state line="179" column="12" selection-start="6564" selection-end="6564" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyLibrary/util/query.py">
+    <entry file="file://$PROJECT_DIR$/src/scripts/alerts.bat">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="403" column="0" selection-start="11067" selection-end="11067" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
+        <state line="5" column="23" selection-start="140" selection-end="140" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/daemons/alert_revision.py">
+    <entry file="file://$PROJECT_DIR$/src/python/migration/v1.1 alerts.sql">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="126" column="18" selection-start="3861" selection-end="3861" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
+        <state line="78" column="16" selection-start="1863" selection-end="1863" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/daemons/alert.py">
+    <entry file="file://$PROJECT_DIR$/alert_settings.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="85" column="14" selection-start="3640" selection-end="3640" vertical-scroll-proportion="0.5028517">
+        <state line="16" column="32" selection-start="432" selection-end="432" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/daemons/test_alert.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="12" column="0" selection-start="538" selection-end="538" vertical-scroll-proportion="0.016601562">
           <folding />
         </state>
       </provider>

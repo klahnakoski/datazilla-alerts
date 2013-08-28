@@ -304,17 +304,20 @@ def single_ttest(point, stats, min_variance=0):
 
 
 
+def main():
+    settings=startup.read_settings()
+    D.start(settings.debug)
+    try:
+        D.println("Finding exceptions in schema {{schema}}", {"schema":settings.database.schema})
 
-settings=startup.read_settings()
-D.start(settings.debug)
+        with DB(settings.database) as db:
+            alert_exception(
+                db=db,
+                debug=settings.debug is not None
+            )
+    except Exception, e:
+        D.warning("Failure to find exceptions", cause=e)
+    D.stop()
 
-try:
-    D.println("Finding exceptions in schema {{schema}}", {"schema":settings.database.schema})
 
-    with DB(settings.database) as db:
-        alert_exception(
-            db=db,
-            debug=settings.debug is not None
-        )
-except Exception, e:
-    D.warning("Failure to find exceptions", cause=e)
+main()

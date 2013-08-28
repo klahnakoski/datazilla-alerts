@@ -11,14 +11,14 @@ from datetime import datetime, timedelta
 from string import Template
 from util.cnv import CNV
 from util.struct import Struct
-from util.maths import bayesian_add
+from util.maths import Math
 from util.debug import D
 from util.db import DB
 from util.startup import startup
 
 
 
-ALERT_LIMIT = bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
+ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h2>This is for testing only.  It may be misleading.</h2><br><br>"
 #TBPL link: https://tbpl.mozilla.org/?rev=c3598b276048
 #TBPL test results:  https://tbpl.mozilla.org/?tree=Mozilla-Inbound&rev=c9429cf294af
@@ -97,7 +97,7 @@ def send_alerts(**env):
             for k,v in alert.items():
                 if k not in details:
                     details[k]=v
-            details.score=str(round(bayesian_add(alert.severity, alert.confidence)*100, 0))+"%",  #AS A PERCENT
+            details.score=str(round(Math.bayesian_add(alert.severity, alert.confidence)*100, 0))+"%",  #AS A PERCENT
             details.reason=Template(alert.description).substitute(details)
             body.append(TEMPLATE.safe_substitute(details))
         body=SEPARATOR.join(body)
@@ -177,5 +177,5 @@ if __name__ == '__main__':
     except Exception, e:
         D.warning("Failure to run alerts", cause=e)
 
-
+    D.stop()
 

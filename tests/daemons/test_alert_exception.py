@@ -5,20 +5,21 @@
 ################################################################################
 from datetime import datetime, timedelta
 from math import sqrt
-from datazilla.daemons.alert_exception import alert_exception, REASON, MIN_CONFIDENCE
+from daemons.alert_exception import alert_exception, REASON, MIN_CONFIDENCE
 
 from util.cnv import CNV
 from util.db import SQL, DB
 from util.debug import D
+from util.startup import startup
 from util.struct import Struct
 from util.query import Q
 from util.stats import closeEnough
-from tests.util.testing import settings, make_test_database
+from util.testing import make_test_database
 
 
 EXPECTED_SEVERITY=0.9
 
-class test_alert_exception:
+class test_alert_exception():
 
     def __init__(self, db):
         self.db=db
@@ -168,90 +169,99 @@ class test_alert_exception:
 
 
 
+def setup_module(module):
+    settings=startup.read_settings()
+    D.start(settings.debug)
+    make_test_database(settings)
+    module.settings=settings
 
-## DEFINE SOME TEST DATA
-test_data1=Struct(**{
-    "header":("date", "count", "mean-std", "mean", "mean+std", "reject"),
-    "rows":[
-        ("2013-Apr-05 13:55:00", "23", "655.048136994614", "668.5652173913044", "682.0822977879948"),
-        ("2013-Apr-05 13:59:00", "23", "657.8717192954238", "673.3478260869565", "688.8239328784892"),
-        ("2013-Apr-05 14:05:00", "23", "658.3247270429598", "673", "687.6752729570402"),
-        ("2013-Apr-05 14:08:00", "23", "658.5476631609771", "673.6521739130435", "688.7566846651099"),
-        ("2013-Apr-05 14:16:00", "23", "653.2311994952266", "666.1739130434783", "679.1166265917299"),
-        ("2013-Apr-05 14:26:00", "23", "659.5613845589426", "671.8260869565217", "684.0907893541009"),
-        ("2013-Apr-05 14:42:00", "23", "662.3517791831357", "677.1739130434783", "691.9960469038208"),
-        ("2013-Apr-05 15:26:00", "23", "659.8270045518033", "672", "684.1729954481967"),
-        ("2013-Apr-05 15:30:00", "23", "659.4023663187861", "674", "688.5976336812139"),
-        ("2013-Apr-05 15:32:00", "23", "652.8643631817508", "666.9565217391304", "681.0486802965099"),
-        ("2013-Apr-05 15:35:00", "23", "661.6037178485499", "675.1739130434783", "688.7441082384066"),
-        ("2013-Apr-05 15:39:00", "23", "658.0124378440726", "670.1304347826087", "682.2484317211449"),
-        ("2013-Apr-05 16:20:00", "46", "655.9645219644624", "667.4782608695652", "678.9919997746681"),
-        ("2013-Apr-05 16:30:00", "23", "660.2572506418051", "671.8695652173913", "683.4818797929775"),
-        ("2013-Apr-05 16:31:00", "23", "661.011102554583", "673.4347826086956", "685.8584626628083"),
-        ("2013-Apr-05 16:55:00", "23", "655.9407699325201", "671.304347826087", "686.6679257196539"),
-        ("2013-Apr-05 17:07:00", "23", "657.6412277100247", "667.5217391304348", "677.4022505508448"),
+
+def teardown_module(module):
+    D.stop()
+
+
+def test_1():
+    test_data1=Struct(**{
+        "header":("date", "count", "mean-std", "mean", "mean+std", "reject"),
+        "rows":[
+            ("2013-Apr-05 13:55:00", "23", "655.048136994614", "668.5652173913044", "682.0822977879948"),
+            ("2013-Apr-05 13:59:00", "23", "657.8717192954238", "673.3478260869565", "688.8239328784892"),
+            ("2013-Apr-05 14:05:00", "23", "658.3247270429598", "673", "687.6752729570402"),
+            ("2013-Apr-05 14:08:00", "23", "658.5476631609771", "673.6521739130435", "688.7566846651099"),
+            ("2013-Apr-05 14:16:00", "23", "653.2311994952266", "666.1739130434783", "679.1166265917299"),
+            ("2013-Apr-05 14:26:00", "23", "659.5613845589426", "671.8260869565217", "684.0907893541009"),
+            ("2013-Apr-05 14:42:00", "23", "662.3517791831357", "677.1739130434783", "691.9960469038208"),
+            ("2013-Apr-05 15:26:00", "23", "659.8270045518033", "672", "684.1729954481967"),
+            ("2013-Apr-05 15:30:00", "23", "659.4023663187861", "674", "688.5976336812139"),
+            ("2013-Apr-05 15:32:00", "23", "652.8643631817508", "666.9565217391304", "681.0486802965099"),
+            ("2013-Apr-05 15:35:00", "23", "661.6037178485499", "675.1739130434783", "688.7441082384066"),
+            ("2013-Apr-05 15:39:00", "23", "658.0124378440726", "670.1304347826087", "682.2484317211449"),
+            ("2013-Apr-05 16:20:00", "46", "655.9645219644624", "667.4782608695652", "678.9919997746681"),
+            ("2013-Apr-05 16:30:00", "23", "660.2572506418051", "671.8695652173913", "683.4818797929775"),
+            ("2013-Apr-05 16:31:00", "23", "661.011102554583", "673.4347826086956", "685.8584626628083"),
+            ("2013-Apr-05 16:55:00", "23", "655.9407699325201", "671.304347826087", "686.6679257196539"),
+            ("2013-Apr-05 17:07:00", "23", "657.6412277100247", "667.5217391304348", "677.4022505508448"),
 #        ("2013-Apr-05 17:12:00", "23", "598.3432138277318", "617.7391304347826", "637.1350470418334"),   # <--DIP IN DATA
-        ("2013-Apr-05 17:23:00", "23", "801.0537973113723", "822.1739130434783", "843.2940287755843", 1)  # <--SPIKE IN DATA
-    ]
-})
-test_data1=[
-    Struct(**{
-        "timestamp":CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
-        "datetime":CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
-        "count":int(t.count),
-        "mean":float(t.mean),
-        "variance":pow(float(t["mean+std"])-float(t.mean), 2),
-        "reject":t.reject
+            ("2013-Apr-05 17:23:00", "23", "801.0537973113723", "822.1739130434783", "843.2940287755843", 1)  # <--SPIKE IN DATA
+        ]
     })
-    for t in CNV.table2list(test_data1.header, test_data1.rows)
-]
-
-
-
-test_data2=Struct(**{
-    "header":("timestamp", "mean", "std", "h0_rejected", "count"),
-    "rows":[
-        (1366388389, 295.36, 32.89741631, 0, 25),
-        (1366387915, 307.92, 32.86198412, 0, 25),
-        (1366390777, 309, 41.22802445, 0, 25),
-        (1366398771, 309.24, 34.18488945, 0, 25),
-        (1366401499, 308.2, 30.36170834, 0, 25),
-        (1366412504, 192.8, 46.27634385, 1, 25),    # Should be an alert
-        (1366421699, 298.04, 29.09249617, 0, 25),
-        (1366433920, 324.52, 28.13378752, 0, 25),
-        (1366445744, 302.2, 28.19131072, 0, 25),
-        (1366455408, 369.96, 31.25363979, 0, 25),
-        (1366474119, 313.12, 33.66541252, 0, 25),
-        (1366483789, 369.96, 30.81460693, 0, 25),
-        (1366498412, 311.76, 36.02462121, 0, 25),
-        (1366507773, 291.08, 27.86562996, 0, 25)
+    test_data1=[
+        Struct(**{
+            "timestamp":CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
+            "datetime":CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
+            "count":int(t.count),
+            "mean":float(t.mean),
+            "variance":pow(float(t["mean+std"])-float(t.mean), 2),
+            "reject":t.reject
+        })
+        for t in CNV.table2list(test_data1.header, test_data1.rows)
     ]
-})
-test_data2=[
-    Struct(**{
-        "timestamp":t.timestamp,
-        "datetime":CNV.unix2datetime(t.timestamp),
-        "count":t.count,
-        "mean":t.mean,
-        "variance":pow(t.std, 2),
-        "reject":t.h0_rejected
+
+    with DB(settings.database) as db:
+        tester=test_alert_exception(db)
+        tester.test_alert_generated(test_data1)
+        db.rollback()  #REMEMBER NOTHING
+        db.begin()
+
+def test_2():
+    test_data2=Struct(**{
+        "header":("timestamp", "mean", "std", "h0_rejected", "count"),
+        "rows":[
+            (1366388389, 295.36, 32.89741631, 0, 25),
+            (1366387915, 307.92, 32.86198412, 0, 25),
+            (1366390777, 309, 41.22802445, 0, 25),
+            (1366398771, 309.24, 34.18488945, 0, 25),
+            (1366401499, 308.2, 30.36170834, 0, 25),
+            (1366412504, 192.8, 46.27634385, 1, 25),    # Should be an alert
+            (1366421699, 298.04, 29.09249617, 0, 25),
+            (1366433920, 324.52, 28.13378752, 0, 25),
+            (1366445744, 302.2, 28.19131072, 0, 25),
+            (1366455408, 369.96, 31.25363979, 0, 25),
+            (1366474119, 313.12, 33.66541252, 0, 25),
+            (1366483789, 369.96, 30.81460693, 0, 25),
+            (1366498412, 311.76, 36.02462121, 0, 25),
+            (1366507773, 291.08, 27.86562996, 0, 25)
+        ]
     })
-    for t in CNV.table2list(test_data2.header, test_data2.rows)
-]
+    test_data2=[
+        Struct(**{
+            "timestamp":t.timestamp,
+            "datetime":CNV.unix2datetime(t.timestamp),
+            "count":t.count,
+            "mean":t.mean,
+            "variance":pow(t.std, 2),
+            "reject":t.h0_rejected
+        })
+        for t in CNV.table2list(test_data2.header, test_data2.rows)
+    ]
 
 
 
+    with DB(settings.database) as db:
+        tester=test_alert_exception(db)
+        tester.test_alert_generated(test_data2)
+        db.rollback()  #REMEMBER NOTHING
+        db.begin()
 
-
-make_test_database(settings)
-
-with DB(settings.database) as db:
-    tester=test_alert_exception(db)
-    tester.test_alert_generated(test_data1)
-    db.rollback()  #REMEMBER NOTHING
-    db.begin()
-    tester=test_alert_exception(db)
-    tester.test_alert_generated(test_data2)
-
-    #ADD TEST TO DECREASE TOLERANCE AND PROVE ALERTS OR obsoleted
+#ADD TEST TO DECREASE TOLERANCE AND PROVE ALERTS OR obsoleted
 

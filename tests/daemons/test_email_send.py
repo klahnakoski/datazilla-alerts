@@ -3,11 +3,13 @@
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
-from datazilla.daemons.email_send import email_send
+from daemons.email_send import email_send
 from util.db import DB
+from util.debug import D
 from util.query import Q
-from tests.util.emailer import Emailer
-from tests.util.testing import settings, make_test_database
+from util.emailer import Emailer
+from util.startup import startup
+from util.testing import settings, make_test_database
 
 
 class test_email_send():
@@ -108,9 +110,31 @@ class test_email_send():
         to_addr=set(self.emailer.sent[0].to_addrs)
         assert to_list == to_addr
 
-make_test_database(settings)
 
-with DB(settings.database) as db:
-    test_email_send(db).test_zero_receivers()
-    test_email_send(db).test_one_receivers()
-    test_email_send(db).test_many_receivers()
+
+
+
+
+
+def setup_module(module):
+    settings=startup.read_settings()
+    D.start(settings.debug)
+    make_test_database(settings)
+    module.settings=settings
+
+def teardown_module(module):
+    D.stop()
+
+
+def test_1():
+    with DB(settings.database) as db:
+        test_email_send(db).test_zero_receivers()
+
+def test_2():
+    with DB(settings.database) as db:
+        test_email_send(db).test_one_receivers()
+
+def test_3():
+    with DB(settings.database) as db:
+        test_email_send(db).test_many_receivers()
+
