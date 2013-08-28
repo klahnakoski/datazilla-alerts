@@ -14,7 +14,7 @@ from util.debug import D
 from util.query import Q
 from util.startup import startup
 from util.timer import Timer
-from util.db import DB, SQL
+from util.db import DB
 from util.cnv import CNV
 from util.multithread import Multithread
 from util.threads import Lock
@@ -45,7 +45,7 @@ def etl(name, db, settings, id):
                 db.flush()
                 return True
     except Exception, e:
-        D.warning("Can not load ${id}", {"id":id}, e)
+        D.warning("Can not load {{id}}", {"id":id}, e)
         return False
 
 
@@ -64,7 +64,7 @@ def get_existing_ids(db):
             FROM
                 objectstore a
             WHERE
-                a.id=${min}
+                a.id={{min}}
 		UNION ALL
             SELECT
                 a.id,
@@ -75,7 +75,7 @@ def get_existing_ids(db):
                 objectstore c ON c.id=a.id-1
             WHERE
                 c.id IS NULL AND
-                a.id BETWEEN ${min} AND ${max}
+                a.id BETWEEN {{min}} AND {{max}}
 		UNION ALL
 			SELECT STRAIGHT_JOIN
                 a.id,
@@ -86,7 +86,7 @@ def get_existing_ids(db):
                 objectstore b ON b.id=a.id+1
             WHERE
                 b.id IS NULL AND
-                a.id BETWEEN ${min} AND ${max}
+                a.id BETWEEN {{min}} AND {{max}}
 		UNION ALL
 			SELECT STRAIGHT_JOIN
                 a.id,
@@ -94,7 +94,7 @@ def get_existing_ids(db):
             FROM
                 objectstore a
             WHERE
-                a.id=${max}
+                a.id={{max}}
 		) a
 		ORDER BY
 			id,

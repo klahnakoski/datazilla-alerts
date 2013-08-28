@@ -92,18 +92,18 @@ def main_loop(db, settings):
                     pl.date `push_date`,
                     json_blob
                 FROM
-                    ${objectstore}.objectstore o
+                    {{objectstore}}.objectstore o
                 LEFT JOIN
-                    ${pushlog}.changesets AS ch ON ch.revision=o.revision
+                    {{pushlog}}.changesets AS ch ON ch.revision=o.revision
                 LEFT JOIN
-                    ${pushlog}.pushlogs AS pl ON pl.id = ch.pushlog_id
+                    {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
                 LEFT JOIN
-                    ${pushlog}.branches AS br ON pl.branch_id = br.id
+                    {{pushlog}}.branches AS br ON pl.branch_id = br.id
                 LEFT JOIN
-                    ${pushlog}.branch_map AS bm ON br.name = bm.name
+                    {{pushlog}}.branch_map AS bm ON br.name = bm.name
                 WHERE
                     (bm.alt_name=o.branch OR br.name=o.branch) AND
-                    o.test_run_id IN ${values}
+                    o.test_run_id IN {{values}}
                 """, {
                     "objectstore":SQL(settings.objectstore.schema),
                     "perftest":SQL(settings.database.schema),
@@ -122,17 +122,17 @@ def get_missing_ids(db, settings):
         SELECT STRAIGHT_JOIN
             o.test_run_id
         FROM
-            ${objectstore}.objectstore o
+            {{objectstore}}.objectstore o
 		LEFT JOIN
-            ${perftest}.test_data_all_dimensions AS tdad ON tdad.test_run_id=o.test_run_id
+            {{perftest}}.test_data_all_dimensions AS tdad ON tdad.test_run_id=o.test_run_id
         LEFT JOIN
-            ${pushlog}.changesets AS ch ON ch.revision=o.revision
+            {{pushlog}}.changesets AS ch ON ch.revision=o.revision
         LEFT JOIN
-            ${pushlog}.pushlogs AS pl ON pl.id = ch.pushlog_id
+            {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
         LEFT JOIN
-            ${pushlog}.branches AS br ON pl.branch_id = br.id
+            {{pushlog}}.branches AS br ON pl.branch_id = br.id
         LEFT JOIN
-            ${pushlog}.branch_map AS bm ON br.name = bm.name
+            {{pushlog}}.branch_map AS bm ON br.name = bm.name
         WHERE
             (bm.alt_name=o.branch OR br.name=o.branch) AND
             o.test_run_id IS NOT NULL AND
@@ -145,7 +145,7 @@ def get_missing_ids(db, settings):
         })
 
     missing_ids=Q.select(missing, field_name="test_run_id")
-    D.println("${num} objectstore records to be processed into cube", {"num":len(missing_ids)})
+    D.println("{{num}} objectstore records to be processed into cube", {"num":len(missing_ids)})
     return missing_ids
 
 

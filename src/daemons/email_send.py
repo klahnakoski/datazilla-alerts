@@ -66,13 +66,13 @@ def email_send(**env):
                     html_data=email.body
                 )
 
-                db.execute("UPDATE email_content SET date_sent=${now} WHERE id=${id}",{"id":email.id, "now":datetime.utcnow()})
+                db.execute("UPDATE email_content SET date_sent={{now}} WHERE id={{id}}",{"id":email.id, "now":datetime.utcnow()})
                 num_done+=len(email.to.split(','))
             except Exception, e:
                 D.warning("Problem sending email", e)
                 not_done=1
 
-        db.execute("UPDATE email_notify SET new_mail=${not_done}", {"not_done":not_done})
+        db.execute("UPDATE email_notify SET new_mail={{not_done}}", {"not_done":not_done})
 
         D.println(str(num_done)+" emails have been sent")
     except Exception, e:
@@ -83,7 +83,7 @@ def email_send(**env):
 settings=startup.read_settings()
 
 try:
-    D.println("Running email using schema ${schema}", {"schema":settings.database.schema})
+    D.println("Running email using schema {{schema}}", {"schema":settings.database.schema})
     with DB(settings.database) as db:
         email_send(
             db=db,

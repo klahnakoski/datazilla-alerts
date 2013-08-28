@@ -100,7 +100,7 @@ m11: BEGIN
 	END IF;
 	
 	
-	DROP TABLE IF EXISTS alert_mail;
+	DROP TABLE IF EXISTS alerts;
 	DROP TABLE IF EXISTS alert_reasons;
 	DROP TABLE IF EXISTS alert_stati;
 	DROP TABLE IF EXISTS alert_listeners;
@@ -126,11 +126,17 @@ m11: BEGIN
 		null
 	);		
 	INSERT INTO alert_reasons VALUES (
-		'exception_point', 
+		'alert_exception',
 		concat(''',char(36),''{url} has performed worse then usual by ',char(36),'{stddev} standard deviations (',char(36),'{confidence})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}'
-	);		
+	);
+	INSERT INTO alert_reasons VALUES (
+		'alert_revision',
+		concat(''',char(36),''{url} has performed worse then usual by ',char(36),'{stddev} standard deviations (',char(36),'{confidence})'),
+		date_add(now(), INTERVAL -30 DAY),
+		'{"minOffset":0.999}'
+	);
 
 
 	CREATE TABLE alert_page_thresholds (
@@ -168,7 +174,7 @@ m11: BEGIN
 
 	#ALTER TABLE test_data_all_dimensions ADD UNIQUE INDEX tdad_id(id)
 	
-	CREATE TABLE alert_mail (
+	CREATE TABLE alerts (
 		id 				INTEGER NOT NULL PRIMARY KEY,
 		status	 		VARCHAR(10) NOT NULL,  ##FOR ALERT LOGIC TO MARKUP, MAYBE AS obsolete
 		create_time		DATETIME NOT NULL,		##WHEN THIS ISSUE WAS FIRST IDENTIFIED

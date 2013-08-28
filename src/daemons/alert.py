@@ -29,14 +29,14 @@ HEADER = "<h2>This is for testing only.  It may be misleading.</h2><br><br>"
 #                            "branch":v.branch,
 #                            "branch_version":v.branch_version,
 #                            "revision":v.revision
-TEMPLATE = Template("<div><h2>${score} - ${revision}</h2>${reason}<br>\n"+
-                    "On page ${page_url}<br>\n"+
-                    "<a href=\"https://tbpl.mozilla.org/?tree=${branch}&rev=${revision}\">TBPL</a><br>\n"+
-                    "<a href=\"https://hg.mozilla.org/rev/${revision}\">Mercurial</a><br>\n"+
-                    "<a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id=${bug_id}\">Bugzilla - ${bug_description}</a><br>\n"+
-                    "<a href=\"https://datazilla.mozilla.org/talos/summary/${branch}/${revision}\">Datazilla</a><br>\n"+
-                    "<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page=${page_url}&sampleMax=${push_date}000&sampleMin=${push_date_min}000&branch=${branch}\">Kyle's ES</a><br>\n"+
-                    "Raw data: ${raw_data}"+
+TEMPLATE = Template("<div><h2>{{score}} - {{revision}}</h2>{{reason}}<br>\n"+
+                    "On page {{page_url}}<br>\n"+
+                    "<a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>\n"+
+                    "<a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>\n"+
+                    "<a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>\n"+
+                    "<a href=\"https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}\">Datazilla</a><br>\n"+
+                    "<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>\n"+
+                    "Raw data: {{raw_data}}"+
                     "</div>\n")
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = timedelta(days=1)
@@ -64,7 +64,7 @@ def send_alerts(**env):
                 t.revision,
                 t.branch
             FROM
-                alert_mail a
+                alerts a
             JOIN
                 alert_reasons r on r.code=a.reason
             JOIN
@@ -73,10 +73,10 @@ def send_alerts(**env):
                 (
                     a.last_sent IS NULL OR
                     a.last_sent < a.last_updated OR
-                    a.last_sent < ${last_sent}
+                    a.last_sent < {{last_sent}}
                 ) AND
                 a.status <> 'obsolete' AND
-                bayesian_add(a.severity, a.confidence) > ${alert_limit} AND
+                bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
                 a.solution IS NULL
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC
@@ -126,7 +126,7 @@ def send_alerts(**env):
         #I HOPE I CAN SEND ARRAYS OF NUMBERS
         if len(new_alerts)>0:
             db.execute(
-                "UPDATE alert_mail SET last_sent=${time} WHERE id IN ${send_list}",
+                "UPDATE alerts SET last_sent={{time}} WHERE id IN {{send_list}}",
                 {"time":datetime.utcnow(), "send_list":[a["alert_id"] for a in new_alerts]}
             )
 
@@ -145,7 +145,7 @@ def update_h0_rejected(db, start_date):
                 tdad_id,
                 max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
             FROM
-                alert_mail
+                alerts
             GROUP BY
                 tdad_id
             ) a ON a.tdad_id=t.id
@@ -153,14 +153,21 @@ def update_h0_rejected(db, start_date):
     """)
 
 
+#ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
+#UPDATE?
+SIGNIFICANT=0.2
+def significant_difference(a, b):
+    return (1-SIGNIFICANT)<a/b or a/b<(1+SIGNIFICANT)
+
+
 
 
 if __name__ == '__main__':
     settings=startup.read_settings()
-    D.settings(settings.debug)
+    D.start(settings.debug)
 
     try:
-        D.println("Running alerts off of schema ${schema}", {"schema":settings.database.schema})
+        D.println("Running alerts off of schema {{schema}}", {"schema":settings.database.schema})
 
         with DB(settings.database) as db:
             send_alerts(
@@ -169,3 +176,6 @@ if __name__ == '__main__':
             )
     except Exception, e:
         D.warning("Failure to run alerts", cause=e)
+
+
+

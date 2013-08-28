@@ -5,7 +5,7 @@
 ################################################################################
 from datetime import datetime, timedelta
 from math import sqrt
-from datazilla.daemons.alert_exception import exception_point, REASON, MIN_CONFIDENCE
+from datazilla.daemons.alert_exception import alert_exception, REASON, MIN_CONFIDENCE
 
 from util.cnv import CNV
 from util.db import SQL, DB
@@ -29,7 +29,7 @@ class test_alert_exception:
     def test_alert_generated(self, test_data):
         self._setup(test_data)
 
-        exception_point (
+        alert_exception (
             db=self.db,
             debug=True
         )
@@ -46,9 +46,9 @@ class test_alert_exception:
                 severity,
                 confidence
             FROM
-                alert_mail
+                alerts
             WHERE
-                reason=${reason}
+                reason={{reason}}
             """, {
                 "reason":REASON
         })
@@ -60,7 +60,7 @@ class test_alert_exception:
 
         #VERIFY last_run HAS BEEEN UPDATED
         last_run=self.db.query(
-            "SELECT last_run FROM alert_reasons WHERE code=${type}",
+            "SELECT last_run FROM alert_reasons WHERE code={{type}}",
             {"type":REASON}
         )[0].last_run
         expected_run_after=datetime.utcnow()+timedelta(minutes=-1)
@@ -76,9 +76,9 @@ class test_alert_exception:
             FROM
                 test_data_all_dimensions t
             JOIN
-                alert_mail a ON a.tdad_id=t.id
+                alerts a ON a.tdad_id=t.id
             WHERE
-                a.id=${alert_id}
+                a.id={{alert_id}}
             """,
             {"alert_id":alert[0].id}
         )
@@ -100,12 +100,12 @@ class test_alert_exception:
             FROM
                 alert_reasons
             WHERE
-                code=${reason}
+                code={{reason}}
             """,
             {"reason":REASON}
         )[0].num
         if exists==0:
-            D.error("Expecting the database to have an alert_reason=${reason}", {"reason":REASON})
+            D.error("Expecting the database to have an alert_reason={{reason}}", {"reason":REASON})
 
         ## MAKE A 'PAGE' TO TEST
         self.db.execute("DELETE FROM pages")
@@ -116,7 +116,7 @@ class test_alert_exception:
         self.page_id=self.db.query("SELECT id FROM pages")[0].id
 
         ## ENSURE THERE ARE NO ALERTS IN DB
-        self.db.execute("DELETE FROM alert_mail WHERE reason=${reason}", {"reason":REASON})
+        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason":REASON})
         self.insert_test_results(test_data)
 
 

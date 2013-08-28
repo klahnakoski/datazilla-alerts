@@ -59,11 +59,11 @@ class test_alert:
 
 
         #MAKE A REASON FOR USE IN THIS TESTING
-        self.db.execute("DELETE FROM alert_mail WHERE reason=${reason}", {"reason":self.reason})
-        self.db.execute("DELETE FROM alert_reasons WHERE code=${reason}", {"reason":self.reason})
+        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason":self.reason})
+        self.db.execute("DELETE FROM alert_reasons WHERE code={{reason}}", {"reason":self.reason})
         self.db.insert("alert_reasons", {
             "code":self.reason,
-            "description":">>>>${id}<<<<",
+            "description":">>>>{{id}}<<<<",
             "config":None,
             "last_run":self.now-timedelta(days=1)
         })
@@ -104,7 +104,7 @@ class test_alert:
         })
 
         self.test_data=CNV.table2list(test_data.header, test_data.data)
-        self.db.insert_list("alert_mail", self.test_data)
+        self.db.insert_list("alerts", self.test_data)
 
 
 
@@ -157,10 +157,10 @@ class test_alert:
                 SELECT
                     id
                 FROM
-                    alert_mail
+                    alerts
                 WHERE
-                    reason=${reason} AND
-                    last_sent>=${send_time}
+                    reason={{reason}} AND
+                    last_sent>={{send_time}}
             """, {
                 "reason":self.reason,
                 "send_time":self.now
@@ -168,7 +168,7 @@ class test_alert:
             expected_marked=set([d.id for d in self.test_data if CNV.JSON2object(d.details).expect=='pass'])
             actual_marked=set(Q.select(alert_state, "id"))
             assert expected_marked == actual_marked, Template(
-                "Expecting only id in ${expected}, but instead got ${actual}").substitute(
+                "Expecting only id in {{expected}}, but instead got {{actual}}").substitute(
                     {"expected":str(expected_marked),
                      "actual":str(actual_marked)
                 })

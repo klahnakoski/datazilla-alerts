@@ -34,7 +34,7 @@ def page_threshold_limit(**env):
 
     try:
         #CALCULATE HOW FAR BACK TO LOOK
-        lasttime = db.query("SELECT last_run, description FROM alert_reasons WHERE code=${type}", {"type":REASON})[0]
+        lasttime = db.query("SELECT last_run, description FROM alert_reasons WHERE code={{type}}", {"type":REASON})[0]
         lasttime = nvl(lasttime.last_run, datetime.utcnow())
         min_date=lasttime+LOOK_BACK
 
@@ -56,10 +56,10 @@ def page_threshold_limit(**env):
             JOIN
                 test_data_all_dimensions t ON t.page_id=h.page
             LEFT JOIN
-                alert_mail m on m.tdad_id=t.test_run_id AND m.reason=${type}
+                alerts m on m.tdad_id=t.test_run_id AND m.reason={{type}}
             WHERE
                 h.threshold<t.mean AND
-                t.push_date>${min_date} AND
+                t.push_date>{{min_date}} AND
                 (m.id IS NULL OR m.status='obsolete')
             """,
             {"type":REASON, "min_date":min_date}
@@ -83,11 +83,11 @@ def page_threshold_limit(**env):
                                     # FOR NOW WE KEEP IT SIMPLE
             }
 
-            db.insert("alert_mail", alert)
+            db.insert("alerts", alert)
 
         for page in pages:
             if page.alert_id is None: break
-            db.update("alert_mail", None)  #ERROR FOR NOW
+            db.update("alerts", None)  #ERROR FOR NOW
 
 
         #OBSOLETE THE ALERTS THAT SHOULD NO LONGER GET SENT
@@ -95,15 +95,15 @@ def page_threshold_limit(**env):
             SELECT
                 m.id
             FROM
-                alert_mail m
+                alerts m
             JOIN
                 test_data_all_dimensions t ON m.tdad_id=t.id
             JOIN
                 alert_page_thresholds h on t.page_id=h.page
             WHERE
-                m.reason=${reason} AND
+                m.reason={{reason}} AND
                 h.threshold>=t.mean AND
-                t.push_date>${time}
+                t.push_date>{{time}}
             """,
             {
                 "reason":REASON,
@@ -113,10 +113,10 @@ def page_threshold_limit(**env):
         obsolete = [o["id"] for o in obsolete]
 
         if len(obsolete)>0:
-            db.execute("UPDATE alert_mail SET status='obsolete' WHERE id IN ${list}", {"list":obsolete})
+            db.execute("UPDATE alerts SET status='obsolete' WHERE id IN {{list}}", {"list":obsolete})
 
         db.execute(
-            "UPDATE alert_reasons SET last_run=${now} WHERE code=${reason}",
+            "UPDATE alert_reasons SET last_run={{now}} WHERE code={{reason}}",
             {"now":datetime.utcnow(), "reason":REASON}
         )
 

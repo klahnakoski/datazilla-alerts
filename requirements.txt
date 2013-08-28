@@ -1,5 +1,5 @@
 requests==1.2.3
-MySQL-python
+pymysql
 numpy
 scipy
 python-dateutil

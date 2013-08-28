@@ -16,7 +16,7 @@ from scipy import stats
 scipy.stats=stats
 
 from util.timer import Timer
-from daemons.alert import update_h0_rejected
+from daemons.alert import update_h0_rejected, significant_difference
 from util.basic import nvl
 from util.cnv import CNV
 from util.db import SQL
@@ -29,12 +29,12 @@ from util.startup import startup
 
 
 SEVERITY = 0.6              #THERE ARE MANY FALSE POSITIVES
-MIN_CONFIDENCE = 0.999
-REASON="exception_point"     #name of the reason in alert_reason
+MIN_CONFIDENCE = 0.99
+REASON="alert_exception"     #name of the reason in alert_reason
 LOOK_BACK=timedelta(days=41)
 WINDOW_SIZE=10
 
-def exception_point (**env):
+def alert_exception (**env):
 ##find single points that deviate from the trend
     env=Struct(**env)
     assert env.db is not None
@@ -72,7 +72,7 @@ def exception_point (**env):
             test_data_all_dimensions t
         WHERE
             test_name="tp5o" AND
-            coalesce(push_date, date_received)>unix_timestamp(${begin_time}) AND
+            coalesce(push_date, date_received)>unix_timestamp({{begin_time}}) AND
             n_replicates IS NOT NULL
         ORDER BY   #THE ONLY IMPORTANT ORDERING IS THE push_date, THE REST JUST CLUSTER THE RESULTS
             test_name,
@@ -90,7 +90,7 @@ def exception_point (**env):
 
     alerts=[]   #PUT ALL THE EXCEPTION ITEM HERE
 
-    D.println("${num} test results found", {"num":len(test_results)})
+    D.println("{{num}} test results found", {"num":len(test_results)})
     if debug: D.println("Find exceptions")
 
     for keys, values in Q.groupby(test_results, [
@@ -146,7 +146,7 @@ def exception_point (**env):
                     total=total-values[count-WINDOW_SIZE].m  #WINDOW LIMITED TO 5 SAMPLES
 
             if debug: D.println(
-                "Testing ${num_tests} samples, ${num_alerts} alerts, on group  ${key}",
+                "Testing {{num_tests}} samples, {{num_alerts}} alerts, on group  {{key}}",
                 {"key":keys, "num_tests":len(values), "num_alerts":num_new}
             )
 
@@ -164,12 +164,12 @@ def exception_point (**env):
             a.details,
             a.solution
         FROM
-            alert_mail a
+            alerts a
         LEFT JOIN
             test_data_all_dimensions t on t.id=a.tdad_id
         WHERE
-            coalesce(t.push_date, t.date_received)>unix_timestamp(${begin_time}) AND
-            reason=${type}
+            coalesce(t.push_date, t.date_received)>unix_timestamp({{begin_time}}) AND
+            reason={{type}}
         """, {
             "begin_time":start_time,
             "list":Q.select(alerts, "tdad_id"),
@@ -187,7 +187,7 @@ def exception_point (**env):
 #    for new_alert in new_alerts-current:
 #        new_alert.id=SQL("util_newid()")
 #        new_alert.last_updated=datetime.utcnow()
-#        db.insert("alert_mail", new_alert)
+#        db.insert("alerts", new_alert)
 #
 #    for existing_alert in new_alerts & current:
 #        if len(nvl(existing_alert.solution, "").trim())==0: continue  # DO NOT TOUCH SOLVED ALERTS
@@ -195,20 +195,20 @@ def exception_point (**env):
 #        c=lookup_current[existing_alert.tdad_id]
 #        if round(existing_alert.severity, 5)!=round(c.severity, 5) or round(existing_alert.confidence, 5)!=round(c.confidence, 5):
 #            existing_alert.last_updated=datetime.utcnow()
-#            db.update("alert_mail", {"id":existing_alert.id}, existing_alert)
+#            db.update("alerts", {"id":existing_alert.id}, existing_alert)
 #
 #    for expired_alert in current - new_alerts:
 #        if len(nvl(expired_alert.solution, "").trim())==0: continue  # DO NOT TOUCH SOLVED ALERTS
 #        expired_alert.status="obsolete"
 #        expired_alert.last_updated=datetime.utcnow()
-#        db.update("alert_mail", {"id":expired_alert.id}, expired_alert)
+#        db.update("alerts", {"id":expired_alert.id}, expired_alert)
 
 
 
 
 
-    lookup_alert=dict([(a.tdad_id, a) for a in alerts])
-    lookup_current=dict([(c.tdad_id, c) for c in current_alerts])
+    lookup_alert=Q.unique_index(alerts, "tdad_id")
+    lookup_current=Q.unique_index(current_alerts, "tdad_id")
 
     if debug: D.println("Update alerts")
 
@@ -218,26 +218,26 @@ def exception_point (**env):
             if len(nvl(a.solution, "").strip())!=0: continue  # DO NOT TOUCH SOLVED ALERTS
 
             c=lookup_current[a.tdad_id]
-            if round(a.severity, 5)!=round(c.severity, 5) or \
-                round(a.confidence, 5)!=round(c.confidence, 5) or \
+            if significant_difference(a.severity, c.severity) or \
+               significant_difference(a.confidence, c.confidence) or \
                 a.reason!=c.reason \
             :
                 a.last_updated=datetime.utcnow()
-                db.update("alert_mail", {"id":c.id}, a)
+                db.update("alerts", {"id":c.id}, a)
         else:
             a.id=SQL("util_newid()")
             a.last_updated=datetime.utcnow()
-            db.insert("alert_mail", a)
+            db.insert("alerts", a)
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     for c in current_alerts:
         if c.tdad_id not in lookup_alert and c.status!="obsolete":
             c.status="obsolete"
             c.last_updated=datetime.utcnow()
-            db.update("alert_mail", {"id":c.id}, c)
+            db.update("alerts", {"id":c.id}, c)
 
     db.execute(
-        "UPDATE alert_reasons SET last_run=${run_time} WHERE code=${reason}", {
+        "UPDATE alert_reasons SET last_run={{run_time}} WHERE code={{reason}}", {
         "run_time":datetime.utcnow(),
         "reason":REASON
     })
@@ -306,13 +306,13 @@ def single_ttest(point, stats, min_variance=0):
 
 
 settings=startup.read_settings()
-D.settings(settings.debug)
+D.start(settings.debug)
 
 try:
-    D.println("Finding exceptions in schema ${schema}", {"schema":settings.database.schema})
+    D.println("Finding exceptions in schema {{schema}}", {"schema":settings.database.schema})
 
     with DB(settings.database) as db:
-        exception_point(
+        alert_exception(
             db=db,
             debug=settings.debug is not None
         )

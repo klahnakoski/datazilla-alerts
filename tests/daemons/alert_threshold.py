@@ -44,9 +44,9 @@ class test_alert_threshold:
                 severity,
                 confidence
             FROM
-                alert_mail
+                alerts
             WHERE
-                reason=${reason}
+                reason={{reason}}
             """, {
                 "reason":REASON
         })
@@ -58,7 +58,7 @@ class test_alert_threshold:
 
         #VERIFY last_run HAS BEEEN UPDATED
         last_run=self.db.query(
-            "SELECT last_run FROM alert_reasons WHERE code=${type}",
+            "SELECT last_run FROM alert_reasons WHERE code={{type}}",
             {"type":REASON}
         )[0].last_run
         assert last_run>=datetime.utcnow()+timedelta(minutes=-1)
@@ -73,9 +73,9 @@ class test_alert_threshold:
             FROM
                 test_data_all_dimensions t
             JOIN
-                alert_mail a ON a.tdad_id=t.id
+                alerts a ON a.tdad_id=t.id
             WHERE
-                a.id=${alert_id}
+                a.id={{alert_id}}
             """,
             {"alert_id":alert[0].id}
         )
@@ -95,7 +95,7 @@ class test_alert_threshold:
         ##SETUP
         assert self.alert_id is not None  #EXPECTING test_alert_generated TO BE RUN FIRST
 
-        self.db.execute("UPDATE alert_page_thresholds SET threshold=${threshold} WHERE page=${page_id}",{
+        self.db.execute("UPDATE alert_page_thresholds SET threshold={{threshold}} WHERE page={{page_id}}",{
             "threshold":900,
             "page_id":self.page_id
         })
@@ -108,7 +108,7 @@ class test_alert_threshold:
 
         ## VERIFY SHOWING OBSOLETE
         new_state=self.db.query(
-            "SELECT status FROM alert_mail WHERE id=${alert_id}",
+            "SELECT status FROM alerts WHERE id={{alert_id}}",
             {"alert_id":self.alert_id}
         )
         assert len(new_state)==1
@@ -121,9 +121,9 @@ class test_alert_threshold:
             FROM
                 test_data_all_dimensions t
             JOIN
-                alert_mail a ON a.tdad_id=t.id
+                alerts a ON a.tdad_id=t.id
             WHERE
-                a.id=${alert_id}
+                a.id={{alert_id}}
             """,
             {"alert_id":self.alert_id}
         )
@@ -145,12 +145,12 @@ class test_alert_threshold:
             FROM
                 alert_reasons
             WHERE
-                code=${reason}
+                code={{reason}}
             """,
             {"reason":REASON}
         )[0].num
         if exists==0:
-            D.error("Expecting the database to have an alert_reason=${reason}", {"reason":REASON})
+            D.error("Expecting the database to have an alert_reason={{reason}}", {"reason":REASON})
 
         ## MAKE A 'PAGE' TO TEST
         self.db.execute("DELETE FROM pages")
@@ -171,11 +171,11 @@ class test_alert_threshold:
                 time_added,
                 contact
             ) VALUES (
-                ${uid},
-                ${page_id},
-                ${threshold},
-                ${severity},
-                concat("(", ${url}, ") for test"),
+                {{uid}},
+                {{page_id}},
+                {{threshold}},
+                {{severity}},
+                concat("(", {{url}}, ") for test"),
                 now(),
                 "klahnakoski@mozilla.com"
             )
@@ -188,7 +188,7 @@ class test_alert_threshold:
         })
 
         ## ENSURE THERE ARE NO ALERTS IN DB
-        self.db.execute("DELETE FROM alert_mail WHERE reason=${reason}", {"reason":REASON})
+        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason":REASON})
 
         ## diff_time IS REQUIRED TO TRANSLATE THE TEST DATE DATES TO SOMETHING MORE CURRENT
         now_time=CNV.datetime2unix(datetime.utcnow())

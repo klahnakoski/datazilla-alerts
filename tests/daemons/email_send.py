@@ -53,7 +53,7 @@ class test_email_send():
         self.verify_notify()
         if len(to_list)==0:
             #ENSURE NOTHING SENT
-            mail_content=self.db.query("SELECT id, subject, date_sent, body FROM email_content WHERE subject=${subject}", {"subject":"subject"+self.uid})
+            mail_content=self.db.query("SELECT id, subject, date_sent, body FROM email_content WHERE subject={{subject}}", {"subject":"subject"+self.uid})
             assert len(mail_content)==0
         else:
             mail_content=self.verify_content()
@@ -82,7 +82,7 @@ class test_email_send():
 
     def verify_content(self):
         #MAIL DOES EXIST
-        mail_content=self.db.query("SELECT id, subject, date_sent, body FROM email_content WHERE subject=${subject}", {"subject":"subject"+self.uid})
+        mail_content=self.db.query("SELECT id, subject, date_sent, body FROM email_content WHERE subject={{subject}}", {"subject":"subject"+self.uid})
         assert len(mail_content)==1
         assert mail_content[0].date_sent is not None
         assert mail_content[0].body=="body"+self.uid
@@ -91,7 +91,7 @@ class test_email_send():
 
     def verify_delivery(self, mail_content, to_list):
         #VERIFY DELIVERY IN DATABASE IS SAME AS LIST
-        mail_delivery=self.db.query("SELECT id, deliver_to FROM email_delivery WHERE content=${content_id}", {"content_id":mail_content.id})
+        mail_delivery=self.db.query("SELECT id, deliver_to FROM email_delivery WHERE content={{content_id}}", {"content_id":mail_content.id})
         mail_delivery=set(Q.select(mail_delivery, "deliver_to"))
         assert mail_delivery==set(to_list)
 
