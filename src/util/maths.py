@@ -7,9 +7,6 @@
 ################################################################################
 import math
 
-from util.debug import D
-from util.strings import find_first
-
 class Math():
 
     @staticmethod
@@ -35,9 +32,17 @@ class Math():
         try:
             float(s)
             return True
-        except ValueError:
+        except Exception:
             return False
 
+    @staticmethod
+    def is_integer(s):
+        try:
+            if float(s)==round(float(s), 0):
+                return True
+            return False
+        except Exception:
+            return False
 
     @staticmethod
     def round_sci(value, decimal=None, digits=None):

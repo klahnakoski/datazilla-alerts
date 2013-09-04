@@ -14,6 +14,7 @@ from util.strings import indent, expand_template
 from util.struct import Struct, StructList
 from util.multiset import multiset
 
+# A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 class Q:
 
     def __init__(self, query):
@@ -33,8 +34,13 @@ class Q:
         try:
             def keys2string(x):
                 #REACH INTO dict TO GET PROPERTY VALUE
+<<<<<<< HEAD
                 return "|".join([str(object.__getattribute__(x, "__dict__")[k]) for k in keys])
             def get_keys(d): return dict([(k, str(d[k])) for k in keys])
+=======
+                return "|".join([str(x[k]) for k in keys])
+            def get_keys(d): return Struct(**{k:d[k] for k in keys})
+>>>>>>> 20130828
 
             agg={}
             for d in data:
@@ -42,7 +48,11 @@ class Q:
                 if key in agg:
                     pair=agg[key]
                 else:
+<<<<<<< HEAD
                     pair=(get_keys(d), list())
+=======
+                    pair=(get_keys(d), StructList())
+>>>>>>> 20130828
                     agg[key]=pair
                 pair[1].append(d)
 
@@ -73,7 +83,11 @@ class Q:
     @staticmethod
     def unique_index(data, keys=None):
     #return dict that uses keys to index data
+<<<<<<< HEAD
     #ONLY ONE VALUE ALLLOWED PER UNIQUE KEY
+=======
+    #ONLY ONE VALUE ALLOWED PER UNIQUE KEY
+>>>>>>> 20130828
         if not isinstance(keys, list): keys=[keys]
         o=Index(keys)
 
@@ -180,6 +194,7 @@ class Q:
     # PASS A FIELD NAME, OR LIST OF FIELD NAMES, OR LIST OF STRUCTS WITH {"field":field_name, "sort":direction}
     @staticmethod
     def sort(data, fieldnames=None):
+<<<<<<< HEAD
         if fieldnames is None:
             return sorted(data)
 
@@ -202,6 +217,51 @@ class Q:
 
         return sorted(data, cmp=comparer)
 
+=======
+        try:
+            if data is None: return None
+
+            if fieldnames is None:
+                return sorted(data)
+
+            if not isinstance(fieldnames, list):
+                #SPECIAL CASE, ONLY ONE FIELD TO SORT BY
+                if isinstance(fieldnames, basestring):
+                    def comparer(left, right):
+                        return cmp(left[fieldnames], right[fieldnames])
+                    return sorted(data, cmp=comparer)
+                else:
+                    #EXPECTING {"field":f, "sort":i} FORMAT
+                    def comparer(left, right):
+                       return fieldnames["sort"]*cmp(left[fieldnames["field"]], right[fieldnames["field"]])
+                    return sorted(data, cmp=comparer)
+
+            formal=[]
+            for f in fieldnames:
+                if isinstance(f, basestring):
+                    f={"field":f, "sort":1}
+                formal.append(f)
+
+            #DEFINITLY NOT FAST IN PYPY
+    #        code="def comparer(left, right):\n"
+    #        first=True
+    #        for col in formal:
+    #            if not first: code+="    if result!=0: return result\n"
+    #            first=False
+    #            code+="    result="+str(col["sort"])+" * cmp(left["+CNV.string2quote(col["field"])+"], right["+CNV.string2quote(col["field"])+"])\n"
+    #        code+="    return result"
+    #        exec(code)
+
+            def comparer(left, right):
+                for f in formal:
+                    result=f["sort"]*cmp(left[f["field"]], right[f["field"]])
+                    if result!=0: return result
+                return 0
+
+            return sorted(data, cmp=comparer)
+        except Exception, e:
+            D.error("Problem sorting", e)
+>>>>>>> 20130828
 
 
 def groupby_size(data, size):

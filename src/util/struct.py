@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+# -*- coding: utf8 -*-
+>>>>>>> 20130828
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -65,15 +69,38 @@ class Struct(dict):
                 seq=key.split(".")
                 for k in seq[0,-1]: d=d[k]
                 d[seq[-1]]=value
+<<<<<<< HEAD
+=======
+                return self
+>>>>>>> 20130828
             d[key]=value
         except Exception, e:
             if key.find(".")>=0:
                 seq=key.split(".")
                 for k in seq[0,-1]: d=d[k]
                 d[seq[-1]]=value
+<<<<<<< HEAD
             d[key]=value
             raise e
 
+=======
+                return self
+            d[key]=value
+            raise e
+
+
+    def __delitem__(self, key):
+        d=object.__getattribute__(self, "__dict__")
+
+        if key.find(".")>=0:
+            seq=key.split(".")
+            for k in seq[0,-1]: d=d[k]
+            del d[seq[-1]]
+            return
+        del d[key]
+
+
+>>>>>>> 20130828
     def keys(self):
         d=object.__getattribute__(self, "__dict__")
         return d.keys()
@@ -108,6 +135,23 @@ class StructList(list):
     def __str__(self):
         return self.list.__str__()
 
+<<<<<<< HEAD
+=======
+    def __len__(self):
+        return self.list.__len__()
+
+    def __getslice__(self, i, j):
+        return wrap(self.list[i:j])
+
+    def remove(self, x):
+        self.list.remove(x)
+        return self
+
+    def extend(self, values):
+        self.list.extend(values)
+        return self
+
+>>>>>>> 20130828
 
 def wrap(v):
     if v is None:

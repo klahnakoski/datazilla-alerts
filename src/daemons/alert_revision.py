@@ -1,5 +1,6 @@
 
-#DISPLAY TEMPLATE
+# -*- coding: utf8 -*-
+DISPLAY TEMPLATE
 from datetime import datetime, timedelta
 from util.cnv import CNV
 from util.db import DB, SQL

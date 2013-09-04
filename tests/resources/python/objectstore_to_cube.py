@@ -1,3 +1,12 @@
+# -*- coding: utf8 -*-
+################################################################################
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this file,
+## You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
 
 from util.cnv import CNV
 from util.db import SQL, DB
@@ -124,23 +133,17 @@ def get_missing_ids(db, settings):
         FROM
             {{objectstore}}.objectstore o
 		LEFT JOIN
-            {{perftest}}.test_data_all_dimensions AS tdad ON tdad.test_run_id=o.test_run_id
-        LEFT JOIN
-            {{pushlog}}.changesets AS ch ON ch.revision=o.revision
-        LEFT JOIN
-            {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
-        LEFT JOIN
-            {{pushlog}}.branches AS br ON pl.branch_id = br.id
-        LEFT JOIN
-            {{pushlog}}.branch_map AS bm ON br.name = bm.name
+            {{perftest}}.test_data_all_dimensions AS tdad
+        ON
+            tdad.test_run_id=o.test_run_id AND
+            tdad.revision=o.revision AND
+            tdad.branch=o.branch
         WHERE
-            (bm.alt_name=o.branch OR br.name=o.branch) AND
             o.test_run_id IS NOT NULL AND
             tdad.test_run_id IS NULL 
         """, {
             "objectstore":SQL(settings.objectstore.schema),
             "perftest":SQL(settings.database.schema),
-            "pushlog":SQL(settings.pushlog.schema),
             "limit":BATCH_SIZE
         })
 
@@ -149,13 +152,16 @@ def get_missing_ids(db, settings):
     return missing_ids
 
 
-
-settings=startup.read_settings()
-D.start(settings.debug)
-with DB(settings.database) as db:
-#    db.debug=settings.debug is not None
-    main_loop(db, settings)
-D.stop()
+try:
+    settings=startup.read_settings()
+    D.start(settings.debug)
+    with DB(settings.database) as db:
+    #    db.debug=settings.debug is not None
+        main_loop(db, settings)
+except Exception, e:
+    D.error("Problem", e)
+finally:
+    D.stop()
 
 
 

@@ -19,4 +19,10 @@ class Random():
     def hex(length):
         return Random.string(length, string.digits + 'ABCDEF')
 
+<<<<<<< HEAD
 
+=======
+    @staticmethod
+    def int(*args):
+        return random.randrange(*args)
+>>>>>>> 20130828
