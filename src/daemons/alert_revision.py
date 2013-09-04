@@ -1,6 +1,14 @@
 
-# -*- coding: utf8 -*-
-DISPLAY TEMPLATE
+################################################################################
+## This Source Code Form is subject to the terms of the Mozilla Public
+## License, v. 2.0. If a copy of the MPL was not distributed with this file,
+## You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+################################################################################
+
+
+
 from datetime import datetime, timedelta
 from util.cnv import CNV
 from util.db import DB, SQL
@@ -31,6 +39,9 @@ TEMPLATE="""
 """
 
 #GET ACTIVE ALERTS
+# assumes there is an outside agent corrupting our test results
+# this will look at all alerts on a revision, and figure out the probability there is an actual regression
+
 def alert_revision(settings):
     assert settings.db is not None
     settings.db.debug=settings.debug

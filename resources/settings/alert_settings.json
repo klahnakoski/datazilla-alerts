@@ -1,0 +1,33 @@
+{
+	"database":{
+		"host":"klahnakoski-es.corp.tor1.mozilla.com",
+		"port":3306,
+		"username":"username",
+		"password":"password",
+		"schema":"ekyle_perftest_1",
+		"debug":true
+	},
+	"objectstore":{"schema":"ekyle_objectstore_1"},
+	"pushlog":{"schema":"pushlog_hgmozilla_1"},
+	"email":{
+		"from_address":"klahnakoski@mozilla.com",
+		"host":"mail.mozilla.com",
+		"port":465,
+		"username":"username",
+		"password":"password",
+		"use_ssl":1
+	},
+	"debug":{
+		"log":[
+		{
+			"class": "logging.handlers.RotatingFileHandler",
+			"filename": "logs/talos_prod.log",
+			"maxBytes": "10000000",
+			"backupCount": "100",
+			"encoding": "utf8"
+		},{
+			"class":"util.debug.Log_usingStream",
+			"stream":"sys.stdout"
+		}]
+	}
+}      

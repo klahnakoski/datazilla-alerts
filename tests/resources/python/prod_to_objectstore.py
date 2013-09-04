@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -191,7 +191,7 @@ def copy_pushlog(settings):
 
                 local.insert_newlist(
                     settings.destination.pushlog.schema+".pushlogs",
-                    "id",
+                    ["push_id", "branch_id"],
                     [{
                         "id":p.pushlog_id,
                         "push_id":p.push_id,
@@ -250,6 +250,9 @@ def main(settings):
     copy_pushlog(settings)
 
 
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 try:
     settings=startup.read_settings()

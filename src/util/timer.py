@@ -8,6 +8,15 @@
 import time
 from util.debug import D
 
+
+## USAGE:
+## with Timer("doing hard time"):
+##     something_that_takes_long()
+##
+## OUTPUT:
+##     doing hard time took 45.468 sec
+
+
 class Timer:
 
     def __init__(self, description):
@@ -20,7 +29,10 @@ class Timer:
     def __exit__(self, type, value, traceback):
         self.end = time.clock()
         self.interval = self.end - self.start
-        D.println(self.description + " took %.03f sec"%self.interval)
+        D.println("{{description}} took {{duration}} sec", {
+            "description":self.description,
+            "duration":round(self.interval, 3)
+        })
 
 
         
