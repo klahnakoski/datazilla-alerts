@@ -44,10 +44,6 @@ class File():
         return codecs.open(self.filename, "r")
 
     def append(self, content):
-<<<<<<< HEAD
-        with open(self.filename, "a") as output_file:
-            output_file.write(content)
-=======
         if not self.parent.exists: self.parent.create()
         with open(self.filename, "a") as output_file:
             output_file.write(content)
@@ -78,4 +74,3 @@ class File():
     def exists(self):
         if self.filename in ["", "."]: return True
         return os.path.exists(self.filename)
->>>>>>> 20130828

@@ -22,12 +22,9 @@ class ElasticSearch():
 
         self.metadata=None
         if settings.port is None: settings.port=9200
-<<<<<<< HEAD
-=======
         self.debug=nvl(settings.debug, DEBUG)
         globals()["DEBUG"]=DEBUG or self.debug
->>>>>>> 20130828
-        
+
         self.settings=settings
         self.path=settings.host+":"+str(settings.port)+"/"+settings.index+"/"+settings.type
 

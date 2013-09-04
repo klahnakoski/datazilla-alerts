@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-# -*- coding: utf8 -*-
->>>>>>> 20130828
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -13,17 +9,11 @@ import datetime
 from decimal import Decimal
 import json
 import re
-<<<<<<< HEAD
-import time
-import pystache
-from util.struct import Struct
-=======
 from threading import Lock
 import time
 
 from util.maths import Math
 from util.struct import Struct, StructList, unwrap
->>>>>>> 20130828
 
 
 def indent(value, prefix="\t"):
@@ -63,11 +53,6 @@ def find_first(value, find_arr, start=0):
     if i==len(value): return -1
     return i
 
-<<<<<<< HEAD
-
-def expand_template(template, values):
-    return pystache.render(template, values)
-=======
 #TURNS OUT PYSTACHE MANGLES CHARS FOR HTML
 #def expand_template(template, values):
 #    if values is None: values={}
@@ -96,8 +81,6 @@ def expand_template(template, values):
 
     return pattern.sub(replacer, template)
 
->>>>>>> 20130828
-
 
 
 class NewJSONEncoder(json.JSONEncoder):
@@ -108,52 +91,16 @@ class NewJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):
             return list(obj)
-<<<<<<< HEAD
-=======
         elif isinstance(obj, Struct):
             return obj.dict
         elif isinstance(obj, StructList):
             return obj.list
->>>>>>> 20130828
         elif isinstance(obj, Decimal):
             return float(obj)
         elif isinstance(obj, datetime.datetime):
             return int(time.mktime(obj.timetuple())*1000)
         return json.JSONEncoder.default(self, obj)
 
-<<<<<<< HEAD
-
-import ujson
-
-class json_encoder():
-    @classmethod
-    def encode(self, value):
-        return ujson.dumps(value)
-
-class json_decoder():
-    @classmethod
-    def decode(cls, value):
-        return ujson.loads(value)
-
-
-#json_encoder=NewJSONEncoder()
-#json_decoder=json._default_decoder
-
-def toString(val):
-    if isinstance(val, Struct):
-        return json_encoder.encode(val.dict)
-    elif isinstance(val, dict) or isinstance(val, list) or isinstance(val, set):
-        val=json_encoder.encode(val)
-        return val
-    return str(val)
-
-#REMOVE VALUES THAT CAN NOT BE JSON-IZED
-def scrub(r):
-    return Struct(**_scrub(r))
-
-def _scrub(r):
-    if isinstance(r, dict):
-=======
 #OH HUM, cPython with uJSON, OR pypy WITH BUILTIN JSON?
 #http://liangnuren.wordpress.com/2012/08/13/python-json-performance/
 
@@ -190,37 +137,21 @@ def _scrub(r):
     if r is None:# or type(r).__name__=="long" or type(r).__name__ in ["str", "bool", "int", "basestring", "float", "boolean"]:
         return r
     elif isinstance(r, dict):
->>>>>>> 20130828
         output={}
         for k, v in r.items():
             v=_scrub(v)
             output[k]=v
-<<<<<<< HEAD
-        if len(output)==0: return None
-=======
->>>>>>> 20130828
         return output
     elif hasattr(r, '__iter__'):
         output=[]
         for v in r:
             v=_scrub(v)
             output.append(v)
-<<<<<<< HEAD
-        if len(output)==0: return None
-        return output
-    elif r is None:
-        return None
-    else:
-        try:
-            json_encoder.encode(r)
-            return r
-=======
         return output
     else:
         try:
             with json_lock:
                 json_encoder.encode(r)
                 return r
->>>>>>> 20130828
         except Exception, e:
             return None

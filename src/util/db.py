@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-# -*- coding: latin-1 -*-
->>>>>>> 20130828
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -50,11 +46,7 @@ class DB():
         self.cursor=None
         self.partial_rollback=False
         self.transaction_level=0
-<<<<<<< HEAD
-        self.debug=settings.debug is not None or DEBUG
-=======
         self.debug=nvl(settings.debug, DEBUG)
->>>>>>> 20130828
         self.backlog=[]     #accumulate the write commands so they are sent at once
 
 
@@ -137,27 +129,18 @@ class DB():
             if old_cursor is None: #ALLOW NON-TRANSACTIONAL READS
                 self.cursor=self.db.cursor()
 
-<<<<<<< HEAD
-            if param is not None: sql=expand_template(sql, self.quote(param))
-=======
             if param is not None: sql=expand_template(sql, self.quote_param(param))
->>>>>>> 20130828
             sql=outdent(sql)
             if self.debug: D.println("Execute SQL:\n"+indent(sql))
 
             self.cursor.execute(sql)
 
-<<<<<<< HEAD
-            columns = tuple( [d[0].decode('utf8') for d in self.cursor.description] )
-            result=CNV.table2list(columns, self.cursor)
-=======
             columns = [d[0].decode('utf8') for d in self.cursor.description]
             fixed=[[utf8_to_unicode(c) for c in row] for row in self.cursor]
             result=CNV.table2list(columns, fixed)
 
 
 
->>>>>>> 20130828
 
             if old_cursor is None:   #CLEANUP AFTER NON-TRANSACTIONAL READS
                 self.cursor.close()
@@ -180,11 +163,7 @@ class DB():
             if old_cursor is None: #ALLOW NON-TRANSACTIONAL READS
                 self.cursor=self.db.cursor()
 
-<<<<<<< HEAD
-            if param is not None: sql=expand_template(sql,self.quote(param))
-=======
             if param is not None: sql=expand_template(sql,self.quote_param(param))
->>>>>>> 20130828
             sql=outdent(sql)
             if self.debug: D.println("Execute SQL:\n"+indent(sql))
 
@@ -208,11 +187,7 @@ class DB():
     def execute(self, sql, param=None):
         if self.transaction_level==0: D.error("Expecting transation to be started before issuing queries")
 
-<<<<<<< HEAD
-        if param is not None: sql=expand_template(sql,self.quote(param))
-=======
         if param is not None: sql=expand_template(sql,self.quote_param(param))
->>>>>>> 20130828
         sql=outdent(sql)
         self.backlog.append(sql)
         if len(self.backlog)>=MAX_BATCH_SIZE:
@@ -275,28 +250,6 @@ class DB():
 
 
     ## Insert dictionary of values into table
-<<<<<<< HEAD
-    def insert (self, table_name, param):
-        def quote(value):
-            return "`"+value+"`"    #MY SQL QUOTE OF COLUMN NAMES
-
-        keys = param.keys()
-        param = self.quote(param)
-
-        command = "INSERT INTO "+quote(table_name)+"("+\
-                  ",".join([quote(k) for k in keys])+\
-                  ") VALUES ("+\
-                  ",".join([param[k] for k in keys])+\
-                  ")"
-
-        self.execute(command)
-
-
-    def insert_list(self, table_name, list):
-        #PROBABLY CAN BE BETTER DONE WITH executeMany()
-        for l in list:
-            self.insert(table_name, l)
-=======
     def insert (self, table_name, record):
         def quote(value):
             return "`"+value+"`"    #MY SQL QUOTE OF COLUMN NAMES
@@ -343,20 +296,14 @@ class DB():
         #PROBABLY CAN BE BETTER DONE WITH executeMany()
         for r in records:
             self.insert(table_name, r)
->>>>>>> 20130828
 
 
     def update(self, table_name, where, new_values):
         def quote(value):
             return "`"+value+"`"    #MY SQL QUOTE OF COLUMN NAMES
 
-<<<<<<< HEAD
-        where=self.quote(where)
-        new_values=self.quote(new_values)
-=======
         where=self.quote_param(where)
         new_values=self.quote_param(new_values)
->>>>>>> 20130828
 
         command="UPDATE "+quote(table_name)+"\n"+\
                 "SET "+\
@@ -366,27 +313,6 @@ class DB():
         self.execute(command, {})
 
 
-<<<<<<< HEAD
-    #convert values to mysql code for the same
-    #mostly delegate directly to the mysql lib, but some exceptions exist
-    def quote(self, param):
-        try:
-            output={}
-            for k, v in [(k, param[k]) for k in param.keys()]:
-                if isinstance(v, datetime):
-                    v=SQL("str_to_date('"+v.strftime("%Y%m%d%H%M%S")+"', '%Y%m%d%H%i%s')")
-                elif isinstance(v, list):
-                    v=SQL("("+",".join([self.db.literal(vv) for vv in v])+")")
-                elif isinstance(v, SQL):
-                    pass
-                elif isinstance(v, Struct):
-                    self.db.literal(None)
-                else:
-                    v=SQL(self.db.literal(v))
-
-                output[k]=v
-            return output
-=======
     def quote_param(self, param):
         return {k:self.quote(v) for k, v in param.items()}
 
@@ -404,23 +330,10 @@ class DB():
                 return self.db.literal(None)
             else:
                 return self.db.literal(value)
->>>>>>> 20130828
         except Exception, e:
             D.error("problem quoting SQL", e)
 
 
-<<<<<<< HEAD
-
-
-#ACTUAL SQL, DO NOT QUOTE THIS STRING
-class SQL(str):
-
-    def __init__(self, string=''):
-        str.__init__(self, string)
-
-    def __str__(self):
-        return self
-=======
 def utf8_to_unicode(v):
     try:
         if isinstance(v, str):
@@ -439,4 +352,3 @@ class SQL():
 
     def __str__(self):
         return self.value
->>>>>>> 20130828
