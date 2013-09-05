@@ -3,25 +3,21 @@
 	"database":{
 		"host":"localhost",
 		"port":3306,
-		"username":"username",
+		"username":"manager",
 		"password":"password",
-		"schema":"ekyle_perftest_1",
+		"schema":"test_alerts",
 		"debug":true
-	},
-	"objectstore":{"schema":"ekyle_objectstore_1"},
-	"pushlog":{"schema":"pushlog_hgmozilla_1"},
-	"email":{
 	},
 	"debug":{
 		"log":[
 		{
 			"class": "logging.handlers.RotatingFileHandler",
-			"filename": "logs/testing.log",
+			"filename": "tests/resources/logs/testing.log",
 			"maxBytes": "10000000",
 			"backupCount": "100",
 			"encoding": "utf8"
 		},{
-			"class":"util.debug.Log_usingStream",
+			"class":"dzAlerts.util.debug.Log_usingStream",
 			"stream":"sys.stdout"
 		}]
 	}

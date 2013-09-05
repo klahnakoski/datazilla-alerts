@@ -21,7 +21,7 @@
 		"log":[
 		{
 			"class": "logging.handlers.RotatingFileHandler",
-			"filename": "logs/talos_prod.log",
+			"filename": "logs/replication.log",
 			"maxBytes": "10000000",
 			"backupCount": "100",
 			"encoding": "utf8"

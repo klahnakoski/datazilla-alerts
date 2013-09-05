@@ -7,18 +7,17 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 import functools
-
 from math import floor
 import requests
-from util.basic import nvl
-from util.debug import D
-from util.query import Q
-from util.startup import startup
-from util.timer import Timer
-from util.db import DB, SQL
-from util.cnv import CNV
-from util.multithread import Multithread
-from util.threads import Lock
+from dzAlerts.util.basic import nvl
+from dzAlerts.util.debug import D
+from dzAlerts.util.query import Q
+from dzAlerts.util.startup import startup
+from dzAlerts.util.timer import Timer
+from dzAlerts.util.db import DB, SQL
+from dzAlerts.util.cnv import CNV
+from dzAlerts.util.multithread import Multithread
+from dzAlerts.util.threads import Lock
 
 
 db_lock=Lock("db lock")
@@ -134,92 +133,96 @@ def copy_pushlog(settings):
                 "pushlog":SQL(settings.destination.pushlog.schema)
             })
 
-            for g, batch in Q.groupby(missing_revisions, size=1000):
-                pushlogs=prod.query("""
-                    SELECT
-                        ch.id changeset_id,
-                        ch.node node,
-                        ch.author author,
-                        ch.branch changeset_branch,
-                        ch.`desc` `desc`,
-                        ch.pushlog_id,
-                        pl.push_id,
-                        pl.`date` `date`,
-                        pl.user user,
-                        pl.branch_id,
-                        br.name branch_name,
-                        br.uri branch_uri,
-                        bm.id branch_map_id,
-                        bm.alt_name
-                    FROM
-                        {{pushlog}}.changesets AS ch
-                    LEFT JOIN
-                        {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
-                    LEFT JOIN
-                        {{pushlog}}.branches AS br ON pl.branch_id = br.id
-                    LEFT JOIN
-                        {{pushlog}}.branch_map AS bm ON br.name = bm.name
-                    WHERE
-                        substring(ch.node, 1, 12) in {{revisions}}
-                """, {
-                    "pushlog":SQL(settings.source.pushlog.schema),
-                    "revisions":Q.select(batch, "revision")
-                })
+            try:
+                for g, batch in Q.groupby(missing_revisions, size=1000):
+                    pushlogs=prod.query("""
+                        SELECT
+                            ch.id changeset_id,
+                            ch.node node,
+                            ch.author author,
+                            ch.branch changeset_branch,
+                            ch.`desc` `desc`,
+                            ch.pushlog_id,
+                            pl.push_id,
+                            pl.`date` `date`,
+                            pl.user user,
+                            pl.branch_id,
+                            br.name branch_name,
+                            br.uri branch_uri,
+                            bm.id branch_map_id,
+                            bm.alt_name
+                        FROM
+                            {{pushlog}}.changesets AS ch
+                        LEFT JOIN
+                            {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
+                        LEFT JOIN
+                            {{pushlog}}.branches AS br ON pl.branch_id = br.id
+                        LEFT JOIN
+                            {{pushlog}}.branch_map AS bm ON br.name = bm.name
+                        WHERE
+                            substring(ch.node, 1, 12) in {{revisions}}
+                    """, {
+                        "pushlog":SQL(settings.source.pushlog.schema),
+                        "revisions":Q.select(batch, "revision")
+                    })
 
-                # ADD BRANCH_MAP. BRANCH, AND PUSHLOGS WHERE THEY DO NOT EXIST
-                # NOTE THAT THESE HAVE BEEN EXPANDED, AND WE USE groupby TO PACK
-                # THEM BACK DOWN TO ORIGINAL RECORDS
-                local.insert_newlist(
-                    settings.destination.pushlog.schema+".branch_map",
-                    "id",
-                    [{
-                        "id":p.branch_map_id,
-                        "name":p.branch_name,
-                        "alt_name":p.alt_name
-                    } for p, d in Q.groupby([p for p in pushlogs if p.branch_map_id is not None], ["branch_map_id", "branch_name", "alt_name"])]
-                )
+                    # ADD BRANCH_MAP. BRANCH, AND PUSHLOGS WHERE THEY DO NOT EXIST
+                    # NOTE THAT THESE HAVE BEEN EXPANDED, AND WE USE groupby TO PACK
+                    # THEM BACK DOWN TO ORIGINAL RECORDS
+                    local.insert_newlist(
+                        settings.destination.pushlog.schema+".branch_map",
+                        "id",
+                        [{
+                            "id":p.branch_map_id,
+                            "name":p.branch_name,
+                            "alt_name":p.alt_name
+                        } for p, d in Q.groupby([p for p in pushlogs if p.branch_map_id is not None], ["branch_map_id", "branch_name", "alt_name"])]
+                    )
 
-                local.insert_newlist(
-                    settings.destination.pushlog.schema+".branches",
-                    "id",
-                    [{
-                        "id":p.branch_id,
-                        "name":p.branch_name,
-                        "uri":p.branch_uri
-                    } for p, d in Q.groupby(pushlogs, ["branch_id", "branch_name", "branch_uri"])]
-                )
+                    local.insert_newlist(
+                        settings.destination.pushlog.schema+".branches",
+                        "id",
+                        [{
+                            "id":p.branch_id,
+                            "name":p.branch_name,
+                            "uri":p.branch_uri
+                        } for p, d in Q.groupby(pushlogs, ["branch_id", "branch_name", "branch_uri"])]
+                    )
 
-                local.insert_newlist(
-                    settings.destination.pushlog.schema+".pushlogs",
-                    ["push_id", "branch_id"],
-                    [{
-                        "id":p.pushlog_id,
-                        "push_id":p.push_id,
-                        "date":p.date,
-                        "user":p.user,
-                        "branch_id":p.branch_id
-                    } for p, d in Q.groupby(pushlogs, ["pushlog_id", "push_id", "date", "user", "branch_id"])]
-                )
+                    local.insert_newlist(
+                        settings.destination.pushlog.schema+".pushlogs",
+                        ["push_id", "branch_id"],
+                        [{
+                            "id":p.pushlog_id,
+                            "push_id":p.push_id,
+                            "date":p.date,
+                            "user":p.user,
+                            "branch_id":p.branch_id,
+                        } for p, d in Q.groupby(pushlogs, ["pushlog_id", "push_id", "date", "user", "branch_id"])]
+                    )
 
-                #NOW WE ARE SAFE TO ADD THE CHANGESETS
-                local.insert_list(
-                    settings.destination.pushlog.schema+".changesets",
-                    [{
-                        "id":p.changeset_id,
-                        "node":p.node,
-                        "author":p.author,
-                        "branch":p.changeset_branch,
-                        "desc":p.desc,
-                        "pushlog_id":p.pushlog_id,
-                        "revision":p.node[0:12]
-                    } for p in pushlogs]
-                )
+                    #NOW WE ARE SAFE TO ADD THE CHANGESETS
+                    local.insert_list(
+                        settings.destination.pushlog.schema+".changesets",
+                        [{
+                            #"id":p.changeset_id,   NOT NEEDED, AUTOINCREMENT
+                            "node":p.node,
+                            "author":p.author,
+                            "branch":p.changeset_branch,
+                            "desc":p.desc,
+                            "pushlog_id":p.pushlog_id,
+                            "revision":p.node[0:12]
+                        } for p in pushlogs]
+                    )
 
-            
+                    local.flush()
+
+            except Exception, e:
+                D.error("Failure during update of pushlog", e)
 
 
 def main(settings):
-    with DB(settings.database) as db:
+    with DB(settings.destination.objectstore) as db:
         try:
             functions=[functools.partial(etl, *["ETL"+str(t), db, settings]) for t in range(settings.source.service.threads)]
 
@@ -250,17 +253,19 @@ def main(settings):
     copy_pushlog(settings)
 
 
-import sys
-reload(sys)
-sys.setdefaultencoding("utf-8")
 
-try:
-    settings=startup.read_settings()
-    settings.source.service.threads=nvl(settings.source.service.threads, 1)
-    D.start(settings.debug)
-    copy_pushlog(settings)
-    main(settings)
-except Exception, e:
-    D.error("Problem", e)
-finally:
-    D.stop()
+
+if __name__=="__main__":
+    import sys
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
+
+    try:
+        settings=startup.read_settings()
+        settings.source.service.threads=nvl(settings.source.service.threads, 1)
+        D.start(settings.debug)
+        main(settings)
+    except Exception, e:
+        D.error("Problem", e)
+    finally:
+        D.stop()

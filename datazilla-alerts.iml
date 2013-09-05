@@ -3,21 +3,9 @@
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
-<<<<<<< HEAD
-      <sourceFolder url="file://$MODULE_DIR$/pyLibrary" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/setup/python" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/setup/scripts" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/setup/sql" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/setup" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/python" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/scripts" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/sql" isTestSource="false" />
-=======
-      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tests/resources/python" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
->>>>>>> 20130828
+      <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/resources/logs" />
     </content>

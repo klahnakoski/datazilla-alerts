@@ -1,0 +1,676 @@
+/* This file contains InnoDB markers that must be replaced
+   before it is sent to MySQL.
+*/
+
+-- MySQL dump 10.13  Distrib 5.1.61, for redhat-linux-gnu (x86_64)
+--
+-- Host: localhost    Database: schema_1_perftest
+-- ------------------------------------------------------
+-- Server version	5.1.61
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `aux_data`
+--
+
+DROP TABLE IF EXISTS `application_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/***********
+application_log - description
+
+A table used for logging critical messages from applications.
+************/
+CREATE TABLE `application_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `revision` varchar(16) NULL,
+  `test_run_id` int(11) NULL,
+  `msg_type` varchar(50) NULL,
+  `msg` mediumtext NULL,
+  `msg_date` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `revision_key` (`revision`),
+  KEY `test_run_id_key` (`test_run_id`),
+  KEY `msg_type_key` (`msg_type`),
+  KEY `msg_date_key` (`msg_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+DROP TABLE IF EXISTS `aux_data`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/***********
+aux_data - Description
+
+The aux in aux_data stands for auxiliary.  Auxiliary 
+data can be any type of meta-data associated with a test.  
+Some examples of auxiliary data would be RAM or cpu 
+consumption over the life cycle of a test.  This table 
+would hold them name and description of different types of 
+auxiliary data, while test_aux_data holds the auxiliary 
+data values generated.
+************/
+CREATE TABLE `aux_data` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_id` int(11) NOT NULL,
+  `name` varchar(25) COLLATE utf8_bin NOT NULL,
+  `description` mediumtext COLLATE utf8_bin,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `test_id_name_UNIQUE` (`test_id`, `name`),
+  KEY `test_id_key` (`test_id`),
+  CONSTRAINT `fk_aux_data_test` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+
+--
+-- Table structure for table `build`
+--
+
+DROP TABLE IF EXISTS `build`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/**************
+build - Description
+
+This table stores product builds associated with test 
+runs.  It maps the build to the operating system, product, 
+and machine.  Test runs can share a build or use different 
+builds.
+****************/
+CREATE TABLE `build` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `test_build_id` varchar(16) NOT NULL,
+  `processor` varchar(25) NOT NULL,
+  `revision` varchar(16) NOT NULL,
+  `build_type` varchar(25) NOT NULL,
+  `build_date` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `build_type_key` (`build_type`),
+  KEY `build_date_key` (`build_date`),
+  KEY `revision_key` (`revision`),
+  KEY `fk_build_product` (`product_id`),
+  UNIQUE KEY `unique_build` (`product_id`, `test_build_id`, `processor`, `build_type`),
+  CONSTRAINT `fk_build_product` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `machine`
+--
+
+DROP TABLE IF EXISTS `machine`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/****************
+machine - Description
+
+This table contains a unique list of machine names.  
+A machine is associated with every build and test run.  
+This can be used for examining any trends in the test 
+data that seem to be machine or environment specific.
+*****************/
+CREATE TABLE `machine` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `is_throttling` tinyint(3) NOT NULL DEFAULT '0',
+  `cpu_speed` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `name` varchar(255) COLLATE utf8_bin NOT NULL,
+  `operating_system_id` int(11) NOT NULL,
+  `is_active` tinyint(3) NOT NULL DEFAULT '0',
+  `date_added` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `operating_system_id_key` (`operating_system_id`),
+  CONSTRAINT `fk_machine_operating_system` FOREIGN KEY (`operating_system_id`) REFERENCES `operating_system` (`id`),
+  UNIQUE KEY `unique_machine` (`name`, `operating_system_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `metric`
+--
+
+DROP TABLE IF EXISTS `metric`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/*************
+metric - Description
+
+The metric table contains a list of metrics that can
+be used to calculate values in test_page_metric.  So a metric
+can have different methods associated with it and can also
+be associated with any number of test values.  A metric
+could be any type of calculation such as a t-test.
+**************/
+CREATE TABLE `metric` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(25) COLLATE utf8_bin NOT NULL,
+  `description` mediumtext COLLATE utf8_bin NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_UNIQUE` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+/*Insert default metrics*/
+LOCK TABLES `metric` WRITE;
+/*!40000 ALTER TABLE `metric` DISABLE KEYS */;
+INSERT INTO `metric` (`name`, `description`) VALUES ('welch_ttest', "one-sided Welchs t-test");
+UNLOCK TABLES;
+
+
+
+--
+-- Table structure for table `metric_value`
+--
+
+DROP TABLE IF EXISTS `metric_value`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/***************
+metric_value - Description
+
+The metric_value table contains the name and description of
+a particular metric stored with a test_run.  So for a t-test
+metric the associated metric_values might include a mean, std,
+and p-value.  Each of these metric values would be assigned an
+id.  Any type of metric value can be defined to meet the needs of
+a test.  A pass_fail metric value might indicate which page in a test
+run passed a t-test.
+****************/
+CREATE TABLE `metric_value` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `metric_id` int(11) NOT NULL,
+  `name` varchar(25) COLLATE utf8_bin NOT NULL,
+  `description` mediumtext COLLATE utf8_bin NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_UNIQUE` (`name`),
+  KEY `metric_id_key` (`metric_id`),
+  KEY `name_key` (`name`),
+  CONSTRAINT `fk_metric_value_metric` FOREIGN KEY (`metric_id`) REFERENCES `metric` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+/*Insert metric values associated with t-test*/
+LOCK TABLES `metric_value` WRITE;
+/*!40000 ALTER TABLE `metric_value` DISABLE KEYS */;
+INSERT INTO `metric_value` (`metric_id`, `name`) VALUES (1, 'stddev'), (1, 'mean'), (1, 'p'), (1, 'h0_rejected'), (1, 'n_replicates'), (1, 'fdr'), (1, 'trend_stddev'), (1, 'trend_mean'), (1, 'pushlog_id'), (1, 'push_date'), (1, 'test_evaluation');
+UNLOCK TABLES;
+
+--
+-- Table structure for table `operating_system`
+--
+
+DROP TABLE IF EXISTS `operating_system`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/*************
+operating_system - Description
+
+This table contains a unique list of operating systems that 
+tests are run on.
+**************/
+CREATE TABLE `operating_system` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) COLLATE utf8_bin NOT NULL,
+  `version` varchar(50) COLLATE utf8_bin NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_os` (`name`,`version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `option`
+--
+
+DROP TABLE IF EXISTS `option`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/***************
+option - Description
+
+The options table contains a unique list of options 
+associated with a particular test run.  These options 
+could be command line options to the program running 
+the test, or any other type of option that dictates 
+how a particular test is run or behaves.
+*****************/
+CREATE TABLE `option` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(25) COLLATE utf8_bin NOT NULL,
+  `description` mediumtext COLLATE utf8_bin,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_option` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `pages`
+--
+
+DROP TABLE IF EXISTS `pages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/**************
+pages - Description
+
+This table contains a complete listing of all of the pages 
+associated with all of the tests.  Every test value has a page 
+associated with it.
+***************/
+CREATE TABLE `pages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_id` int(11) NOT NULL,
+  `url` varchar(255) COLLATE utf8_bin NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `test_id_key` (`test_id`),
+  UNIQUE KEY `unique_test_url` (`test_id`,`url`),
+  CONSTRAINT `fk_pages_test` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `product`
+--
+
+DROP TABLE IF EXISTS `product`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/***************
+product - Description
+
+This table contains the list of products and their associated 
+branches and versions.  Each unique combination of a product, 
+branch, and version receive's a new id and is referred to as 
+the product_id in other tables.
+****************/
+CREATE TABLE `product` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product` varchar(50) COLLATE utf8_bin NOT NULL,
+  `branch` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `version` varchar(16) COLLATE utf8_bin NOT NULL,
+  `default_product` TINYINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_branch` (`product`,`branch`,`version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `summary_cache`
+--
+
+DROP TABLE IF EXISTS `summary_cache`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/****************
+summary_cache - Description
+
+The summary cache table holds JSON blobs that need to be 
+stored in a  persistent cache.  These blobs are added to 
+a memcache and used by the user interface to reduce load 
+on the database and improve performance for the user.  
+Currently this includes a 7 and 30 day summary of all test runs.  
+The columns item_id and item_data allow for the construction of 
+a two part key for a key value object store.
+*****************/
+CREATE TABLE `summary_cache` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `item_id` int(11) NOT NULL,
+  `item_data` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `value` mediumtext COLLATE utf8_bin NOT NULL,
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `item_id_item_data` (`item_id`,`item_data`),
+  KEY `item_id_key` (`item_id`),
+  KEY `item_data_key` (`item_data`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test`
+--
+
+DROP TABLE IF EXISTS `test`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/****************
+test - Description
+
+The test table stores the complete list of test names and 
+their associated descriptions.  A test can also be versioned.  
+For a talos test, a new version might be created when the set 
+of pages associated with a test is modified.  All test runs 
+have a test_id associated with them.
+*****************/
+CREATE TABLE `test` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) COLLATE utf8_bin NOT NULL,
+  `description` mediumtext COLLATE utf8_bin,
+  `version` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_UNIQUE` (`name`, `version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_aux_data`
+--
+
+DROP TABLE IF EXISTS `test_aux_data`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/****************
+test_aux_data - Description
+
+This table stores auxiliary data associated with test runs.  
+The associated data can be either numeric or string based.
+*****************/
+CREATE TABLE `test_aux_data` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_run_id` int(11) NOT NULL,
+  `run_id` int(11) NOT NULL,
+  `aux_data_id` int(11) NOT NULL,
+  `numeric_data` double DEFAULT NULL,
+  `string_data` varchar(50) COLLATE utf8_bin DEFAULT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `test_run_id_key` (`test_run_id`),
+  KEY `status_key` (`status`),
+  KEY `fk_aux_data` (`aux_data_id`),
+  CONSTRAINT `fk_test_aux_data_test_run` FOREIGN KEY (`test_run_id`) REFERENCES `test_run` (`id`),
+  CONSTRAINT `fk_aux_data` FOREIGN KEY (`aux_data_id`) REFERENCES `aux_data` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_collection`
+--
+
+DROP TABLE IF EXISTS `test_collection`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/******************
+test_collection - Description
+
+The test collection table holds a collection of tests 
+that are examined as a group in the user interface.  
+The test collections can be accessed on the control 
+menu of "Runs" data view which holds a summary of all 
+test runs.
+********************/
+CREATE TABLE `test_collection` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) COLLATE utf8_bin NOT NULL,
+  `description` mediumtext COLLATE utf8_bin,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_UNIQUE` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_collection_map`
+--
+
+DROP TABLE IF EXISTS `test_collection_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/*******************
+test_collection_map - Description
+
+This table holds a mapping of test_id, operating_system_id, 
+and product_id for a given test collection.  This allows the 
+user interface to provide pre-defined test/platform combinations 
+for users to examine using any combination of those three id types.
+*********************/
+CREATE TABLE `test_collection_map` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_id` int(11) DEFAULT NULL,
+  `test_collection_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `operating_system_id` varchar(45) COLLATE utf8_bin DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_test_collection_map_test_collection` (`test_collection_id`),
+  CONSTRAINT `fk_test_collection_map_test_collection` FOREIGN KEY (`test_collection_id`) REFERENCES `test_collection` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_page_metric`
+--
+
+DROP TABLE IF EXISTS `test_page_metric`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/*************
+test_page_metric - Description
+
+The test_page_metric table contains metrics associated with the
+pages of a given test run.  A metric could be any type of calculation
+such as standard deviation, a t-test, or p-value etc...
+The type of metric stored with a test run is determined by
+the metric_value_id.  The status column allows us to ignore a stored
+metric if necessary.
+**************/
+CREATE TABLE `test_page_metric` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_run_id` int(11) NOT NULL,
+  `threshold_test_run_id` int(11) NOT NULL,
+  `metric_id` int(11) NOT NULL,
+  `metric_value_id` int(11) NOT NULL,
+  `page_id` int(11),
+  `value` double NOT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `test_run_id_key` (`test_run_id`),
+  KEY `threshold_test_run_id_key` (`threshold_test_run_id`),
+  KEY `metric_id_key` (`metric_id`),
+  KEY `metric_value_id_key` (`metric_value_id`),
+  KEY `value_key` (`value`),
+  CONSTRAINT `fk_test_page_metric_metric` FOREIGN KEY (`metric_id`) REFERENCES `metric` (`id`),
+  CONSTRAINT `fk_test_page_metric_metric_value` FOREIGN KEY (`metric_value_id`) REFERENCES `metric_value` (`id`),
+  CONSTRAINT `fk_test_page_metric_page` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_option_values`
+--
+
+DROP TABLE IF EXISTS `test_option_values`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/***************
+test_option_values - Description
+
+This table contains options associated with a particular
+test run.  These options could be command line options to
+the program running the test, or any other type of option
+that dictates how a particular test is run or behaves.
+****************/
+CREATE TABLE `test_option_values` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_run_id` int(11) NOT NULL,
+  `option_id` int(11) NOT NULL,
+  `value` varchar(25) COLLATE utf8_bin DEFAULT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `test_run_id_key` (`test_run_id`),
+  KEY `option_id_key` (`option_id`),
+  KEY `status_key` (`status`),
+  CONSTRAINT `fk_test_option_values_option` FOREIGN KEY (`option_id`) REFERENCES `option` (`id`),
+  CONSTRAINT `fk_test_option_values_test_run` FOREIGN KEY (`test_run_id`) REFERENCES `test_run` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_run`
+--
+
+DROP TABLE IF EXISTS `test_run`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/****************
+test_run - Description
+
+The test run is associated with a particular revision (this 
+corresponds to changeset in mercurial).  Each test run has 
+a single test associated with it.  It will also have a build 
+associated with it but the same build could be associated with 
+multiple test runs.
+*****************/
+CREATE TABLE `test_run` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_id` int(11) NOT NULL,
+  `build_id` int(11) NOT NULL,
+  `machine_id` int(11) NOT NULL,
+  `revision` varchar(16) NOT NULL,
+  `date_run` int(11) NOT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `test_id_key` (`test_id`),
+  KEY `build_id_key` (`build_id`),
+  KEY `machine_id_key` (`machine_id`),
+  KEY `date_run_key` (`date_run`),
+  KEY `changeset_key` (`revision`),
+  KEY `status_key` (`status`),
+  CONSTRAINT `fk_test_run_machine` FOREIGN KEY (`machine_id`) REFERENCES `machine` (`id`),
+  CONSTRAINT `fk_test_run_build` FOREIGN KEY (`build_id`) REFERENCES `build` (`id`),
+  CONSTRAINT `fk_test_run_test` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `test_value`
+--
+
+DROP TABLE IF EXISTS `test_value`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/********************
+test_value - Description
+
+This table holds the raw data for each replicate.  The 
+run_id column is a unique identifier used to distinguish multiple 
+replicates for the same page_id.  A test can have one or more 
+replicates.
+*********************/
+CREATE TABLE `test_value` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `test_run_id` int(11) NOT NULL,
+  `run_id` int(11) NOT NULL,
+  `page_id` int(11) DEFAULT NULL,
+  `value_id` int(11) NOT NULL,
+  `value` double NOT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `test_run_id_key` (`test_run_id`),
+  KEY `page_id_key` (`page_id`),
+  KEY `status_key` (`status`),
+  CONSTRAINT `fk_test_value_test_run` FOREIGN KEY (`test_run_id`) REFERENCES `test_run` (`id`),
+  CONSTRAINT `fk_test_value_page` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `metric_threshold`
+--
+
+DROP TABLE IF EXISTS `metric_threshold`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/*********************
+metric_threshold - Description
+
+**********************/
+CREATE TABLE `metric_threshold` (
+  `product_id` int(11) NOT NULL,
+  `operating_system_id` int(11) NOT NULL,
+  `processor` varchar(25) NOT NULL,
+  `build_type` varchar(25) NOT NULL,
+  `metric_id` int(11) NOT NULL,
+  `test_id` int(11) NOT NULL,
+  `page_id` int(11) NOT NULL,
+  `test_run_id` int(11) NOT NULL,
+  `revision` varchar(16) NOT NULL,
+  KEY `product_id_key` (`product_id`),
+  KEY `operating_system_id_key` (`operating_system_id`),
+  KEY `processor_key` (`processor`),
+  KEY `build_type_key` (`build_type`),
+  KEY `metric_id_key` (`metric_id`),
+  KEY `test_id_key` (`test_id`),
+  KEY `page_id_key` (`page_id`),
+  KEY `test_run_id_key` (`test_run_id`),
+  KEY `revision_key` (`revision`),
+  CONSTRAINT `fk_metric_threshold_product` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
+  CONSTRAINT `fk_metric_threshold_machine` FOREIGN KEY (`operating_system_id`) REFERENCES `machine` (`operating_system_id`),
+  CONSTRAINT `fk_metric_threshold_test` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`),
+  CONSTRAINT `fk_metric_threshold_page` FOREIGN KEY (`page_id`) REFERENCES `pages` (`id`),
+  UNIQUE KEY `metric_threshold_UNIQUE` (`product_id`, `operating_system_id`, `processor`, `build_type`, `metric_id`, `test_id`, `page_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `value`
+--
+
+DROP TABLE IF EXISTS `value`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+
+/*********************
+value - Description
+
+This table contains a unique list of value types that are 
+stored in the test_value and are associated with each test run.  
+The most common value type is run_time and describes the time 
+it took for a particular product to load a page.
+**********************/
+CREATE TABLE `value` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(25) NOT NULL,
+  `description` mediumtext NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_UNIQUE` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+
+-- Dump completed on 2012-05-01 11:02:48
