@@ -16,10 +16,15 @@ from dzAlerts.util import struct
 from .struct import Struct, StructList
 
 
-def indent(value, prefix="\t"):
+def indent(value, prefix="\t", indent=None):
+    if indent is not None:
+        prefix=prefix*indent
+        
     try:
-        lines=value.rstrip().splitlines()
-        return prefix+("\n"+prefix).join(lines)
+        content=value.rstrip()
+        suffix=value[len(content):]
+        lines=content.splitlines()
+        return prefix+("\n"+prefix).join(lines)+suffix
     except Exception, e:
         raise Exception("Problem with indent of value ("+e.message+")\n"+str(value))
 

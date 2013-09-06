@@ -13,6 +13,7 @@ import re
 import time
 import datetime
 from .debug import D
+from dzAlerts.util import struct
 from .strings import expand_template, NewJSONEncoder, json_decoder, json_scrub
 from .struct import Struct, StructList
 from .threads import Lock
@@ -45,7 +46,7 @@ class CNV:
 
             obj=json_decoder.decode(json_string)
             if isinstance(obj, list): return StructList(obj)
-            return Struct(**obj)
+            return struct.wrap(obj)
         except Exception, e:
             D.error("Can not decode JSON:\n\t"+json_string, e)
 

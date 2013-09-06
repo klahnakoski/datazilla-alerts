@@ -9,8 +9,10 @@
 
 from datetime import datetime
 import subprocess
+import numpy
 from pymysql import connect
 from dzAlerts.util import struct
+from dzAlerts.util.maths import Math
 
 from .strings import expand_template
 from .basic import nvl
@@ -370,6 +372,8 @@ class DB():
                 return value.value
             elif isinstance(value, Struct):
                 return self.db.literal(None)
+            elif Math.is_number(value):
+                return str(value)
             else:
                 return self.db.literal(value)
         except Exception, e:

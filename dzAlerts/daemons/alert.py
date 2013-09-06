@@ -46,12 +46,8 @@ EPSILON = 0.0001
 
 
 
-def send_alerts(**env):
-    env = Struct(**env)
-    assert env.db is not None
-
-    db = env.db
-    db.debug = env.debug
+def send_alerts(db, debug):
+    db.debug = debug
 
     try:
         new_alerts = db.query("""

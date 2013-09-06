@@ -35,14 +35,12 @@ REASON="alert_exception"     #name of the reason in alert_reason
 LOOK_BACK=timedelta(days = 41)
 WINDOW_SIZE = 10
 
-def alert_exception (**env):
-##find single points that deviate from the trend
-    env = Struct(**env)
-    assert env.db is not None
-    debug = env.debug
-    db = env.db
+def alert_exception (db, debug):
+    """
+    find single points that deviate from the trend
+    """
     db.debug = debug
-#    db.debug=debug
+    
 
     #LOAD CONFIG
 

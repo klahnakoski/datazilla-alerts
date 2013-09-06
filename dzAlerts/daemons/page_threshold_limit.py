@@ -22,19 +22,13 @@ REASON="page_threshold_limit"     #name of the reason in alert_reason
 LOOK_BACK=timedelta(weeks=4)
 
 
-def page_threshold_limit(**env):
+def page_threshold_limit(db, debug):
     """
     simplest of rules to test the dataflow from test_run, to alert, to email
     may prove slightly useful also!
     #point out any pages that are breaking human-set threshold limits
     """
-    env=Struct(**env)
-    assert env.db is not None
-    
-    REASON="page_threshold_limit"     #name of the reason in alert_reason
-
-    db = env.db
-    db.debug = env.debug
+    db.debug = debug
 
     try:
         #CALCULATE HOW FAR BACK TO LOOK

@@ -11,8 +11,11 @@ from dzAlerts.util.struct import StructList
 
 
 class Emailer:
-#dummy emailer
+    """
+    dummy emailer
+    """
 
+    
     def __init__(self, settings):
         self.settings=settings
         self.sent=StructList()

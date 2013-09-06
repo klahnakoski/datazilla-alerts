@@ -92,7 +92,7 @@ class D(object):
     @classmethod
     def start(cls, settings=None):
         if settings is None:
-            settings=Struct(**{"log":{"stream":sys.stdout}})
+            settings=struct.wrap({"log":{"stream":sys.stdout}})
         
         #PART 2 OF 2 SETUP OF THREADED LOGGING
         #WE NOW CAN LOAD THE threads MODULE
