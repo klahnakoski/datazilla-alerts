@@ -7,12 +7,15 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 from datetime import datetime, timedelta
+import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.debug import D
+from dzAlerts.util.startup import startup
 from dzAlerts.util.struct import Struct
-from util.testing import make_test_database
+from util import testing
+
 
 
 
@@ -279,10 +282,25 @@ test_data=Struct(**{
     ]
 })
 
-make_test_database(settings)
 
-with DB(settings.database) as db:
-    tester=test_alert_threshold(db)
-    tester.test_alert_generated()
-    tester.test_alert_obsolete()
-    
+@pytest.fixture()
+def settings(request):
+    settings=startup.read_settings(filename="test_settings.json")
+    D.start(settings.debug)
+    testing.make_test_database(settings)
+
+    def fin():
+        D.stop()
+    request.addfinalizer(fin)
+
+    return settings
+
+
+
+def test_1(settings):
+    with DB(settings.database) as db:
+        tester=test_alert_threshold(db)
+        tester.test_alert_generated()
+        tester.test_alert_obsolete()
+
+

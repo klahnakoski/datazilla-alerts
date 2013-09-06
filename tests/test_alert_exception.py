@@ -8,6 +8,7 @@
 ################################################################################
 from datetime import datetime, timedelta
 from math import sqrt
+import pytest
 from dzAlerts.daemons.alert_exception import alert_exception, REASON, MIN_CONFIDENCE
 
 from dzAlerts.util.cnv import CNV

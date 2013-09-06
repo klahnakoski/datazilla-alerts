@@ -315,7 +315,10 @@ def main():
             )
     except Exception, e:
         D.warning("Failure to find exceptions", cause=e)
-    D.stop()
+    finally:
+        D.stop()
 
 
-main()
+
+if __name__ == '__main__':
+    main()

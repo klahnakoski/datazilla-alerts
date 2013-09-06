@@ -154,6 +154,14 @@ class CNV:
 
 
     @staticmethod
+    def value2int(value):
+        if value is None:
+            return None
+        else:
+            return int(value)
+
+
+    @staticmethod
     def value2number(v):
         try:
             #IF LOOKS LIKE AN INT, RETURN AN INT

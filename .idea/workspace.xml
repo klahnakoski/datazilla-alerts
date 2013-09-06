@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6e63cd29-ec2c-4129-8573-6e7d8b9ed876" name="Default" comment="">
-      <change type="MOVED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\tests\resources\sql\schema_perftest.sql.tmpl" afterPath="$PROJECT_DIR$/tests/resources/sql/schema_perftest.sql" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/util/testing.py" afterPath="$PROJECT_DIR$/tests/util/testing.py" />
+      <change type="MOVED" beforePath="C:\Users\klahnakoski\git\datazilla-alerts\tests\test_email_send.py" afterPath="$PROJECT_DIR$/tests/_test_email_send.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/dzAlerts/util/db.py" afterPath="$PROJECT_DIR$/dzAlerts/util/db.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/dzAlerts/util/strings.py" afterPath="$PROJECT_DIR$/dzAlerts/util/strings.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test_alert_exception.py" afterPath="$PROJECT_DIR$/tests/test_alert_exception.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test_alert_threshold.py" afterPath="$PROJECT_DIR$/tests/test_alert_threshold.py" />
     </list>
     <ignored path="datazilla-alerts.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -79,46 +82,19 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="test_alert_exception.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tests/test_alert_exception.py">
+      <file leaf-file-name="strings.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/dzAlerts/util/strings.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="271" column="8" selection-start="9874" selection-end="9874" vertical-scroll-proportion="0.0">
+            <state line="23" column="0" selection-start="830" selection-end="830" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="testing.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tests/util/testing.py">
+      <file leaf-file-name="query.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/dzAlerts/util/query.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="36" column="41" selection-start="1594" selection-end="1594" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="debug.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/dzAlerts/util/debug.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="87" column="0" selection-start="2536" selection-end="2536" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="test_email_send.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tests/test_email_send.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="129" column="4" selection-start="4429" selection-end="4429" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="test_alert.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tests/test_alert.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="84" column="0" selection-start="3629" selection-end="3629" vertical-scroll-proportion="0.0">
+            <state line="350" column="0" selection-start="10119" selection-end="10144" vertical-scroll-proportion="0.32771084">
               <folding />
             </state>
           </provider>
@@ -127,34 +103,7 @@
       <file leaf-file-name="db.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/dzAlerts/util/db.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="174" column="0" selection-start="5139" selection-end="5139" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="cursors.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/cursors.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="229" column="0" selection-start="7221" selection-end="7221" vertical-scroll-proportion="-6.4">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="connections.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/connections.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="688" column="8" selection-start="23706" selection-end="23706" vertical-scroll-proportion="0.3319838">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="test_settings.json" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/test_settings.json">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="14" column="39" selection-start="290" selection-end="290" vertical-scroll-proportion="0.0">
+            <state line="177" column="5" selection-start="5226" selection-end="5226" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -175,22 +124,22 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/tests/resources/python/objectstore_to_cube.py" />
+        <option value="$PROJECT_DIR$/dzAlerts/daemons/alert.py" />
+        <option value="$PROJECT_DIR$/dzAlerts/util/cnv.py" />
         <option value="$PROJECT_DIR$/dzAlerts/daemons/alert_exception.py" />
-        <option value="$PROJECT_DIR$/dzAlerts/daemons/alert_revision.py" />
+        <option value="$PROJECT_DIR$/dzAlerts/daemons/alert_ttest.py" />
         <option value="$PROJECT_DIR$/dzAlerts/daemons/page_threshold_limit.py" />
-        <option value="$PROJECT_DIR$/tests/test_alert_threshold.py" />
-        <option value="$PROJECT_DIR$/dzAlerts/util/startup.py" />
-        <option value="$PROJECT_DIR$/dzAlerts/util/db.py" />
-        <option value="$PROJECT_DIR$/tests/resources/sql/Add test_data_all_dimensions.sql" />
-        <option value="$PROJECT_DIR$/dzAlerts/util/struct.py" />
+        <option value="$PROJECT_DIR$/dzAlerts/daemons/email_send.py" />
         <option value="$PROJECT_DIR$/test_settings.json" />
-        <option value="$PROJECT_DIR$/dzAlerts/util/debug.py" />
-        <option value="$PROJECT_DIR$/tests/test_alert_exception.py" />
-        <option value="$PROJECT_DIR$/tests/test_email_send.py" />
+        <option value="$PROJECT_DIR$/tests/util/emailer.py" />
         <option value="$PROJECT_DIR$/tests/test_alert.py" />
-        <option value="$PROJECT_DIR$/tests/resources/sql/schema_perftest.sql.tmpl" />
+        <option value="$PROJECT_DIR$/dzAlerts/util/struct.py" />
+        <option value="$PROJECT_DIR$/tests/test_email_send.py" />
         <option value="$PROJECT_DIR$/tests/util/testing.py" />
+        <option value="$PROJECT_DIR$/tests/test_alert_threshold.py" />
+        <option value="$PROJECT_DIR$/tests/test_alert_exception.py" />
+        <option value="$PROJECT_DIR$/dzAlerts/util/db.py" />
+        <option value="$PROJECT_DIR$/dzAlerts/util/strings.py" />
       </list>
     </option>
   </component>
@@ -315,6 +264,28 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="sql" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="datazilla-alerts" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="tests" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="resources" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="scripts" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -480,7 +451,7 @@
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="" />
       <option name="IS_MODULE_SDK" value="false" />
-      <module name="" />
+      <module name="datazilla-alerts" />
       <option name="SCRIPT_NAME" value="" />
       <option name="CLASS_NAME" value="" />
       <option name="METHOD_NAME" value="" />
@@ -770,22 +741,22 @@
     <myIsUseDefaultProxy>false</myIsUseDefaultProxy>
   </component>
   <component name="ToolWindowManager">
-    <frame x="54" y="-8" width="1554" height="916" extended-state="6" />
-    <editor active="true" />
+    <frame x="63" y="0" width="1512" height="900" extended-state="1" />
+    <editor active="false" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.39480197" sideWeight="0.98792756" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.29212454" sideWeight="0.98792756" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3391089" sideWeight="0.99945027" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.42550504" sideWeight="0.99945027" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Script Monkey" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32835025" sideWeight="0.6046931" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32781458" sideWeight="0.66117215" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="JSON Formatter" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32740587" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24748491" sideWeight="0.6608911" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25465837" sideWeight="0.57449496" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32982087" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -839,19 +810,19 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>106</line>
+          <line>111</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>79</line>
+          <line>84</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>91</line>
+          <line>96</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>133</line>
+          <line>138</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/tests/resources/python/prod_to_objectstore.py</url>
@@ -859,59 +830,59 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>71</line>
+          <line>76</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>128</line>
+          <line>133</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>217</line>
+          <line>222</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/tests/util/testing.py</url>
-          <line>42</line>
+          <line>57</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>259</line>
+          <line>266</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>186</line>
+          <line>191</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>300</line>
+          <line>315</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/tests/test_alert.py</url>
-          <line>89</line>
+          <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
+          <line>289</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/tests/test_alert.py</url>
+          <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
+          <line>114</line>
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/_test_alert.py</url>
+          <line>187</line>
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/dzAlerts/util/strings.py</url>
           <line>84</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/dzAlerts/util/db.py</url>
-          <line>174</line>
+          <url>file://$PROJECT_DIR$/dzAlerts/daemons/email_send.py</url>
+          <line>72</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/cursors.py</url>
-          <line>229</line>
+          <url>file://$PROJECT_DIR$/dzAlerts/daemons/email_send.py</url>
+          <line>65</line>
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/connections.py</url>
-          <line>874</line>
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/connections.py</url>
-          <line>606</line>
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/connections.py</url>
-          <line>690</line>
+          <url>file://$PROJECT_DIR$/dzAlerts/util/strings.py</url>
+          <line>23</line>
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -921,114 +892,114 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/tests/resources/sql/Add test_data_all_dimensions.sql">
+    <entry file="file://$PROJECT_DIR$/alert_settings.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="47" column="35" selection-start="1935" selection-end="2024" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/dzAlerts/util/cnv.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="90" column="8" selection-start="2925" selection-end="2925" vertical-scroll-proportion="0.33136094">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+        <state line="17" column="19" selection-start="282" selection-end="446" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/test_settings.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="14" column="39" selection-start="290" selection-end="290" vertical-scroll-proportion="0.0">
+        <state line="27" column="7" selection-start="628" selection-end="628" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Python27/Lib/logging/__init__.py">
+    <entry file="file://$PROJECT_DIR$/tests/resources/logs/testing.log">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="1108" column="8" selection-start="39536" selection-end="39536" vertical-scroll-proportion="32.139603">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/dzAlerts/util/struct.py">
+    <entry file="file://$PROJECT_DIR$/tests/_test_alert.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="119" column="26" selection-start="3492" selection-end="3492" vertical-scroll-proportion="0.33333334">
+        <state line="27" column="48" selection-start="1115" selection-end="1115" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tests/test_email_send.py">
+    <entry file="file://$PROJECT_DIR$/resources/migration/v1.1 alerts.sql">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="129" column="4" selection-start="4429" selection-end="4429" vertical-scroll-proportion="0.0">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/dzAlerts/util/debug.py">
+    <entry file="file://$PROJECT_DIR$/resources/migration/v1.2 email.sql">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="87" column="0" selection-start="2536" selection-end="2536" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests/resources/sql/schema_perftest.sql">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="354" column="44" selection-start="12371" selection-end="12371" vertical-scroll-proportion="0.6450116">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests/test_alert_exception.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="271" column="8" selection-start="9874" selection-end="9874" vertical-scroll-proportion="0.0">
+        <state line="136" column="20" selection-start="2910" selection-end="2910" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tests/util/testing.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="36" column="41" selection-start="1594" selection-end="1594" vertical-scroll-proportion="0.0">
+        <state line="52" column="54" selection-start="2101" selection-end="2101" vertical-scroll-proportion="0.6769437">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tests/test_alert.py">
+    <entry file="file://$PROJECT_DIR$/dzAlerts/daemons/email_send.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="84" column="0" selection-start="3629" selection-end="3629" vertical-scroll-proportion="0.0">
+        <state line="54" column="0" selection-start="1762" selection-end="1762" vertical-scroll-proportion="0.3016086">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/_test_email_send.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="140" column="0" selection-start="4409" selection-end="4793" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test_alert_threshold.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="17" column="0" selection-start="841" selection-end="841" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test_alert_exception.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="141" column="31" selection-start="4249" selection-end="4249" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/dzAlerts/util/debug.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="171" column="24" selection-start="4813" selection-end="4813" vertical-scroll-proportion="0.3243968">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/dzAlerts/util/struct.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="168" column="21" selection-start="4590" selection-end="4590" vertical-scroll-proportion="0.36997318">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/dzAlerts/util/db.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="174" column="0" selection-start="5139" selection-end="5139" vertical-scroll-proportion="0.0">
+        <state line="177" column="5" selection-start="5226" selection-end="5226" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/cursors.py">
+    <entry file="file://$PROJECT_DIR$/dzAlerts/util/strings.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="229" column="0" selection-start="7221" selection-end="7221" vertical-scroll-proportion="-6.4">
+        <state line="23" column="0" selection-start="830" selection-end="830" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/.IntelliJIdea10/system/python_stubs/-762174762/_weakref.py">
+    <entry file="file://$PROJECT_DIR$/dzAlerts/util/query.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="31" column="0" selection-start="838" selection-end="838" vertical-scroll-proportion="0.5766871">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Python27/Lib/site-packages/pymysql-0.5-py2.7.egg/pymysql/connections.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="688" column="8" selection-start="23706" selection-end="23706" vertical-scroll-proportion="0.3319838">
+        <state line="350" column="0" selection-start="10119" selection-end="10144" vertical-scroll-proportion="0.32771084">
           <folding />
         </state>
       </provider>

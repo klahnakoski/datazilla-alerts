@@ -11,15 +11,19 @@ from dzAlerts.daemons.email_send import email_send
 from dzAlerts.util.db import DB
 from dzAlerts.util.debug import D
 from dzAlerts.util.query import Q
-from dzAlerts.util.emailer import Emailer
 from dzAlerts.util.startup import startup
-from util.testing import make_test_database
+from util import testing
 
 
 class test_email_send():
+    """
+    VERIFY ENTRIES IN THE email_* TABLES ACTUALLY GET SENT AS INTENDED:
+    TO THE CORRECT EMAIL ADDRESSES AND HAVE THE CORRECT CONTENT
+    """
 
-    def __init__(self, db):
+    def __init__(self, db, settings):
         self.db=db
+        self.settings=settings
         self.emailer=None
         self.uid=None
 
@@ -56,7 +60,7 @@ class test_email_send():
         ########################################################################
         # VERIFY
         ########################################################################
-        self.verify_notify()
+        self.verify_notify_is_cleared()
         if len(to_list)==0:
             #ENSURE NOTHING SENT
             mail_content=self.db.query("SELECT id, subject, date_sent, body FROM email_content WHERE subject={{subject}}", {"subject":"subject"+self.uid})
@@ -67,20 +71,18 @@ class test_email_send():
             self.verify_sent(to_list)
 
 
-
     def setup(self, to_list):
-        self.emailer=Emailer(None)
+        self.emailer = testing.Emailer(self.settings.email)
 
-        self.db.call("email_send",(
+        self.db.call("email_send", (
             ";".join(to_list), #to
-            "subject"+self.uid, #title
-            "body"+self.uid, #body
+            "subject" + self.uid, #title
+            "body" + self.uid, #body
             None
-        ))
+            ))
 
 
-
-    def verify_notify(self):
+    def verify_notify_is_cleared(self):
         #THE NOTIFY FLAG IS PROPERLY CLEARED
         notify = self.db.query("SELECT new_mail FROM email_notify")[0].new_mail
         assert notify == 0
@@ -123,7 +125,7 @@ class test_email_send():
 def settings(request):
     settings=startup.read_settings(filename="test_settings.json")
     D.start(settings.debug)
-    make_test_database(settings)
+    testing.make_test_database(settings)
 
     def fin():
         D.stop()
@@ -135,13 +137,13 @@ def settings(request):
 
 def test_1(settings):
     with DB(settings.database) as db:
-        test_email_send(db).test_zero_receivers()
+        test_email_send(db, settings).test_zero_receivers()
 
 def test_2(settings):
     with DB(settings.database) as db:
-        test_email_send(db).test_one_receivers()
+        test_email_send(db, settings).test_one_receivers()
 
 def test_3(settings):
     with DB(settings.database) as db:
-        test_email_send(db).test_many_receivers()
+        test_email_send(db, settings).test_many_receivers()
 

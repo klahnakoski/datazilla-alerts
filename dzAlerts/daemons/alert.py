@@ -9,8 +9,8 @@
 
 
 from datetime import datetime, timedelta
-from string import Template
 from dzAlerts.util.cnv import CNV
+from dzAlerts.util.strings import expand_template
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.maths import Math
 from dzAlerts.util.debug import D
@@ -30,15 +30,15 @@ HEADER = "<h2>This is for testing only.  It may be misleading.</h2><br><br>"
 #                            "branch":v.branch,
 #                            "branch_version":v.branch_version,
 #                            "revision":v.revision
-TEMPLATE = Template("<div><h2>{{score}} - {{revision}}</h2>{{reason}}<br>\n"+
-                    "On page {{page_url}}<br>\n"+
-                    "<a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>\n"+
-                    "<a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>\n"+
-                    "<a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>\n"+
-                    "<a href=\"https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}\">Datazilla</a><br>\n"+
-                    "<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>\n"+
-                    "Raw data: {{raw_data}}"+
-                    "</div>\n")
+TEMPLATE =  """<div><h2>{{score}} - {{revision}}</h2>{{reason}}<br>
+            On page {{page_url}}<br>
+            <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
+            <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
+            <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
+            <a href=\"https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}\">Datazilla</a><br>
+            <a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
+            Raw data: {{raw_data}}
+            </div>"""
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = timedelta(days = 1)
 MAX_EMAIL_LENGTH = 8000
@@ -98,9 +98,9 @@ def send_alerts(**env):
             for k,v in alert.items():
                 if k not in details:
                     details[k]=v
-            details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence)*100, 0))+"%",  #AS A PERCENT
-            details.reason = Template(alert.description).substitute(details)
-            body.append(TEMPLATE.safe_substitute(details))
+            details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence)*100, 0))+"%"  #AS A PERCENT
+            details.reason = expand_template(alert.description, details)
+            body.append(expand_template(TEMPLATE, details))
         body = SEPARATOR.join(body)
 
 #        listeners = SQLQuery.run({

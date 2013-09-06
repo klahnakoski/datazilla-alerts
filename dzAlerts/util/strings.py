@@ -11,13 +11,17 @@ import json
 import re
 from threading import Lock
 import time
+from dzAlerts.util import struct
 
-from .maths import Math
-from .struct import Struct, StructList, unwrap
+from .struct import Struct, StructList
 
 
 def indent(value, prefix="\t"):
-    return prefix+("\n"+prefix).join(value.rstrip().splitlines())
+    try:
+        lines=value.rstrip().splitlines()
+        return prefix+("\n"+prefix).join(lines)
+    except Exception, e:
+        raise Exception("Problem with indent of value ("+e.message+")\n"+str(value))
 
 
 def outdent(value):
@@ -34,7 +38,8 @@ def between(value, prefix, suffix):
     s+=len(prefix)
 
     e=value.find(suffix, s)
-    if e==-1: raise Exception("can not find '"+suffix+"'")
+    if e==-1:
+        return None
 
     s=value.rfind(prefix, 0, e)+len(prefix) #WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
     return value[s:e]
@@ -58,17 +63,17 @@ def find_first(value, find_arr, start=0):
 #    if values is None: values={}
 #    return pystache.render(template, values)
 
-pattern=re.compile(r"(\{\{[\w_.]+\}\})")
+pattern=re.compile(r"(\{\{[\w_\.]+\}\})")
 def expand_template(template, values):
     if values is None: values={}
-    values=Struct(**values)
+    values=struct.wrap(values)
 
     def replacer(found):
         var=found.group(1)
         try:
             val=values[var[2:-2]]
             val=toString(val)
-            return str(val)
+            return val
         except Exception, e:
             try:
                 if e.message.find("is not JSON serializable"):

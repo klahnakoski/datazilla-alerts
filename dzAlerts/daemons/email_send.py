@@ -12,21 +12,14 @@ from datetime import datetime
 from dzAlerts.util.debug import D
 
 #if there are emails, then send them
-from dzAlerts.util.struct import Struct
 from dzAlerts.util.db import DB
 from dzAlerts.util.emailer import Emailer
 from dzAlerts.util.startup import startup
 
 
 
-def email_send(**env):
-    env=Struct(**env)
-    assert env.db is not None               #EXPECTING db WITH EMAIL SCHEMA
-    assert env.emailer is not None          #EXPECTING SMTP CONNECTION INFO
-
-    db = env.db
-    emailer=env.emailer
-    db.debug=env.debug
+def email_send(db, emailer, debug):
+    db.debug=debug
 
     ##VERIFY self SHOULD BE THE ONE PERFORMING OPS (TO PREVENT MULTIPLE INSTANCES NEEDLESSLY RUNNING)
     try:
@@ -80,16 +73,24 @@ def email_send(**env):
         D.error("Could not send emails", e)
 
 
-        
-settings=startup.read_settings()
 
-try:
-    D.println("Running email using schema {{schema}}", {"schema":settings.database.schema})
-    with DB(settings.database) as db:
-        email_send(
-            db=db,
-            emailer=Emailer(settings.email),
-            debug=settings.debug is not None
-        )
-except Exception, e:
-    D.warning("Failure to send emails", cause=e)
+def main():
+    settings=startup.read_settings()
+    D.start(settings.debug)
+    try:
+        D.println("Running email using schema {{schema}}", {"schema":settings.database.schema})
+        with DB(settings.database) as db:
+            email_send(
+                db=db,
+                emailer=Emailer(settings.email),
+                debug=settings.debug is not None
+            )
+    except Exception, e:
+        D.warning("Failure to send emails", cause=e)
+    finally:
+        D.stop()
+
+
+
+if __name__=="__main__":
+    main()

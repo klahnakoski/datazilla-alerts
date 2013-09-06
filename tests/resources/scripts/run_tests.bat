@@ -1,4 +1,4 @@
 REM RUN FROM MAIN DIRECTORY
 
-SET PYTHONPATH=./pyLibrary;./src/python;./tests
+SET PYTHONPATH=.
 py.test tests

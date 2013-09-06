@@ -21,10 +21,13 @@ from dzAlerts.util.struct import Struct
 REASON="page_threshold_limit"     #name of the reason in alert_reason
 LOOK_BACK=timedelta(weeks=4)
 
-#simplest of rules to test the dataflow from test_run, to alert, to email
-#may prove slightly useful also!
-##point out any pages that are breaking human-set threshold limits
+
 def page_threshold_limit(**env):
+    """
+    simplest of rules to test the dataflow from test_run, to alert, to email
+    may prove slightly useful also!
+    #point out any pages that are breaking human-set threshold limits
+    """
     env=Struct(**env)
     assert env.db is not None
     

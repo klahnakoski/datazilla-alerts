@@ -10,7 +10,7 @@
 from datetime import datetime
 import subprocess
 from pymysql import connect
-from dzAlerts.util.struct import wrap
+from dzAlerts.util import struct
 
 from .strings import expand_template
 from .basic import nvl
@@ -32,20 +32,26 @@ class DB():
 
     """
 
-    #OVERRIDE THE settings.schema WITH THE schema PARAMETER
     def __init__(self, settings, schema=None):
+        """OVERRIDE THE settings.schema WITH THE schema PARAMETER"""
         if isinstance(settings, DB):
             settings=settings.settings
 
         self.settings=settings.copy()
         self.settings.schema=nvl(schema, self.settings.schema)
+
+        self.debug=nvl(self.settings.debug, DEBUG)
+        self._open()
+
+    def _open(self):
+        """ DO NOT USE THIS UNLESS YOU close() FIRST"""
         try:
             self.db=connect(
-                host=settings.host,
-                port=settings.port,
-                user=nvl(settings.username, settings.user),
-                passwd=nvl(settings.password, settings.passwd),
-                db=nvl(schema, settings.schema, settings.db),
+                host=self.settings.host,
+                port=self.settings.port,
+                user=nvl(self.settings.username, self.settings.user),
+                passwd=nvl(self.settings.password, self.settings.passwd),
+                db=nvl(self.settings.schema, self.settings.schema, self.settings.db),
                 charset="utf8",
                 use_unicode=True
             )
@@ -54,7 +60,6 @@ class DB():
         self.cursor=None
         self.partial_rollback=False
         self.transaction_level=0
-        self.debug=nvl(settings.debug, DEBUG)
         self.backlog=[]     #accumulate the write commands so they are sent at once
 
 
@@ -98,7 +103,7 @@ class DB():
         
     def commit(self):
         try:
-            self.execute_backlog()
+            self._execute_backlog()
         except Exception, e:
             try:
                 self.rollback()
@@ -151,7 +156,7 @@ class DB():
 
 
     def call(self, proc_name, params):
-        self.execute_backlog()
+        self._execute_backlog()
         try:
             self.cursor.callproc(proc_name, params)
             self.cursor.close()
@@ -162,7 +167,7 @@ class DB():
 
 
     def query(self, sql, param=None):
-        self.execute_backlog()
+        self._execute_backlog()
         try:
             old_cursor=self.cursor
             if old_cursor is None: #ALLOW NON-TRANSACTIONAL READS
@@ -193,7 +198,7 @@ class DB():
 
         num=0
 
-        self.execute_backlog()
+        self._execute_backlog()
         try:
             old_cursor=self.cursor
             if old_cursor is None: #ALLOW NON-TRANSACTIONAL READS
@@ -208,7 +213,7 @@ class DB():
             columns = tuple( [utf8_to_unicode(d[0]) for d in self.cursor.description] )
             for r in self.cursor:
                 num+=1
-                execute(wrap(dict(zip(columns, [utf8_to_unicode(c) for c in r]))))
+                execute(struct.wrap(dict(zip(columns, [utf8_to_unicode(c) for c in r]))))
 
             if old_cursor is None:   #CLEANUP AFTER NON-TRANSACTIONAL READS
                 self.cursor.close()
@@ -227,7 +232,7 @@ class DB():
         sql=outdent(sql)
         self.backlog.append(sql)
         if len(self.backlog)>=MAX_BATCH_SIZE:
-            self.execute_backlog()
+            self._execute_backlog()
 
         
     def execute_file(self, filename, param=None):
@@ -236,6 +241,8 @@ class DB():
 
     @staticmethod
     def execute_sql(settings, sql, param=None):
+        """EXECUTE MANY LINES OF SQL (FROM SQLDUMP FILE, MAYBE?"""
+
         # MySQLdb provides no way to execute an entire SQL file in bulk, so we
         # have to shell out to the commandline client.
         if param is not None: sql=expand_template(sql,param)
@@ -268,19 +275,27 @@ class DB():
         DB.execute_sql(settings, sql, param)
 
 
-    def execute_backlog(self):
+    def _execute_backlog(self):
         if len(self.backlog)==0: return
 
         (backlog, self.backlog)=(self.backlog, [])
-        for i, g in Q.groupby(backlog, size=MAX_BATCH_SIZE):
-            sql=";\n".join(g)
-            try:
-                if self.debug: D.println("Execute block of SQL:\n"+indent(sql))
-                self.cursor.execute(sql)
-                self.cursor.close()
-                self.cursor = self.db.cursor()
-            except Exception, e:
-                D.error("Problem executing SQL:\n{{sql}}", {"sql":indent(sql.strip())}, e, offset=1)
+        if self.db.__module__.startswith("pymysql"):
+            #BUG IN PYMYSQL: CAN NOT HANDLE MULTIPLE STATEMENTS
+            for b in backlog:
+                self.cursor.execute(b)
+
+            self.cursor.close()
+            self.cursor = self.db.cursor()
+        else:
+            for i, g in Q.groupby(backlog, size=MAX_BATCH_SIZE):
+                sql=";\n".join(g)
+                try:
+                    if self.debug: D.println("Execute block of SQL:\n"+indent(sql))
+                    self.cursor.execute(sql)
+                    self.cursor.close()
+                    self.cursor = self.db.cursor()
+                except Exception, e:
+                    D.error("Problem executing SQL:\n{{sql}}", {"sql":indent(sql.strip())}, e, offset=1)
 
 
 
@@ -352,7 +367,7 @@ class DB():
             elif isinstance(value, list):
                 return "("+",".join([self.db.literal(vv) for vv in value])+")"
             elif isinstance(value, SQL):
-                return value
+                return value.value
             elif isinstance(value, Struct):
                 return self.db.literal(None)
             else:

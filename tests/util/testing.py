@@ -5,13 +5,25 @@
 ## You can obtain one at http://mozilla.org/MPL/2.0/.
 ################################################################################
 
-import os
-from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB
 from dzAlerts.util.debug import D
-from dzAlerts.util.files import File
+from dzAlerts.util.struct import StructList
 
 
+class Emailer:
+#dummy emailer
+
+    def __init__(self, settings):
+        self.settings=settings
+        self.sent=StructList()
+
+
+    def send_email(self, **args):
+        self.sent.append(args)      #SIMPLY RECORD THE CALL FOR LATER VERIFICATION
+
+
+
+        
 def make_test_database(settings):
     try:
         settings.database.debug=True
@@ -30,13 +42,16 @@ def make_test_database(settings):
         DB.execute_file(settings.database, "tests/resources/sql/schema_perftest.sql")
         DB.execute_file(settings.database, "tests/resources/sql/Add test_data_all_dimensions.sql")
 
-        D.println("MIGREATE {{database}} TO NEW SCHEMA", {"database":settings.database.schema})
+        D.println("MIGRATE {{database}} TO NEW SCHEMA", {"database":settings.database.schema})
         DB.execute_file(settings.database, "resources/migration/v1.1 alerts.sql")
         DB.execute_file(settings.database, "resources/migration/v1.2 email.sql")
 
         with DB(settings.database) as db:
             db.execute("ALTER TABLE test_data_all_dimensions DROP FOREIGN KEY `fk_test_run_id_tdad`")
             db.execute("ALTER TABLE pages DROP FOREIGN KEY `fk_pages_test`")
+            db.execute("DELETE FROM email_delivery")
+            db.execute("DELETE FROM email_attachment")
+            db.execute("DELETE FROM email_content")
 
         D.println("DATABASE READY {{database}}", {"database":settings.database.schema})
     except Exception, e:

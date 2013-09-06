@@ -7,10 +7,10 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 import pytest
+import dzAlerts
 
 from dzAlerts.daemons.alert import send_alerts
 from datetime import datetime, timedelta
-from string import Template
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB
 from dzAlerts.util.debug import D
@@ -18,13 +18,13 @@ from dzAlerts.util.startup import startup
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.query import Q
 from dzAlerts.util.maths import Math
-from dzAlerts.util.strings import between
+from dzAlerts.util.strings import between, expand_template
 from util.testing import make_test_database
 
 
 class test_alert:
     """
-    datazilla.daemons.test_alert.py IS A *FUNCTION* WITH DOMAIN alert_* AND CODOMAIN email_*
+    alert.py IS A *FUNCTION* WITH DOMAIN alerts AND CODOMAIN email_*
     self.test_data HAS THE DOMAIN VALUES TO TEST
 
     self.test_data[].details INCLUDES THE pass/fail INDICATION SO THE VERIFICATION
@@ -68,7 +68,7 @@ class test_alert:
         self.db.execute("DELETE FROM alert_reasons WHERE code={{reason}}", {"reason":self.reason})
         self.db.insert("alert_reasons", {
             "code":self.reason,
-            "description":">>>>{{id}}<<<<",
+            "description":">>>>{{id}}<<<<",  #SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
             "config":None,
             "last_run":self.now-timedelta(days=1)
         })
@@ -148,7 +148,6 @@ class test_alert:
 
             if len(to_list)==0:
                 assert len(emails)==0
-                self.db.commit()
                 return
             
             #VERIFY ONE MAIL SENT
@@ -171,17 +170,20 @@ class test_alert:
             })
             expected_marked=set([d.id for d in self.test_data if CNV.JSON2object(d.details).expect=='pass'])
             actual_marked=set(Q.select(alert_state, "id"))
-            assert expected_marked == actual_marked, Template(
-                "Expecting only id in {{expected}}, but instead got {{actual}}").substitute(
-                    {"expected":str(expected_marked),
-                     "actual":str(actual_marked)
+            assert expected_marked == actual_marked, expand_template(
+                "Expecting only id in {{expected}}, but instead got {{actual}}", {
+                    "expected":str(expected_marked),
+                    "actual":str(actual_marked)
                 })
 
             #VERIFY BODY HAS THE CORRECT ALERTS
             expecting_alerts=set([d.id for d in map(lambda d: CNV.JSON2object(d.details), self.test_data) if d.expect=='pass'])
-            actual_alerts_sent=set([int(between(b, ">>>>", "<<<<")) for b in emails[0].body.split(daemons.alert.SEPARATOR)])
+            actual_alerts_sent=set([
+                CNV.value2int(between(b, ">>>>", "<<<<"))
+                for b in emails[0].body.split(dzAlerts.daemons.alert.SEPARATOR)
+                if CNV.value2int(between(b, ">>>>", "<<<<")) is not None
+            ])
             assert expecting_alerts == actual_alerts_sent
-            self.db.flush()
         except Exception, e:
             D.error("Test failure", e)
 

@@ -110,8 +110,11 @@ class Struct(dict):
 
 class StructList(list):
 
-    def __init__(self, vals=[]):
-        if isinstance(vals, StructList):
+    def __init__(self, vals=None):
+        """ USE THE vals, NOT A COPY """
+        if vals is None:
+            self.list=[]
+        elif isinstance(vals, StructList):
             self.list=vals.list
         else:
             self.list=vals
