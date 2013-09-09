@@ -17,8 +17,8 @@ from dzAlerts.util.timer import Timer
 from dzAlerts.util.query import Q
 
 
-BATCH_SIZE=500  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN=100000
+BATCH_SIZE=1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
+TEST_RESULTS_PER_RUN=10000
 
 
 def objectstore_to_cube(db, r):

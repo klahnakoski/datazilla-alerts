@@ -32,6 +32,10 @@ def etl(name, db, settings, id):
                 return False
             data=CNV.JSON2object(content)
 
+        if data.test_run_id is None:
+            #DZ IS RESPOSNSIBLE FOR THIS NUMBER, WHICH MAY NOT BE SET YET
+            return
+
         with Timer(str(name)+" push to local "+str(id)):
             with db_lock:
                 db.insert("objectstore", {
@@ -256,10 +260,6 @@ def main(settings):
 
 
 if __name__=="__main__":
-    import sys
-    reload(sys)
-    sys.setdefaultencoding("utf-8")
-
     try:
         settings=startup.read_settings()
         settings.source.service.threads=nvl(settings.source.service.threads, 1)

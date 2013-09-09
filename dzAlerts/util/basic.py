@@ -9,7 +9,7 @@
 
 
 def nvl(*args):
-    #pick the first non-None value
+    #pick the first none-null value
     for a in args:
         if a is not None: return a
     return None

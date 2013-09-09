@@ -8,12 +8,10 @@
 
 
 from datetime import datetime
-import subprocess
-import numpy
+from decimal import Decimal
 from pymysql import connect
-from dzAlerts.util import struct
-from dzAlerts.util.maths import Math
-
+from . import struct
+from .maths import Math
 from .strings import expand_template
 from .basic import nvl
 from .cnv import CNV
@@ -102,7 +100,7 @@ class DB():
             self.db.close()
         except Exception, e:
             D.warning("can not close()", e)
-        
+
     def commit(self):
         try:
             self._execute_backlog()
@@ -284,8 +282,10 @@ class DB():
         if self.db.__module__.startswith("pymysql"):
             #BUG IN PYMYSQL: CAN NOT HANDLE MULTIPLE STATEMENTS
             for b in backlog:
-                self.cursor.execute(b)
-
+                try:
+                    self.cursor.execute(b)
+                except Exception, e:
+                    D.error("Can not execute sql:\n{{sql}}", {"sql":b}, e)
             self.cursor.close()
             self.cursor = self.db.cursor()
         else:
@@ -372,8 +372,8 @@ class DB():
                 return value.value
             elif isinstance(value, Struct):
                 return self.db.literal(None)
-            elif Math.is_number(value):
-                return str(value)
+            elif isinstance(value, Decimal):
+                return unicode(value)
             else:
                 return self.db.literal(value)
         except Exception, e:

@@ -6,6 +6,8 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 import math
+from .debug import D
+from .strings import find_first
 
 class Math():
 
@@ -56,7 +58,7 @@ class Math():
     #RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(str(value))<len(str(value)):
     @staticmethod
     def approx_str(value):
-        v=str(value)
+        v=unicode(value)
         d=v.find(".")
         if d==-1: return value
 
