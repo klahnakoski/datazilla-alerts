@@ -235,7 +235,7 @@ def main(settings):
                 missing_ids=set(range(settings.source.service.min, settings.source.service.max))
             else:
                 existing_ids = get_existing_ids(db)
-                missing_ids=set(range(settings.source.service.min, settings.source.service.max)) - existing_ids
+                missing_ids=Q.sort(set(range(settings.source.service.min, settings.source.service.max)) - existing_ids)
             settings.num_not_found=0
 
             with Multithread(functions) as many:
