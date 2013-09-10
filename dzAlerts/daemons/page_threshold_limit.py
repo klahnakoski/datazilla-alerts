@@ -13,7 +13,7 @@ from dzAlerts.daemons.alert import update_h0_rejected
 from dzAlerts.util.basic import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.struct import Struct
 
 
@@ -122,7 +122,7 @@ def page_threshold_limit(db, debug):
 
     except Exception, e:
 
-        D.error("Could not perform threshold comparisons", e)
+        Log.error("Could not perform threshold comparisons", e)
 
 
       

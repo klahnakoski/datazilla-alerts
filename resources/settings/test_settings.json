@@ -17,7 +17,7 @@
 			"backupCount": "100",
 			"encoding": "utf8"
 		},{
-			"class":"dzAlerts.util.debug.Log_usingStream",
+			"class":"dzAlerts.util.logs.Log_usingStream",
 			"stream":"sys.stdout"
 		}]
 	}

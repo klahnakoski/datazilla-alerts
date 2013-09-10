@@ -15,7 +15,7 @@ from dzAlerts.util import struct
 
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.startup import startup
 from dzAlerts.util.query import Q
 from dzAlerts.util.stats import closeEnough
@@ -112,7 +112,7 @@ class test_alert_exception():
             {"reason":REASON}
         )[0].num
         if exists==0:
-            D.error("Expecting the database to have an alert_reason={{reason}}", {"reason":REASON})
+            Log.error("Expecting the database to have an alert_reason={{reason}}", {"reason":REASON})
 
         ## MAKE A 'PAGE' TO TEST
         self.db.execute("DELETE FROM pages")
@@ -178,11 +178,11 @@ class test_alert_exception():
 @pytest.fixture()
 def settings(request):
     settings=startup.read_settings(filename="test_settings.json")
-    D.start(settings.debug)
+    Log.start(settings.debug)
     make_test_database(settings)
 
     def fin():
-        D.stop()
+        Log.stop()
     request.addfinalizer(fin)
 
     return settings

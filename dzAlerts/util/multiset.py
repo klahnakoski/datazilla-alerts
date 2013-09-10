@@ -6,7 +6,7 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 
-from .debug import D
+from .logs import Log
 
 class multiset():
 
@@ -35,7 +35,7 @@ class multiset():
 
     def remove(self, value):
         if value not in self.dic:
-            D.error("{{value}} is not in multiset", {"value":value})
+            Log.error("{{value}} is not in multiset", {"value":value})
 
         count=self.dic[value]
         count-=1
@@ -44,6 +44,8 @@ class multiset():
         else:
             self.dic[value]=count
 
+    def __len__(self):
+        return sum(self.dic.values())
 
 
     def count(self, value):

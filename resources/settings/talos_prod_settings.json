@@ -32,7 +32,7 @@
 			"backupCount": "100",
 			"encoding": "utf8"
 		},{
-			"class":"util.debug.Log_usingStream",
+			"class":"util.logs.Log_usingStream",
 			"stream":"sys.stdout"
 		}]
 	}

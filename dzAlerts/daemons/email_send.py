@@ -9,7 +9,7 @@
 
 
 from datetime import datetime
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 
 #if there are emails, then send them
 from dzAlerts.util.db import DB
@@ -27,7 +27,7 @@ def email_send(db, emailer, debug):
         ## EXIT EARLY IF THERE ARE NO EMAILS TO SEND
         has_mail = db.query("SELECT max(new_mail) new_mail FROM email_notify")
         if has_mail[0]["new_mail"]==0:
-            D.println("No emails to send")
+            Log.note("No emails to send")
             return
 
         ## GET LIST OF MAILS TO SEND
@@ -63,22 +63,22 @@ def email_send(db, emailer, debug):
                 db.execute("UPDATE email_content SET date_sent={{now}} WHERE id={{id}}",{"id":email.id, "now":datetime.utcnow()})
                 num_done+=len(email.to.split(','))
             except Exception, e:
-                D.warning("Problem sending email", e)
+                Log.warning("Problem sending email", e)
                 not_done=1
 
         db.execute("UPDATE email_notify SET new_mail={{not_done}}", {"not_done":not_done})
 
-        D.println(str(num_done)+" emails have been sent")
+        Log.note(str(num_done)+" emails have been sent")
     except Exception, e:
-        D.error("Could not send emails", e)
+        Log.error("Could not send emails", e)
 
 
 
 def main():
     settings=startup.read_settings()
-    D.start(settings.debug)
+    Log.start(settings.debug)
     try:
-        D.println("Running email using schema {{schema}}", {"schema":settings.database.schema})
+        Log.note("Running email using schema {{schema}}", {"schema":settings.database.schema})
         with DB(settings.database) as db:
             email_send(
                 db=db,
@@ -86,9 +86,9 @@ def main():
                 debug=settings.debug is not None
             )
     except Exception, e:
-        D.warning("Failure to send emails", cause=e)
+        Log.warning("Failure to send emails", cause=e)
     finally:
-        D.stop()
+        Log.stop()
 
 
 

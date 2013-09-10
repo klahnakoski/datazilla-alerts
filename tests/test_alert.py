@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.startup import startup
 from dzAlerts.util.query import Q
 from dzAlerts.util.maths import Math
@@ -185,7 +185,7 @@ class test_alert:
             ])
             assert expecting_alerts == actual_alerts_sent
         except Exception, e:
-            D.error("Test failure", e)
+            Log.error("Test failure", e)
 
 
 
@@ -216,11 +216,11 @@ class test_alert:
 @pytest.fixture()
 def settings(request):
     settings=startup.read_settings(filename="test_settings.json")
-    D.start(settings.debug)
+    Log.start(settings.debug)
     make_test_database(settings)
     
     def fin():
-        D.stop()
+        Log.stop()
     request.addfinalizer(fin)
 
     return settings

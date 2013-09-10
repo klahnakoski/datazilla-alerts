@@ -10,7 +10,7 @@ import functools
 from math import floor
 import requests
 from dzAlerts.util.basic import nvl
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.query import Q
 from dzAlerts.util.startup import startup
 from dzAlerts.util.timer import Timer
@@ -28,7 +28,7 @@ def etl(name, db, settings, id):
         with Timer(str(name)+" read from prod "+str(id)):
             content = requests.get(settings.source.service.blob_url + "/" + str(id), timeout=30).content
             if content.startswith("Id not found:"):
-                D.println("Id not found: {{id}}", {"id":id})
+                Log.note("Id not found: {{id}}", {"id":id})
                 return False
             data=CNV.JSON2object(content)
 
@@ -49,7 +49,7 @@ def etl(name, db, settings, id):
                 db.flush()
                 return True
     except Exception, e:
-        D.warning("Can not load {{id}}", {"id":id}, e)
+        Log.warning("Can not load {{id}}", {"id":id}, e)
         return False
 
 
@@ -114,7 +114,7 @@ def get_existing_ids(db):
         existing_ids = existing_ids.union(
             range(r.min, r.max + 1))
 
-    D.println("Number of ids in local: "+str(len(existing_ids)))
+    Log.note("Number of ids in local: "+str(len(existing_ids)))
     return existing_ids
 
 
@@ -128,7 +128,10 @@ def copy_pushlog(settings):
                 FROM
                     {{objectstore}}.objectstore o
                 LEFT JOIN
-                    {{pushlog}}.changesets AS ch ON ch.revision=o.revision
+                    {{pushlog}}.changesets AS ch
+                ON
+                    ch.revision=o.revision AND
+                    ch.branch=o.branch
                 WHERE
                     o.revision is not null AND
                     ch.revision is null
@@ -222,7 +225,7 @@ def copy_pushlog(settings):
                     local.flush()
 
             except Exception, e:
-                D.error("Failure during update of pushlog", e)
+                Log.error("Failure during update of pushlog", e)
 
 
 def main(settings):
@@ -249,10 +252,10 @@ def main(settings):
                         settings.num_not_found=0
 
         except (KeyboardInterrupt, SystemExit):
-            D.println("Shutdow Started, please be patient")
+            Log.note("Shutdow Started, please be patient")
         except Exception, e:
-            D.error("Unusual shutdown!", e)
-        D.println("Done")
+            Log.error("Unusual shutdown!", e)
+        Log.note("Done")
 
     copy_pushlog(settings)
 
@@ -263,9 +266,9 @@ if __name__=="__main__":
     try:
         settings=startup.read_settings()
         settings.source.service.threads=nvl(settings.source.service.threads, 1)
-        D.start(settings.debug)
+        Log.start(settings.debug)
         main(settings)
     except Exception, e:
-        D.error("Problem", e)
+        Log.error("Problem", e)
     finally:
-        D.stop()
+        Log.stop()

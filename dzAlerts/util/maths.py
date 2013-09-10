@@ -6,14 +6,14 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 import math
-from .debug import D
+from .logs import Log
 from .strings import find_first
 
 class Math():
 
     @staticmethod
     def bayesian_add(a, b):
-        if a>=1 or b>=1 or a<=0 or b<=0: D.error("Only allowed values *between* zero and one")
+        if a>=1 or b>=1 or a<=0 or b<=0: Log.error("Only allowed values *between* zero and one")
         return a*b/(a*b+(1-a)*(1-b))
 
 
@@ -55,7 +55,7 @@ class Math():
 
         return round(value, decimal)
 
-    #RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(str(value))<len(str(value)):
+    #RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(unicode(value))<len(unicode(value)):
     @staticmethod
     def approx_str(value):
         v=unicode(value)

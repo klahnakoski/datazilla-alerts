@@ -9,7 +9,7 @@
 import pytest
 from dzAlerts.daemons.email_send import email_send
 from dzAlerts.util.db import DB
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.query import Q
 from dzAlerts.util.startup import startup
 from util import testing
@@ -124,11 +124,11 @@ class test_email_send():
 @pytest.fixture()
 def settings(request):
     settings=startup.read_settings(filename="test_settings.json")
-    D.start(settings.debug)
+    Log.start(settings.debug)
     testing.make_test_database(settings)
 
     def fin():
-        D.stop()
+        Log.stop()
     request.addfinalizer(fin)
 
     return settings

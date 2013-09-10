@@ -21,7 +21,7 @@ from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
 from dzAlerts.util.basic import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.query import Q
 from dzAlerts.util.stats import Z_moment, stats2z_moment, Stats, z_moment2stats
@@ -47,7 +47,7 @@ def alert_exception (db, debug):
     #CALCULATE HOW FAR BACK TO LOOK
     #BRING IN ALL NEEDED DATA
     start_time = datetime.utcnow()-LOOK_BACK
-    if debug: D.println("Pull all data")
+    if debug: Log.note("Pull all data")
 
     test_results = db.query("""
         SELECT
@@ -89,8 +89,8 @@ def alert_exception (db, debug):
 
     alerts=[]   #PUT ALL THE EXCEPTION ITEM HERE
 
-    D.println("{{num}} test results found", {"num":len(test_results)})
-    if debug: D.println("Find exceptions")
+    Log.note("{{num}} test results found", {"num":len(test_results)})
+    if debug: Log.note("Find exceptions")
 
     for keys, values in Q.groupby(test_results, [
         "test_name",
@@ -141,12 +141,12 @@ def alert_exception (db, debug):
                 if count>=WINDOW_SIZE:
                     total=total-values[count-WINDOW_SIZE].m  #WINDOW LIMITED TO 5 SAMPLES
 
-            if debug: D.println(
+            if debug: Log.note(
                 "Testing {{num_tests}} samples, {{num_alerts}} alerts, on group  {{key}}",
                 {"key":keys, "num_tests":len(values), "num_alerts":num_new}
             )
 
-    if debug: D.println("Get Current Alerts")
+    if debug: Log.note("Get Current Alerts")
 
     #CHECK THE CURRENT ALERTS
     current_alerts=db.query("""
@@ -178,7 +178,7 @@ def alert_exception (db, debug):
 #    current=set(Q.select(current_alerts, "tdad_id"))
 #    lookup_current=dict([(c.tdad_id, c) for c in current_alerts])
 #
-#    if debug: D.println("Update alerts")
+#    if debug: Log.note("Update alerts")
 #
 #    for new_alert in new_alerts-current:
 #        new_alert.id=SQL("util_newid()")
@@ -206,7 +206,7 @@ def alert_exception (db, debug):
     lookup_alert=Q.unique_index(alerts, "tdad_id")
     lookup_current=Q.unique_index(current_alerts, "tdad_id")
 
-    if debug: D.println("Update alerts")
+    if debug: Log.note("Update alerts")
 
     for a in alerts:
         #CHECK IF ALREADY AN ALERT
@@ -238,7 +238,7 @@ def alert_exception (db, debug):
         "reason":REASON
     })
 
-    if debug: D.println("Reviewing h0")
+    if debug: Log.note("Reviewing h0")
 
     update_h0_rejected(db, start_time)
 
@@ -296,15 +296,15 @@ def single_ttest(point, stats, min_variance=0):
         t_distribution = scipy.stats.distributions.t(n1-1)
         return t_distribution.cdf(tt), tt
     except Exception, e:
-        D.error("error with t-test", e)
+        Log.error("error with t-test", e)
 
 
 
 def main():
     settings=startup.read_settings()
-    D.start(settings.debug)
+    Log.start(settings.debug)
     try:
-        D.println("Finding exceptions in schema {{schema}}", {"schema":settings.database.schema})
+        Log.note("Finding exceptions in schema {{schema}}", {"schema":settings.database.schema})
 
         with DB(settings.database) as db:
             alert_exception(
@@ -312,9 +312,9 @@ def main():
                 debug=settings.debug is not None
             )
     except Exception, e:
-        D.warning("Failure to find exceptions", cause=e)
+        Log.warning("Failure to find exceptions", cause=e)
     finally:
-        D.stop()
+        Log.stop()
 
 
 

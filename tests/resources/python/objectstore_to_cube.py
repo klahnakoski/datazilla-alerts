@@ -9,7 +9,7 @@
 
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.startup import startup
 from dzAlerts.util.stats import z_moment2stats, Z_moment
 from dzAlerts.util.timer import Timer
@@ -84,7 +84,7 @@ def objectstore_to_cube(db, r):
                 "n_replicates":S.count
             })
     except Exception, e:
-        D.error("Conversion failed", e)
+        Log.error("Conversion failed", e)
 
         
 def main(settings):
@@ -165,18 +165,18 @@ def get_missing_ids(db, settings):
         })
 
     missing_ids=Q.select(missing, field_name="test_run_id")
-    D.println("{{num}} objectstore records to be processed into cube", {"num":len(missing_ids)})
+    Log.note("{{num}} objectstore records to be processed into cube", {"num":len(missing_ids)})
     return missing_ids
 
 
 try:
     settings=startup.read_settings()
-    D.start(settings.debug)
+    Log.start(settings.debug)
     main(settings)
 except Exception, e:
-    D.error("Problem", e)
+    Log.error("Problem", e)
 finally:
-    D.stop()
+    Log.stop()
 
 
 

@@ -11,9 +11,8 @@
 from datetime import datetime, timedelta
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.strings import expand_template
-from dzAlerts.util.struct import Struct
 from dzAlerts.util.maths import Math
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.db import DB
 from dzAlerts.util.startup import startup
 
@@ -83,7 +82,7 @@ def send_alerts(db, debug):
             })
 
         if len(new_alerts)==0:
-            if env.debug: D.println("Nothing important to email")
+            if env.debug: Log.note("Nothing important to email")
             return
 
         body=[HEADER]
@@ -109,7 +108,7 @@ def send_alerts(db, debug):
         listeners = ";".join(listeners)
 
         if len(body)>MAX_EMAIL_LENGTH:
-            D.println("Truncated the email body")
+            Log.note("Truncated the email body")
             suffix="... (has been truncated)"
             body = body[0:MAX_EMAIL_LENGTH-len(suffix)]+suffix   #keep it reasonable
 
@@ -128,7 +127,7 @@ def send_alerts(db, debug):
             )
 
     except Exception, e:
-        D.error("Could not send alerts", e)
+        Log.error("Could not send alerts", e)
 
         
 # REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
@@ -161,10 +160,10 @@ def significant_difference(a, b):
 
 if __name__ == '__main__':
     settings = startup.read_settings()
-    D.start(settings.debug)
+    Log.start(settings.debug)
 
     try:
-        D.println("Running alerts off of schema {{schema}}", {"schema":settings.database.schema})
+        Log.note("Running alerts off of schema {{schema}}", {"schema":settings.database.schema})
 
         with DB(settings.database) as db:
             send_alerts(
@@ -172,7 +171,7 @@ if __name__ == '__main__':
                 debug = settings.debug is not None
             )
     except Exception, e:
-        D.warning("Failure to run alerts", cause = e)
-
-    D.stop()
+        Log.warning("Failure to run alerts", cause = e)
+    finally:
+        Log.stop()
 

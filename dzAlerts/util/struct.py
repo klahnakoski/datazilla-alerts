@@ -69,7 +69,7 @@ class Struct(dict):
         try:
             d=object.__getattribute__(self, "__dict__")
             value=unwrap(value)
-
+            
             if key.find(".")>=0:
                 seq=key.split(".")
                 for k in seq[0,-1]: d=d[k]

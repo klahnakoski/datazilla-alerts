@@ -6,7 +6,7 @@
 ################################################################################
 
 from dzAlerts.util.db import DB
-from dzAlerts.util.debug import D
+from dzAlerts.util.logs import Log
 from dzAlerts.util.struct import StructList
 
 
@@ -33,7 +33,7 @@ def make_test_database(settings):
         no_schema=settings.database.copy()
         no_schema.schema=""
 
-        D.println("CLEAR DATABASE {{database}}", {"database":settings.database.schema})
+        Log.note("CLEAR DATABASE {{database}}", {"database":settings.database.schema})
         with DB(no_schema) as db:
             db.execute("DROP DATABASE IF EXISTS "+settings.database.schema)
             db.flush()
@@ -41,11 +41,11 @@ def make_test_database(settings):
 
 
         #TEMPLATE HAS {engine} TAG THAT MUST BE REPLACED
-        D.println("BUILD NEW DATABASE {{database}}", {"database":settings.database.schema})
+        Log.note("BUILD NEW DATABASE {{database}}", {"database":settings.database.schema})
         DB.execute_file(settings.database, "tests/resources/sql/schema_perftest.sql")
         DB.execute_file(settings.database, "tests/resources/sql/Add test_data_all_dimensions.sql")
 
-        D.println("MIGRATE {{database}} TO NEW SCHEMA", {"database":settings.database.schema})
+        Log.note("MIGRATE {{database}} TO NEW SCHEMA", {"database":settings.database.schema})
         DB.execute_file(settings.database, "resources/migration/v1.1 alerts.sql")
         DB.execute_file(settings.database, "resources/migration/v1.2 email.sql")
 
@@ -56,6 +56,6 @@ def make_test_database(settings):
             db.execute("DELETE FROM email_attachment")
             db.execute("DELETE FROM email_content")
 
-        D.println("DATABASE READY {{database}}", {"database":settings.database.schema})
+        Log.note("DATABASE READY {{database}}", {"database":settings.database.schema})
     except Exception, e:
-        D.error("Database setup failed", e)
+        Log.error("Database setup failed", e)
