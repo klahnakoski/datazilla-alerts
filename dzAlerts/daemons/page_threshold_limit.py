@@ -65,11 +65,11 @@ def page_threshold_limit(db, debug):
 
         #FOR EACH PAGE THAT BREAKS LIMITS
         for page in pages:
-            if page.alert_id is not None: break
+            if page.alert_id != Null: break
 
             alert = {
                 "id":SQL("util_newID()"),
-    	        "status":"new",
+                "status":"new",
                 "create_time":datetime.utcnow(),
                 "last_updated":datetime.utcnow(),
                 "tdad_id":page.tdad_id,
@@ -84,8 +84,8 @@ def page_threshold_limit(db, debug):
             db.insert("alerts", alert)
 
         for page in pages:
-            if page.alert_id is None: break
-            db.update("alerts", None)  #ERROR FOR NOW
+            if page.alert_id == Null: break
+            db.update("alerts", Null)  #ERROR FOR NOW
 
 
         #OBSOLETE THE ALERTS THAT SHOULD NO LONGER GET SENT

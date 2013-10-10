@@ -15,7 +15,7 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.logs import Log
 from dzAlerts.util.db import DB
 from dzAlerts.util.startup import startup
-
+from dzAlerts.util.struct import Null
 
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
@@ -29,12 +29,13 @@ HEADER = "<h2>This is for testing only.  It may be misleading.</h2><br><br>"
 #                            "branch":v.branch,
 #                            "branch_version":v.branch_version,
 #                            "revision":v.revision
-TEMPLATE =  """<div><h2>{{score}} - {{revision}}</h2>{{reason}}<br>
+TEMPLATE =  """<div><h2>{{score}} - {{reason}}</h2><br>
+            {{details}}
             On page {{page_url}}<br>
             <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
             <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
             <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
-            <a href=\"https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}\">Datazilla</a><br>
+            <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date}}&product={{product}}&repository={{branch}}&os={{os}}&os_version={{os_version}}&test={{test_name}}&graph_search={{revision}}\">Datazilla</a><br>
             <a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
             Raw data: {{raw_data}}
             </div>"""
@@ -45,8 +46,8 @@ EPSILON = 0.0001
 
 
 
-def send_alerts(db, debug):
-    db.debug = debug
+def send_alerts(settings, db):
+    db.debug = settings.prarm.debug
 
     try:
         new_alerts = db.query("""
@@ -82,7 +83,7 @@ def send_alerts(db, debug):
             })
 
         if len(new_alerts)==0:
-            if env.debug: Log.note("Nothing important to email")
+            if debug: Log.note("Nothing important to email")
             return
 
         body=[HEADER]
@@ -98,10 +99,6 @@ def send_alerts(db, debug):
             body.append(expand_template(TEMPLATE, details))
         body = SEPARATOR.join(body)
 
-#        listeners = SQLQuery.run({
-#            "select":{"value":"email"},
-#            "from":"alert_email_listener"
-#        })
         #poor souls that signed up for emails
         listeners = db.query("SELECT email FROM alert_listeners")
         listeners = [x["email"] for x in listeners]
@@ -116,7 +113,7 @@ def send_alerts(db, debug):
             listeners, #to
             "Bad news from tests", #title
             body, #body
-            None
+            Null
         ))
 
         #I HOPE I CAN SEND ARRAYS OF NUMBERS
@@ -167,8 +164,8 @@ if __name__ == '__main__':
 
         with DB(settings.database) as db:
             send_alerts(
-                db = db,
-                debug = settings.debug is not None
+                settings=settings,
+                db = db
             )
     except Exception, e:
         Log.warning("Failure to run alerts", cause = e)

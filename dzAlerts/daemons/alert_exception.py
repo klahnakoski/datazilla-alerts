@@ -34,6 +34,21 @@ MIN_CONFIDENCE = 0.99
 REASON="alert_exception"     #name of the reason in alert_reason
 LOOK_BACK=timedelta(days = 41)
 WINDOW_SIZE = 10
+TEMPLATE =  """
+            test = {{test_name}}<br>
+            product = {{product}}<br>
+            repository = {{branch}}<br>
+            os = {{os}} ({{os_version}})<br>
+            revision = {{revision}}<br>
+            page = {{page_url}}<br>
+            <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
+            <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
+            <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
+            <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date}}&product={{product}}&repository={{branch}}&os={{os}}&os_version={{os_version}}&test={{test_name}}&graph_search={{revision}}\">Datazilla</a><br>
+            <a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
+            </div>
+            """
+
 
 def alert_exception (db, debug):
     """
@@ -51,19 +66,21 @@ def alert_exception (db, debug):
 
     test_results = db.query("""
         SELECT
-            id tdad_id,
             test_name,
             product,
             branch,
             branch_version,
-            revision,
-            operating_system_name,
-            operating_system_version,
+            operating_system_name os,
+            operating_system_version os_version,
             processor,
             page_id,
             page_url,
-            test_run_id,
+
             coalesce(push_date, date_received) push_date,
+
+            id tdad_id,
+            test_run_id,
+            revision,
             n_replicates `count`,
             mean,
             std
@@ -82,12 +99,13 @@ def alert_exception (db, debug):
             operating_system_version,
             processor,
             page_url,
+
             coalesce(push_date, date_received)
         """,
         {"begin_time":start_time}
     )
 
-    alerts=[]   #PUT ALL THE EXCEPTION ITEM HERE
+    alerts=[]   #PUT ALL THE EXCEPTION ITEMS HERE
 
     Log.note("{{num}} test results found", {"num":len(test_results)})
     if debug: Log.note("Find exceptions")
@@ -132,7 +150,7 @@ def alert_exception (db, debug):
                             reason=REASON,
                             details=CNV.object2JSON(v),
                             severity=SEVERITY,
-                            confidence=confidence
+                            confidence=0.5    #*v.confidence #DO NOT ALLOW CONFIDENCE GO BEYOND severity
                         ))
                 #accumulate v
                 m=stats2z_moment(s)
@@ -173,36 +191,7 @@ def alert_exception (db, debug):
         }
     )
 
-# NEED BETTER WAY TO SAY THIS
-#      new_alerts=set(Q.select(alerts, "tdad_id")) #dict([(a.tdad_id, a) for a in alerts])
-#    current=set(Q.select(current_alerts, "tdad_id"))
-#    lookup_current=dict([(c.tdad_id, c) for c in current_alerts])
-#
-#    if debug: Log.note("Update alerts")
-#
-#    for new_alert in new_alerts-current:
-#        new_alert.id=SQL("util_newid()")
-#        new_alert.last_updated=datetime.utcnow()
-#        db.insert("alerts", new_alert)
-#
-#    for existing_alert in new_alerts & current:
-#        if len(nvl(existing_alert.solution, "").trim())==0: continue  # DO NOT TOUCH SOLVED ALERTS
-#
-#        c=lookup_current[existing_alert.tdad_id]
-#        if round(existing_alert.severity, 5)!=round(c.severity, 5) or round(existing_alert.confidence, 5)!=round(c.confidence, 5):
-#            existing_alert.last_updated=datetime.utcnow()
-#            db.update("alerts", {"id":existing_alert.id}, existing_alert)
-#
-#    for expired_alert in current - new_alerts:
-#        if len(nvl(expired_alert.solution, "").trim())==0: continue  # DO NOT TOUCH SOLVED ALERTS
-#        expired_alert.status="obsolete"
-#        expired_alert.last_updated=datetime.utcnow()
-#        db.update("alerts", {"id":expired_alert.id}, expired_alert)
-
-
-
-
-
+    
     lookup_alert=Q.unique_index(alerts, "tdad_id")
     lookup_current=Q.unique_index(current_alerts, "tdad_id")
 
@@ -274,27 +263,18 @@ def welchs_ttest(stats1, stats2):
 
 
 def single_ttest(point, stats, min_variance=0):
-    n1=stats.count
-    m1=stats.mean
-    v1=stats.variance
+    n1 = stats.count
+    m1 = stats.mean
+    v1 = stats.variance
 
-
-################################################################################
-## Gamma Distribution better models wait times, but large k makes it almost normal
-## This current code does not compensate for unknown variance in the sample
-## https://en.wikipedia.org/wiki/Gamma_distribution
-## http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gamma.html
-##
-#    v1=stats.variance*n1/(n1-1)
-#    k = (m1**2)/v1
-#    theta=v1/m1
-#    g=scipy.stats.gamma(k, scale=1/theta)
-#    return abs(g.cdf(point)-0.5)+0.5, abs(point-m1)/sqrt(v1)
+    if n1 < 2:
+        return {"confidence": 0, "diff": 0}
 
     try:
-        tt=(point-m1)/max(min_variance, sqrt(v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
-        t_distribution = scipy.stats.distributions.t(n1-1)
-        return t_distribution.cdf(tt), tt
+        tt = (point - m1) / max(min_variance, sqrt(v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
+        t_distribution = scipy.stats.distributions.t(n1 - 1)
+        confidence = t_distribution.cdf(tt)
+        return {"confidence": confidence, "diff": tt}
     except Exception, e:
         Log.error("error with t-test", e)
 
@@ -307,9 +287,11 @@ def main():
         Log.note("Finding exceptions in schema {{schema}}", {"schema":settings.database.schema})
 
         with DB(settings.database) as db:
+            db.update("alerts_reasons", {"code":REASON}, {"email_template":TEMPLATE})
+
             alert_exception(
-                db=db,
-                debug=settings.debug is not None
+                settings=settings,
+                db=db
             )
     except Exception, e:
         Log.warning("Failure to find exceptions", cause=e)

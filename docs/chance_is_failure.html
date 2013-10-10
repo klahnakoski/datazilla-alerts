@@ -1,0 +1,323 @@
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<html>
+<HEAD>
+	<script type="application/javascript;version=1.7" src="es/lib/jsImport/js/import.js"></script>
+	<link type="text/css" rel="stylesheet" href="es/css/menu.css"/>
+</HEAD>
+<body>
+
+<div class="indent">
+
+	<h2>Logic</h2>
+
+	<div class="indent">
+		<p>
+			I must assume the false-negative rate is the same as the false
+			positive rate.
+			I suspect that this assumption is wrong, but until we have some
+			actual
+			regressions indicated in the alerts table, there is no way to refine
+			this
+			formula further.
+		</p>
+
+		<div class="indent">
+			Let <span class="AM">f_i</span> be the false positive rate for page
+			i<br>
+			Let <span class="AM">r_i = 1-f_i</span> be the real rate for page
+			i<br>
+
+			Let <span class="AM">k</span> be the failure rate (probability there
+			is a real regression, which is guesswork at best)<br>
+			Let <span class="AM">P(e_i)</span> be the probability of event
+			<span class="AM">e_i</span> happening:
+			<div class="indent">
+				<span class="AM">P(e_i) = {(r_i,"on real results"), (1-r_i, "on false results"))</span>
+			</div>
+
+		</div>
+		<p>
+			Please notice that <i>"on false results"</i> is different than using
+			<i>"false positive rate"</i>.
+			I have used the assumption that the false positive rate and false
+			negative rate are the
+			same and therefore the falsifying rate is <i>independent</i> of the
+			real test outcome.
+		</p>
+
+		<p>
+			Given event <span class="AM">e_i</span> is a failure, we calculate
+			the chance we are seeing a real regression:
+		</p>
+
+		<div class="indent"><span class="AM">
+	P("real regression" | e_i " is failure") = (P("real")*P("fail")) / (P("false") * P("success") + P("real") * P("fail"))
+	</span></div>
+
+		<div class="indent"><span class="AM">
+	P("real regression" | e_i " is failure") =  (P(e_i " is real")*P("fail")) / (P(e_i " is false") * P("success") + P(e_i " is real") * P("fail"))
+	</span></div>
+
+		<div class="indent"><span class="AM">
+	P("real regression" | e_i " is failure") =  (r_i*k)  / ((1-r_i) *(1-k) + r_i*k)
+	</span></div>
+
+		<p>
+			This we define a new operator
+			(<a href="https://github.com/klahnakoski/datazilla-alerts/blob/ca5732f85a18b8897cd77017ce57d26482c710aa/dzAlerts/util/maths.py#L15">
+			&#8853; - see bayesian_add</a>) to simplify the above formula:
+		</p>
+
+		<div class="indent"><span class="AM">
+		a &#8853; b = (a*b)/(a*b + (1-a)(1-b))
+	</span></div>
+
+		<p>
+			and we get
+		</p>
+
+		<div class="indent"><span class="AM">
+	P("real regression" | e_i " is failure") =  k &#8853; r_i</span>
+			</span></div>
+
+		<p>
+			Similar logic can be used when <span class="AM">e_i</span> is a
+			success:
+		</p>
+
+		<div class="indent"><span class="AM">
+	P("real regression" | e_i " is success") =  k &#8853; (1-r_i)</span>
+			</span></div>
+
+		<p>
+			More generally,
+		</p>
+
+		<div class="indent"><span class="AM">
+	P("real regression") =  k &#8853; P(e_i)</span>
+			</span></div>
+
+		<p>
+			For a series of events <span class="AM">{e_i}</span> this formula
+			can be generalized using the bayesian method:
+		</p>
+
+		<div class="indent"><span class="AM">
+	P("real regression") =  k &#8853; sum_"i (over &#8853;)" P(e_i)
+	</span></div>
+	</div>
+
+	<h2>Examples</h2>
+
+	<div class="indent">
+		<p>Suppose we have 2 page tests: The first (page_0) is prone to
+			inexplicable noise
+			(10% samples are false), and the second (page_1) is quite well
+			behaved (1% of samples are false).
+			We also assume real regressions are rare (k=1%).
+		</p>
+
+		<h3>We observe events {e_0="failure", e_1="success"} for page_0 and
+			page_1 respectively.</h3>
+
+		<div class="indent">
+		<span class="AM">
+		P("real regression") =  k &#8853; P(e_0) &#8853; P(e_1)
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  1% &#8853; 90% &#8853; 1%
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  (0.01 * 0.9 * 0.01) / (0.01 * 0.9 * 0.01 + (1-0.01)*(1-0.9)*(1-0.01))
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  0.0917%
+		</span>
+			<p>When we observe a failure event for page_0, we do not expect the
+				regression to be real.
+			</p>
+		</div>
+
+		<h3>We observe the opposite {e_0="success", e_1="failure"}</h3>
+
+		<div class="indent">
+		<span class="AM">
+		P("real regression") =  k &#8853; P(e_0) &#8853; P(e_1)
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  1% &#8853; 10% &#8853; 99%
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  (0.01 * 0.1 * 0.99) / (0.01 * 0.1 * 0.99 + (1-0.01)*(1-0.1)*(1-0.99))
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  10%
+		</span>
+
+			<p>When we observe a failure event for page_1, we expect the chance
+				it is real to be much larger than the opposite case above, but we are
+				not near 99% confident, as a naive interpretation would expect:
+				The page_1 failure rate (1%) occurs at the same rate as the real
+				failures (k=1%), and we can't be confident we are looking at
+				a real regression.
+				</p>
+
+		</div>
+
+		<h3>We observe both fail {e_0="failure", e_1="failure"}</h3>
+
+		<div class="indent">
+		<span class="AM">
+		P("real regression") =  k &#8853; P(e_0) &#8853; P(e_1)
+		</span>
+		<br>
+		<span class="AM">
+		P("real regression") =  1% &#8853; 90% &#8853; 99%
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  (0.01 * 0.9 * 0.99) / (0.01 * 0.9 * 0.99 + (1-0.01)*(1-0.9)*(1-0.99))
+		</span>
+			<br>
+		<span class="AM">
+		P("real regression") =  90%
+		</span>
+			<p>
+				Both pages showing a failure is rare enough (0.1%) that the real
+				failures (k=1%) begin to make a significant proportion of the
+				samples, and we can reasonably confident we are seeing a real
+				regression
+			</p>
+
+		</div>
+	</div>
+
+
+	<h2>More</h2>
+
+	<div class="indent">
+		<p>
+			There probably is not enough information to determine <span class="AM">k</span>
+			ahead of time.  We can negate <span class="AM">k</span> if we are only interested in
+			proportional results.
+		</p>
+
+
+	</div>
+
+
+	<h2>Conservative Percentage Estimates</h2>
+
+	<div class="indent">
+		<p>
+			Since we are dealing with rare events, we must adjust our failure rate
+			measurements to account for possible bad samples:  In other words,
+			the number of failures we have seen in the recent past may be
+			lower than the actual failure rate.
+		</p>
+
+		<p>Start with the familiar binomial distribution</p>
+		<div class="indent">
+		<span class="AM">"binomial"_"pmf"(k; n, rho) = ((n) , (k)) * rho^k*(1-rho)^(n-k)</span>
+		</div>
+		<p>where</p>
+		<div class="indent">
+			<span class="AM">n</span> is total number of trails<br>
+			<span class="AM">rho</span> is probability of failure <span class="AM">{rho in RR | 0 < rho < 1}</span> <br>
+			<span class="AM">k</span> is number of observed failures <span class="AM">{k in ZZ | 0 <= k <= n}</span> <br>
+		</div>
+		<p>The binomial distribution assumes <span class="AM">n</span> and <span class="AM">rho</span>
+			are fixed, and the probability for all <span class="AM">k</span> sums to <span class="AM">1</span>
+		</p>
+		<div class="indent">
+		<span class="AM">1 = sum_(k=0)^n "binomial"_"pmf"(k; n, rho)</span>
+		</div>
+		<p>
+			Instead we want to fix k and vary <span class="AM">rho</span> over it's
+			allowable range.  We multiply by a normalizing constant so the resulting
+			distribution's area sums to <span class="AM">1</span>, which gives us
+			a probability density function:
+		</p>
+		<div class="indent">
+		<span class="AM">"beta"_"pdf"(rho; k+1, n-k+1) = 1/(B(k+1, n-k+1))* rho^k*(1-rho)^(n-k)</span>
+		</div>
+		<p>where</p>
+		<div class="indent">
+			<span class="AM">"beta"_"pdf"(rho; alpha, beta)</span> is called the beta distribution, with <span class="AM">alpha</span>, <span class="AM">beta</span> shape parameters <br>
+			<span class="AM">B(a, b)</span> is the beta function<br>
+		</div>
+		<p>
+			Given the number of observed failures (<span class="AM">k</span>) for a
+			given number of trials (<span class="AM">n</span>), we can calculate the
+			cumulative distribution function (also known as the regularized incomplete beta function):
+		</p>
+		<div class="indent">
+		<span class="AM">"beta"_"cdf"(x; alpha, beta) = int_0^x "beta"_"pdf"(rho; alpha, beta)"d"rho</span>
+		</div>
+		<p>
+			We can use this to determine our confidence (<span class="AM">c</span>)
+			in any range <span class="AM">{rho in RR | rho_"min" < p < rho_"max"}</span>:
+		</p>
+		<div class="indent">
+		<span class="AM">"c"(rho_"min", rho_"max"; alpha, beta) = "beta"_"cdf"(rho_"max"; alpha, beta) - "beta"_"cdf"(rho_"min"; alpha, beta)</span>
+		</div>
+		<p>
+			But it is easier to use the inverse of <span class="AM">"beta"_"cdf"</span>
+			(denoted as <span class="AM">"beta"_"cdf"^-1</span>) which maps the
+			desired confidence to a left-sided probability range <span class="AM">{rho in RR | 0 < p < rho_0}</span>:
+		</p>
+		<div class="indent">
+		<span class="AM">rho_0 = "beta"_"cdf"^-1 ("confidence"; alpha, beta)</span>
+		</div>
+		<p>Please notice some symmetry:
+		</p>
+		<div class="indent">
+		<span class="AM">"beta"_"cdf"^-1 ("confidence"; alpha, beta) = 1 - "beta"_"cdf"^-1 (1-"confidence"; beta, alpha)</span>
+		</div>
+		<p>
+			If we are suspicious our measured <span class="AM">n_"fail"</span> is too low,
+			we can ask how high can the real false negative rate (<span class="AM">rho_0</span>) be:
+		</p>
+
+		<p>Let</p>
+		<div class="indent">
+			<span class="AM">alpha = n_"fail" +1</span><br>
+			<span class="AM">beta = n-k+1 = n_"pass" +1</span><br>
+		</div>
+		<div class="indent">
+		<span class="AM">rho_0 = "beta"_"cdf"^-1 ("confidence"; n_"fail" +1, n_"pass" +1)</span>
+		</div>
+
+
+		
+
+
+
+
+
+
+		</p>
+
+
+
+
+	</div>
+
+
+
+</div>
+<script type="application/javascript;version=1.7">
+	importScript([
+		"es/lib/jquery.js",
+		"es/lib/ASCIIMathML.js"
+	], function(){});
+</script>
+
+</body>
+</html>

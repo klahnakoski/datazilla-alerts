@@ -28,7 +28,7 @@
 		{
 			"class": "logging.handlers.RotatingFileHandler",
 			"filename": "logs/replication.log",
-			"maxBytes": "10000000",
+			"maxBytes": 10000000,
 			"backupCount": "100",
 			"encoding": "utf8"
 		},{

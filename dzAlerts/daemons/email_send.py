@@ -83,7 +83,7 @@ def main():
             email_send(
                 db=db,
                 emailer=Emailer(settings.email),
-                debug=settings.debug is not None
+                debug=settings.debug != Null
             )
     except Exception, e:
         Log.warning("Failure to send emails", cause=e)

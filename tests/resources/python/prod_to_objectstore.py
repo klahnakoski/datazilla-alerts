@@ -11,8 +11,10 @@ from math import floor
 import requests
 from dzAlerts.util.basic import nvl
 from dzAlerts.util.logs import Log
+from dzAlerts.util.maths import Math
 from dzAlerts.util.query import Q
 from dzAlerts.util.startup import startup
+from dzAlerts.util.struct import Null
 from dzAlerts.util.timer import Timer
 from dzAlerts.util.db import DB, SQL
 from dzAlerts.util.cnv import CNV
@@ -32,9 +34,9 @@ def etl(name, db, settings, id):
                 return False
             data=CNV.JSON2object(content)
 
-        if data.test_run_id is None:
-            #DZ IS RESPOSNSIBLE FOR THIS NUMBER, WHICH MAY NOT BE SET YET
-            return
+        if data.test_run_id == Null:
+            #DZ IS RESPONSIBLE FOR THIS NUMBER, WHICH MAY NOT BE SET YET
+            return False
 
         with Timer(str(name)+" push to local "+str(id)):
             with db_lock:
@@ -58,21 +60,21 @@ def etl(name, db, settings, id):
 def get_existing_ids(db):
     #FIND WHAT'S MISSING IN LOCAL ALREADY
     ranges = db.query("""
-	    SELECT DISTINCT
-			id,
-			`end`
-		FROM (
-			SELECT STRAIGHT_JOIN
+        SELECT DISTINCT
+                id,
+                `end`
+        FROM (
+            SELECT STRAIGHT_JOIN
                 a.id,
-				"min" `end`
+                "min" `end`
             FROM
                 objectstore a
             WHERE
                 a.id={{min}}
-		UNION ALL
+        UNION ALL
             SELECT
                 a.id,
-				"min" `end`
+                "min" `end`
             FROM
                 objectstore a
             LEFT JOIN
@@ -80,10 +82,10 @@ def get_existing_ids(db):
             WHERE
                 c.id IS NULL AND
                 a.id BETWEEN {{min}} AND {{max}}
-		UNION ALL
-			SELECT STRAIGHT_JOIN
+        UNION ALL
+            SELECT STRAIGHT_JOIN
                 a.id,
-				"max" `end`
+                "max" `end`
             FROM
                 objectstore a
             LEFT JOIN
@@ -91,18 +93,18 @@ def get_existing_ids(db):
             WHERE
                 b.id IS NULL AND
                 a.id BETWEEN {{min}} AND {{max}}
-		UNION ALL
-			SELECT STRAIGHT_JOIN
+        UNION ALL
+            SELECT STRAIGHT_JOIN
                 a.id,
-				"max" `end`
+                "max" `end`
             FROM
                 objectstore a
             WHERE
                 a.id={{max}}
-		) a
-		ORDER BY
-			id,
-			`end` desc
+        ) a
+        ORDER BY
+            id,
+            `end` desc
     """, {"min":settings.source.service.min, "max":settings.source.service.max})
     #RESULT COMES IN min/max PAIRS, IN ORDER
     for i, r in enumerate(ranges):
@@ -118,117 +120,51 @@ def get_existing_ids(db):
     return existing_ids
 
 
+def replicate_table(table_name, id_name, source, destination):
+    """
+     COPY TABLE FROM ONE SCHEMA TO ANOTHER.  MUST HAVE AN id COLUMN THAT IS STRICTLY INCREASING
+     SO ONLY A DIFF IS REQUIRED TO KEEP TABLES IN SYNCH
+    """
+
+    BATCH_SIZE = 1000
+
+    max_id = destination.query("SELECT max({{id}}) `max` FROM {{table}}", {
+        "table": destination.quote_column(table_name),
+        "id": destination.quote_column(id_name)
+    })[0].max
+
+    if max_id == Null: max_id=-1
+
+    while True:
+        missing = source.query("SELECT * FROM {{table}} WHERE {{id}}>{{max}} ORDER BY {{id}} LIMIT {{limit}}", {
+            "table": destination.quote_column(table_name),
+            "id": destination.quote_column(id_name),
+            "max": max_id,
+            "limit": BATCH_SIZE
+        })
+
+        if len(missing) == 0:
+            return
+        max_id = Math.max(Q.select(missing, id_name))
+        destination.insert_list(table_name, missing)
+        destination.flush()
+
+
+
+
 def copy_pushlog(settings):
-    with DB(settings.destination.objectstore) as local:
+    with DB(settings.destination.pushlog) as local:
         with DB(settings.source.pushlog) as prod:
-
-            missing_revisions=local.query("""
-                SELECT DISTINCT
-                    o.revision
-                FROM
-                    {{objectstore}}.objectstore o
-                LEFT JOIN
-                    {{pushlog}}.changesets AS ch
-                ON
-                    ch.revision=o.revision AND
-                    ch.branch=o.branch
-                WHERE
-                    o.revision is not null AND
-                    ch.revision is null
-            """, {
-                "objectstore":SQL(settings.destination.objectstore.schema),
-                "pushlog":SQL(settings.destination.pushlog.schema)
-            })
-
             try:
-                for g, batch in Q.groupby(missing_revisions, size=1000):
-                    pushlogs=prod.query("""
-                        SELECT
-                            ch.id changeset_id,
-                            ch.node node,
-                            ch.author author,
-                            ch.branch changeset_branch,
-                            ch.`desc` `desc`,
-                            ch.pushlog_id,
-                            pl.push_id,
-                            pl.`date` `date`,
-                            pl.user user,
-                            pl.branch_id,
-                            br.name branch_name,
-                            br.uri branch_uri,
-                            bm.id branch_map_id,
-                            bm.alt_name
-                        FROM
-                            {{pushlog}}.changesets AS ch
-                        LEFT JOIN
-                            {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
-                        LEFT JOIN
-                            {{pushlog}}.branches AS br ON pl.branch_id = br.id
-                        LEFT JOIN
-                            {{pushlog}}.branch_map AS bm ON br.name = bm.name
-                        WHERE
-                            substring(ch.node, 1, 12) in {{revisions}}
-                    """, {
-                        "pushlog":SQL(settings.source.pushlog.schema),
-                        "revisions":Q.select(batch, "revision")
-                    })
-
-                    # ADD BRANCH_MAP. BRANCH, AND PUSHLOGS WHERE THEY DO NOT EXIST
-                    # NOTE THAT THESE HAVE BEEN EXPANDED, AND WE USE groupby TO PACK
-                    # THEM BACK DOWN TO ORIGINAL RECORDS
-                    local.insert_newlist(
-                        settings.destination.pushlog.schema+".branch_map",
-                        "id",
-                        [{
-                            "id":p.branch_map_id,
-                            "name":p.branch_name,
-                            "alt_name":p.alt_name
-                        } for p, d in Q.groupby([p for p in pushlogs if p.branch_map_id is not None], ["branch_map_id", "branch_name", "alt_name"])]
-                    )
-
-                    local.insert_newlist(
-                        settings.destination.pushlog.schema+".branches",
-                        "id",
-                        [{
-                            "id":p.branch_id,
-                            "name":p.branch_name,
-                            "uri":p.branch_uri
-                        } for p, d in Q.groupby(pushlogs, ["branch_id", "branch_name", "branch_uri"])]
-                    )
-
-                    local.insert_newlist(
-                        settings.destination.pushlog.schema+".pushlogs",
-                        ["push_id", "branch_id"],
-                        [{
-                            "id":p.pushlog_id,
-                            "push_id":p.push_id,
-                            "date":p.date,
-                            "user":p.user,
-                            "branch_id":p.branch_id,
-                        } for p, d in Q.groupby(pushlogs, ["pushlog_id", "push_id", "date", "user", "branch_id"])]
-                    )
-
-                    #NOW WE ARE SAFE TO ADD THE CHANGESETS
-                    local.insert_list(
-                        settings.destination.pushlog.schema+".changesets",
-                        [{
-                            #"id":p.changeset_id,   NOT NEEDED, AUTOINCREMENT
-                            "node":p.node,
-                            "author":p.author,
-                            "branch":p.changeset_branch,
-                            "desc":p.desc,
-                            "pushlog_id":p.pushlog_id,
-                            "revision":p.node[0:12]
-                        } for p in pushlogs]
-                    )
-
-                    local.flush()
-
+                replicate_table("branch_map", "id", prod, local)
+                replicate_table("branches", "id", prod, local)
+                replicate_table("pushlogs", "id", prod, local)
+                replicate_table("changesets", "id", prod, local)
             except Exception, e:
                 Log.error("Failure during update of pushlog", e)
 
 
-def main(settings):
+def copy_objectstore(settings):
     with DB(settings.destination.objectstore) as db:
         try:
             functions=[functools.partial(etl, *["ETL"+str(t), db, settings]) for t in range(settings.source.service.threads)]
@@ -257,17 +193,14 @@ def main(settings):
             Log.error("Unusual shutdown!", e)
         Log.note("Done")
 
-    copy_pushlog(settings)
-
-
-
 
 if __name__=="__main__":
     try:
         settings=startup.read_settings()
         settings.source.service.threads=nvl(settings.source.service.threads, 1)
         Log.start(settings.debug)
-        main(settings)
+        copy_objectstore(settings)
+        copy_pushlog(settings)
     except Exception, e:
         Log.error("Problem", e)
     finally:

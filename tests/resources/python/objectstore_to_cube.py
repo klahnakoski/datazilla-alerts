@@ -12,6 +12,7 @@ from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.logs import Log
 from dzAlerts.util.startup import startup
 from dzAlerts.util.stats import z_moment2stats, Z_moment
+from dzAlerts.util.struct import Null
 from dzAlerts.util.timer import Timer
 from dzAlerts.util.query import Q
 
@@ -47,10 +48,10 @@ def objectstore_to_cube(db, r):
                 "pushlog_id":r.pushlog_id,
                 "push_date":r.push_date,
                 "test_name":json.testrun.suite,
-                "page_url":None,
-                "mean":None,
-                "std":None,
-                "n_replicates":None
+                "page_url":Null,
+                "mean":Null,
+                "std":Null,
+                "n_replicates":Null
             })
             return
 
@@ -124,7 +125,20 @@ def main(settings):
                         },
                         execute=lambda x: objectstore_to_cube(write_db, x)
                     )
+
+                    #MARK WE ARE DONE HERE
+                    db.execute("""
+                        UPDATE {{objectstore}}.objectstore o
+                        SET o.processed_flag = 'complete'
+                        WHERE test_run_id IN {{values}}
+                    """, {
+                        "objectstore": SQL(settings.destination.objectstore.schema),
+                        "values": values
+                    })
+
                     db.flush()
+
+
 
 
 
@@ -136,12 +150,6 @@ def get_missing_ids(db, settings):
         FROM
             {{objectstore}}.objectstore o
         LEFT JOIN
-            {{perftest}}.test_data_all_dimensions AS tdad
-        ON
-            tdad.test_run_id=o.test_run_id AND
-            tdad.revision=o.revision AND
-            tdad.branch=o.branch
-        LEFT JOIN
             {{pushlog}}.changesets AS ch ON ch.revision=o.revision
         LEFT JOIN
             {{pushlog}}.pushlogs AS pl ON pl.id = ch.pushlog_id
@@ -150,8 +158,7 @@ def get_missing_ids(db, settings):
         LEFT JOIN
             {{pushlog}}.branch_map AS bm ON br.name = bm.name
         WHERE
-            o.test_run_id IS NOT NULL AND
-            tdad.test_run_id IS NULL AND
+            o.processed_flag in ('ready', 'loading') AND
             (bm.alt_name=o.branch OR br.name=o.branch)
         ORDER BY
             o.test_run_id DESC

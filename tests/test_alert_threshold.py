@@ -100,7 +100,7 @@ class test_alert_threshold:
     ## TEST AN INCREASE IN THE THRESHOLD OBSOLETES THE ALERT
     def test_alert_obsolete(self):
         ##SETUP
-        assert self.alert_id is not None  #EXPECTING test_alert_generated TO BE RUN FIRST
+        assert self.alert_id != Null  #EXPECTING test_alert_generated TO BE RUN FIRST
 
         self.db.execute("UPDATE alert_page_thresholds SET threshold={{threshold}} WHERE page={{page_id}}",{
             "threshold":900,
@@ -230,12 +230,12 @@ class test_alert_threshold:
                 "page_url":self.url,
                 "mean":float(t.mean),
                 "std":float(t["mean+std"])-float(t.mean),
-                "h0_rejected":None,
-                "p":None,
+                "h0_rejected":Null,
+                "p":Null,
                 "n_replicates":t.count,
                 "fdr":0,
-                "trend_mean":None,
-                "trend_std":None,
+                "trend_mean":Null,
+                "trend_std":Null,
                 "test_evaluation":0,
                 "status":1
             })

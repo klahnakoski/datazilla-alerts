@@ -37,7 +37,7 @@ class test_alert:
         self.far_past=self.now-timedelta(days=2)
 
         self.db=db
-#        self.uid=None
+#        self.uid=Null
         self.series=0
         self.reason="used for testing 1"
 
@@ -69,7 +69,7 @@ class test_alert:
         self.db.insert("alert_reasons", {
             "code":self.reason,
             "description":">>>>{{id}}<<<<",  #SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
-            "config":None,
+            "config":Null,
             "last_run":self.now-timedelta(days=1)
         })
 
@@ -92,19 +92,19 @@ class test_alert:
                 ("id",      "status",  "create_time", "last_updated", "last_sent",        "tdad_id", "reason",    "details",                 "severity",         "confidence",        "solution"),
             "data":[
                 #TEST last_sent IS NOT TOO YOUNG
-                (self.uid+0,"new",      self.far_past, self.far_past,  self.recent_past, self.series,   self.reason, CNV.object2JSON({"id":0, "expect":"fail"}),  self.high_severity, self.high_confidence, None),
+                (self.uid+0,"new",      self.far_past, self.far_past,  self.recent_past, self.series,   self.reason, CNV.object2JSON({"id":0, "expect":"fail"}),  self.high_severity, self.high_confidence, Null),
                 #TEST last_sent IS TOO OLD, SHOULD BE (RE)SENT
-                (self.uid+1,"new",      self.far_past, self.now,       None,             self.series,   self.reason, CNV.object2JSON({"id":1, "expect":"pass"}),  self.high_severity, self.high_confidence, None),
-                (self.uid+2,"new",      self.far_past, self.now,       self.far_past,    self.series,   self.reason, CNV.object2JSON({"id":2, "expect":"pass"}),  self.high_severity, self.high_confidence, None),
-                (self.uid+3,"new",      self.now,      self.now,       self.recent_past, self.series,   self.reason, CNV.object2JSON({"id":3, "expect":"pass"}),  self.high_severity, self.high_confidence, None),
+                (self.uid+1,"new",      self.far_past, self.now,       Null,             self.series,   self.reason, CNV.object2JSON({"id":1, "expect":"pass"}),  self.high_severity, self.high_confidence, Null),
+                (self.uid+2,"new",      self.far_past, self.now,       self.far_past,    self.series,   self.reason, CNV.object2JSON({"id":2, "expect":"pass"}),  self.high_severity, self.high_confidence, Null),
+                (self.uid+3,"new",      self.now,      self.now,       self.recent_past, self.series,   self.reason, CNV.object2JSON({"id":3, "expect":"pass"}),  self.high_severity, self.high_confidence, Null),
                 #TEST obsolete ARE NOT SENT
-                (self.uid+4,"obsolete", self.now,      self.now,       self.far_past,    self.series,   self.reason, CNV.object2JSON({"id":4, "expect":"fail"}),  self.high_severity, self.high_confidence, None),
+                (self.uid+4,"obsolete", self.now,      self.now,       self.far_past,    self.series,   self.reason, CNV.object2JSON({"id":4, "expect":"fail"}),  self.high_severity, self.high_confidence, Null),
                 #TEST ONLY IMPORTANT ARE SENT
-                (self.uid+5,"new",      self.now,      self.now,       None,             self.series,   self.reason, CNV.object2JSON({"id":5, "expect":"pass"}),  self.important,     0.5,                  None),
-                (self.uid+6,"new",      self.now,      self.now,       None,             self.series,   self.reason, CNV.object2JSON({"id":6, "expect":"fail"}),  self.low_severity,  self.high_confidence, None),
-                (self.uid+7,"new",      self.now,      self.now,       None,             self.series,   self.reason, CNV.object2JSON({"id":7, "expect":"fail"}),  self.high_severity, self.low_confidence,  None),
+                (self.uid+5,"new",      self.now,      self.now,       Null,             self.series,   self.reason, CNV.object2JSON({"id":5, "expect":"pass"}),  self.important,     0.5,                  Null),
+                (self.uid+6,"new",      self.now,      self.now,       Null,             self.series,   self.reason, CNV.object2JSON({"id":6, "expect":"fail"}),  self.low_severity,  self.high_confidence, Null),
+                (self.uid+7,"new",      self.now,      self.now,       Null,             self.series,   self.reason, CNV.object2JSON({"id":7, "expect":"fail"}),  self.high_severity, self.low_confidence,  Null),
                 #TEST ONES WITH SOLUTION ARE NOT SENT
-                (self.uid+8,"new",      self.now,      self.now,       None,             self.series,   self.reason, CNV.object2JSON({"id":8, "expect":"fail"}),  self.high_severity, self.high_confidence, "a solution!")
+                (self.uid+8,"new",      self.now,      self.now,       Null,             self.series,   self.reason, CNV.object2JSON({"id":8, "expect":"fail"}),  self.high_severity, self.high_confidence, "a solution!")
                 ]
         })
 
@@ -181,7 +181,7 @@ class test_alert:
             actual_alerts_sent=set([
                 CNV.value2int(between(b, ">>>>", "<<<<"))
                 for b in emails[0].body.split(dzAlerts.daemons.alert.SEPARATOR)
-                if CNV.value2int(between(b, ">>>>", "<<<<")) is not None
+                if CNV.value2int(between(b, ">>>>", "<<<<")) != Null
             ])
             assert expecting_alerts == actual_alerts_sent
         except Exception, e:
@@ -205,7 +205,7 @@ class test_alert:
                 c.id
             """)
         for e in emails:
-            if e.to is None:
+            if e.to == Null:
                 e.to=[]
             else:
                 e.to=e.to.split(",")

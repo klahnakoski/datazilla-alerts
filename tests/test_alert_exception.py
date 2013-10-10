@@ -162,12 +162,12 @@ class test_alert_exception():
                 "page_url":self.url,
                 "mean":float(t.mean),
                 "std":sqrt(t.variance),
-                "h0_rejected":None,
-                "p":None,
+                "h0_rejected":Null,
+                "p":Null,
                 "n_replicates":t.count,
                 "fdr":0,
-                "trend_mean":None,
-                "trend_std":None,
+                "trend_mean":Null,
+                "trend_std":Null,
                 "test_evaluation":0,
                 "status":1
             })

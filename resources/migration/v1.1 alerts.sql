@@ -117,23 +117,24 @@ m11: BEGIN
 		code			VARCHAR(80) NOT NULL PRIMARY KEY,
 		description		VARCHAR(2000), ##MORE DETAILS ABOUT WHAT THIS IS
 		last_run		DATETIME NOT NULL,
-		config			VARCHAR(8000)
+		config			VARCHAR(8000),
+		email_template	VARCHAR(8000)	 
 	);
 	INSERT INTO alert_reasons VALUES (
 		'page_threshold_limit', 
-		concat('The page has performed badly (',char(36),'{actual}), ',char(36),'{expected} or less was expected'),
+		concat('The page has performed badly ({{actual}}), {{expected}} or less was expected'),
 		date_add(now(), INTERVAL -30 DAY),
 		null
 	);		
 	INSERT INTO alert_reasons VALUES (
 		'alert_exception',
-		concat(''',char(36),''{url} has performed worse then usual by ',char(36),'{stddev} standard deviations (',char(36),'{confidence})'),
+		concat('{{url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}'
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_revision',
-		concat(''',char(36),''{url} has performed worse then usual by ',char(36),'{stddev} standard deviations (',char(36),'{confidence})'),
+		concat('{{url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}'
 	);

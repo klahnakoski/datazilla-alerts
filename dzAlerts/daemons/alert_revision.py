@@ -10,6 +10,7 @@
 
 
 from datetime import datetime, timedelta
+from dzAlerts.daemons import alert_exception
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB, SQL
 from dzAlerts.util.query import Q
@@ -22,28 +23,33 @@ FALSE_POSITIVE_RATE=.95
 REASON="alert_revision"     #name of the reason in alert_reason
 LOOK_BACK=timedelta(days=41)
 SEVERITY=0.9
-TEMPLATE="""
-<div><h2>{{score}} - {{revision}}</h2>
-{{num_exceptions}} exceptional events<br>
-<a href="https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}">Datazilla</a><br>
-<a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}">Bugzilla - {{bug_description}}</a><br>
-{{# pages}}
-    <hr>
-    On page {{page_url}}<br>
-    <a href="https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}">TBPL</a><br>
-    <a href="https://hg.mozilla.org/rev/{{revision}}">Mercurial</a><br>
+TEMPLATE=[
+    """
+    <div><h2>{{score}} - {{revision}}</h2>
+    {{num_exceptions}} exceptional events<br>
     <a href="https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}">Datazilla</a><br>
-    <a href="http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}">Kyle's ES</a><br>
-    Raw data: {{raw_data}}
-{{/ pages}
-"""
+    <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}">Bugzilla - {{bug_description}}</a><br>
+    """,{
+        "from":"pages",
+        "template":"""
+            <hr>
+            On page {{.page_url}}<br>
+            <a href="https://tbpl.mozilla.org/?tree={{.branch}}&rev={{.revision}}">TBPL</a><br>
+            <a href="https://hg.mozilla.org/rev/{{.revision}}">Mercurial</a><br>
+            <a href="https://datazilla.mozilla.org/talos/summary/{{.branch}}/{{.revision}}">Datazilla</a><br>
+            <a href="http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{.page_url}}&sampleMax={{.push_date}}000&sampleMin={{.push_date_min}}000&branch={{.branch}}">Kyle's ES</a><br>
+            Raw data: {{.raw_data}}
+            """,
+        "between":"<hr>"
+    }
+]
 
 #GET ACTIVE ALERTS
 # assumes there is an outside agent corrupting our test results
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
 def alert_revision(settings):
-    assert settings.db is not None
+    assert settings.db != Null
     settings.db.debug=settings.debug
     db=DB(settings.db)
 
@@ -66,12 +72,13 @@ def alert_revision(settings):
         LEFT JOIN
             test_data_all_dimensions t on t.id=a.tdad_id
         WHERE
-            reason='alert_exception' AND
+            reason={{reason}} AND
             status<>'obsolete' AND
             t.push_date>{{min_time}} and
             h0_rejected=1
     """, {
-        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK)
+        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK),
+        "reason":alert_exception.REASON
     })
     exception_lookup=Q.index(single_exceptions, ["test_name", "revision"])
 
@@ -87,10 +94,11 @@ def alert_revision(settings):
         FROM
             alerts a
         WHERE
-            reason='alert_revision' AND
+            reason={{reason}} AND
             t.push_date>{{min_time}}
     """, {
-        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK)
+        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK),
+        "reason":REASON
     })
     for e in existing:
         e.details=CNV.JSON2object(e.details)
@@ -117,7 +125,6 @@ def alert_revision(settings):
     })
 
 
-
     #SUMMARIZE
     new_alerts=[{
         "status":"new",
@@ -128,8 +135,8 @@ def alert_revision(settings):
             "test_name":r.test_name,
             "num_exceptions":r.num_exceptions,
             "num_tests":r.num_tdad,
-            "branch":None,
-            "bug_id":None,
+            "branch":Null,
+            "bug_id":Null,
             "pages":Q.sort(exception_lookup[r.revision], {"value":"severity", "sort":-1})
         },
         "severity":SEVERITY,

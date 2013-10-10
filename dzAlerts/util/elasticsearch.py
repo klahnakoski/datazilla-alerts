@@ -2,10 +2,13 @@ import sha
 
 import requests
 import time
+import struct
+from .maths import Math
+from .query import Q
 from .cnv import CNV
 from .logs import Log
 from .basic import nvl
-from .struct import Struct, StructList
+from .struct import Struct, StructList, Null
 
 DEBUG=False
 
@@ -16,12 +19,12 @@ class ElasticSearch():
 
 
     def __init__(self, settings):
-        assert settings.host is not None
-        assert settings.index is not None
-        assert settings.type is not None
+        assert settings.host != Null
+        assert settings.index != Null
+        assert settings.type != Null
 
-        self.metadata=None
-        if settings.port is None: settings.port=9200
+        self.metadata=Null
+        if settings.port == Null: settings.port=9200
         self.debug=nvl(settings.debug, DEBUG)
         globals()["DEBUG"]=DEBUG or self.debug
         
@@ -49,7 +52,7 @@ class ElasticSearch():
 
 
     @staticmethod
-    def delete_index(settings, index=None):
+    def delete_index(settings, index=Null):
         index=nvl(index, settings.index)
 
         ElasticSearch.delete(
@@ -57,13 +60,13 @@ class ElasticSearch():
         )
 
     #RETURN LIST OF {"alias":a, "index":i} PAIRS
-    #ALL INDEXES INCLUDED, EVEN IF NO ALIAS {"alias":None}
+    #ALL INDEXES INCLUDED, EVEN IF NO ALIAS {"alias":Null}
     def get_aliases(self):
         data=self.get_metadata().indices
         output=[]
         for index, desc in data.items():
-            if desc["aliases"] is None or len(desc["aliases"])==0:
-                output.append({"index":index, "alias":None})
+            if desc["aliases"] == Null or len(desc["aliases"])==0:
+                output.append({"index":index, "alias":Null})
             else:
                 for a in desc["aliases"]:
                     output.append({"index":index, "alias":a})
@@ -72,7 +75,7 @@ class ElasticSearch():
 
     
     def get_metadata(self):
-        if self.metadata is None:
+        if self.metadata == Null:
             response=self.get(self.settings.host+":"+unicode(self.settings.port)+"/_cluster/state")
             self.metadata=response.metadata
         return self.metadata
@@ -99,6 +102,19 @@ class ElasticSearch():
             })
         )
 
+    def delete_record(self, query):
+        if isinstance(query, dict):
+            ElasticSearch.delete(
+                self.path+"/_query",
+                data=CNV.object2JSON(query)
+            )
+        else:
+            ElasticSearch.delete(
+                self.path+"/"+query
+            )
+
+
+
     # RECORDS MUST HAVE id AND json AS A STRING OR
     # HAVE id AND value AS AN OBJECT
     def add(self, records):
@@ -113,7 +129,7 @@ class ElasticSearch():
             else:
                 Log.error("Expecting every record given to have \"value\" or \"json\" property")
                 
-            if id is None: id=sha.new(json).hexdigest()
+            if id == Null: id=sha.new(json).hexdigest()
 
             lines.append('{"index":{"_id":"'+id+'"}}')
             lines.append(json)
@@ -133,20 +149,23 @@ class ElasticSearch():
                     "line":lines[i*2+1]
                 })
 
-        if self.debug: Log.note("{{num}} items added", {"num":len(lines)/2})
+        if self.debug:
+            Log.note("{{num}} items added", {"num":len(lines)/2})
 
 
 
     # -1 FOR NO REFRESH
     def set_refresh_interval(self, seconds):
-        if seconds<=0: interval="-1"
-        else: interval=unicode(seconds)+"s"
+        if seconds <= 0:
+            interval = "-1"
+        else:
+            interval = unicode(seconds) + "s"
 
         ElasticSearch.put(
-             self.settings.host+":"+unicode(self.settings.port)+"/"+self.settings.index+"/_settings",
-             data="{\"index.refresh_interval\":\""+interval+"\"}"
+            self.settings.host + ":" + unicode(
+                self.settings.port) + "/" + self.settings.index + "/_settings",
+            data="{\"index.refresh_interval\":\"" + interval + "\"}"
         )
-
 
 
     def search(self, query):
@@ -163,7 +182,7 @@ class ElasticSearch():
             response=requests.post(*list, **args)
             if DEBUG: Log.note(response.content[:130])
             details=CNV.JSON2object(response.content)
-            if details.error is not None:
+            if details.error != Null:
                 Log.error(details.error)
             return details
         except Exception, e:
@@ -175,7 +194,7 @@ class ElasticSearch():
             response=requests.get(*list, **args)
             if DEBUG: Log.note(response.content[:130])
             details=CNV.JSON2object(response.content)
-            if details.error is not None:
+            if details.error != Null:
                 Log.error(details.error)
             return details
         except Exception, e:
@@ -198,5 +217,57 @@ class ElasticSearch():
             return response
         except Exception, e:
             Log.error("Problem with call to {{url}}", {"url":list[0]}, e)
+
+
+    @staticmethod
+    def scrub(r):
+        """
+        REMOVE KEYS OF DEGENERATE VALUES (EMPTY STRINGS, EMPTY LISTS, AND NULLS)
+        TO LOWER CASE
+        CONVERT STRINGS OF NUMBERS TO NUMBERS
+        RETURNS **COPY**, DOES NOT CHANGE ORIGINAL
+        """
+        return struct.wrap(_scrub(r))
+
+
+def _scrub(r):
+    try:
+        if r is None or r == Null:
+            return Null
+        elif isinstance(r, basestring):
+            if r == "":
+                return Null
+            return r.lower()
+        elif Math.is_number(r):
+            return CNV.value2number(r)
+        elif isinstance(r, dict):
+            if isinstance(r, Struct):
+                r = r.dict
+            output = {}
+            for k, v in r.items():
+                v = _scrub(v)
+                if v != Null:
+                    output[k.lower()] = v
+            if len(output) == 0:
+                return Null
+            return output
+        elif hasattr(r, '__iter__'):
+            if isinstance(r, StructList):
+                r = r.list
+            output = []
+            for v in r:
+                v = _scrub(v)
+                if v != Null:
+                    output.append(v)
+            if len(output) == 0:
+                return Null
+            try:
+                return Q.sort(output)
+            except Exception:
+                return output
+        else:
+            return r
+    except Exception, e:
+        Log.warning("Can not scrub: {{json}}", {"json": r})
 
 

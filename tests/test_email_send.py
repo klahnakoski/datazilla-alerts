@@ -12,6 +12,7 @@ from dzAlerts.util.db import DB
 from dzAlerts.util.logs import Log
 from dzAlerts.util.query import Q
 from dzAlerts.util.startup import startup
+from dzAlerts.util.struct import Null
 from util import testing
 
 
@@ -24,8 +25,8 @@ class test_email_send():
     def __init__(self, db, settings):
         self.db=db
         self.settings=settings
-        self.emailer=None
-        self.uid=None
+        self.emailer=Null
+        self.uid=Null
 
 
     def test_zero_receivers(self):
@@ -78,7 +79,7 @@ class test_email_send():
             ";".join(to_list), #to
             "subject" + self.uid, #title
             "body" + self.uid, #body
-            None
+            Null
             ))
 
 
@@ -92,7 +93,7 @@ class test_email_send():
         #MAIL DOES EXIST
         mail_content=self.db.query("SELECT id, subject, date_sent, body FROM email_content WHERE subject={{subject}}", {"subject":"subject"+self.uid})
         assert len(mail_content)==1
-        assert mail_content[0].date_sent is not None
+        assert mail_content[0].date_sent != Null
         assert mail_content[0].body=="body"+self.uid
         return mail_content[0]
 
@@ -106,9 +107,9 @@ class test_email_send():
         
     def verify_sent(self, to_list):
         assert len(self.emailer.sent)==1
-        assert self.emailer.sent[0].from_address is None
+        assert self.emailer.sent[0].from_address == Null
         assert self.emailer.sent[0].subject=="subject"+self.uid
-        assert self.emailer.sent[0].text_data is None
+        assert self.emailer.sent[0].text_data == Null
         assert self.emailer.sent[0].html_data=="body"+self.uid
 
         #THE EMAIL SHOULD HAVE BEEN SENT TO EVERYONE IN to_list. NO MORE, NO LESS
