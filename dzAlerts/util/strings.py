@@ -5,15 +5,12 @@
 ################################################################################
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
-import datetime
-from decimal import Decimal
-import json
+
 import re
-from threading import Lock
-import time
+from .jsons import json_encoder
 import struct
 
-from .struct import Struct, StructList, Null
+from .struct import Null, Struct
 
 import sys
 reload(sys)
@@ -79,7 +76,7 @@ def find_first(value, find_arr, start=0):
 
 pattern=re.compile(r"(\{\{[\w_\.]+\}\})")
 def expand_template(template, values):
-    if values == Null: values={}
+    # if values == Null: values={}
     values=struct.wrap(values)
 
     def replacer(found):
@@ -92,76 +89,44 @@ def expand_template(template, values):
             try:
                 if e.message.find(u"is not JSON serializable"):
                     #WORK HARDER
-                    val=json_scrub(val)
                     val=toString(val)
                     return val
             except Exception:
-                raise Exception(u"Can not find "+var[2:-2]+u" in template:\n"+indent(template))
+                raise Exception(u"Can not find "+var[2:-2]+u" in template:\n"+indent(template), e)
 
     return pattern.sub(replacer, template)
 
 
-
-class NewJSONEncoder(json.JSONEncoder):
-
-    def __init__(self):
-        json.JSONEncoder.__init__(self, sort_keys=True)
-
-    def default(self, obj):
-        if obj == Null:
-            return None
-        elif isinstance(obj, set):
-            return list(obj)
-        elif isinstance(obj, Struct):
-            return obj.dict
-        elif isinstance(obj, StructList):
-            return obj.list
-        elif isinstance(obj, Decimal):
-            return float(obj)
-        elif isinstance(obj, datetime.datetime):
-            return int(time.mktime(obj.timetuple())*1000)
-        return json.JSONEncoder.default(self, obj)
-
-#OH HUM, cPython with uJSON, OR pypy WITH BUILTIN JSON?
-#http://liangnuren.wordpress.com/2012/08/13/python-json-performance/
-
-json_lock=Lock()
-json_encoder=NewJSONEncoder()
-json_decoder=json._default_decoder
-
 def toString(val):
-    with json_lock:
-        if isinstance(val, Struct):
-            return json_encoder.encode(val.dict)
-        elif isinstance(val, dict) or isinstance(val, list) or isinstance(val, set):
-            val=json_encoder.encode(val)
-            return val
+    if isinstance(val, Struct):
+        return json_encoder.encode(val.dict)
+    elif isinstance(val, dict) or isinstance(val, list) or isinstance(val, set):
+        val=json_encoder.encode(val)
+        return val
     return unicode(val)
 
-#REMOVE VALUES THAT CAN NOT BE JSON-IZED
-def json_scrub(r):
-    return _scrub(r)
 
 
-def _scrub(r):
-    if r == Null:
-        return Null
-    elif isinstance(r, dict):
-        output = {}
-        for k, v in r.items():
-            v = _scrub(v)
-            output[k] = v
-        return output
-    elif hasattr(r, '__iter__'):
-        output = []
-        for v in r:
-            v = _scrub(v)
-            output.append(v)
-        return output
-    else:
-        try:
-            with json_lock:
-                json_encoder.encode(r)
-                return r
-        except Exception, e:
-            return None
+def edit_distance(s1, s2):
+    """
+    FROM http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+    LICENCE http://creativecommons.org/licenses/by-sa/3.0/
+    """
+    if len(s1) < len(s2):
+        return edit_distance(s2, s1)
+
+    # len(s1) >= len(s2)
+    if len(s2) == 0:
+        return 1.0
+
+    previous_row = xrange(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1 # j+1 instead of j since previous_row and current_row are one character longer
+            deletions = current_row[j] + 1       # than s2
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return float(previous_row[-1])/len(s1)

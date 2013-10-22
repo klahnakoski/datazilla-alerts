@@ -5,18 +5,11 @@
 ################################################################################
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
-
-from scipy.special._ufuncs import betaincinv
-from dzAlerts.util.logs import Log
+from scipy.stats import stats
 from dzAlerts.util.maths import Math
 
 import scipy
-from scipy import stats
-from dzAlerts.util.startup import startup
-
 scipy.stats = stats  ## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
-
-
 
 REAL_REGRESSION_RATE = 0.01    # CHOOSE SOMETHING SMALL TO REFLECT RARITY
 CONFIDENCE = 0.70

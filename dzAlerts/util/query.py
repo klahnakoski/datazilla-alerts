@@ -8,11 +8,11 @@
 
 import sys
 from .logs import Log
-from .basic import nvl
+from .basic import nvl, listwrap
 import struct
 from .strings import indent, expand_template
 from .struct import StructList, Struct, Null
-from .multiset import multiset
+from .multiset import Multiset
 
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -35,20 +35,19 @@ class Q:
         if query.filter != Null:
             Log.error("not implemented yet")
 
-        if query.window != Null:
-            w = query.window
-            if not isinstance(w, list):
-                w = [w]
-
-            for param in w:
-                Q.window(_from, param)
+        for param in listwrap(query.window):
+            Q.window(_from, param)
 
         if query.where != Null:
             w = query.where
             _from = Q.filter(_from, w)
 
+        if query.sort != Null:
+            _from = Q.sort(_from, query.sort)
+
         if query.select != Null:
             _from = Q.select(_from, query.select)
+
 
         return _from
 
@@ -88,7 +87,7 @@ class Q:
     @staticmethod
     def index(data, keys=Null):
     #return dict that uses keys to index data
-        if not isinstance(keys, list): keys = [keys]
+        keys=listwrap(keys)
 
         output = dict()
         for d in data:
@@ -110,8 +109,7 @@ class Q:
         RETURN dict THAT USES KEYS TO INDEX DATA
         ONLY ONE VALUE ALLOWED PER UNIQUE KEY
         """
-        if not isinstance(keys, list): keys = [keys]
-        o = Index(keys)
+        o = Index(listwrap(keys))
 
         for d in data:
             try:
@@ -219,11 +217,8 @@ class Q:
         if fieldnames == Null:
             return []
 
-        if not isinstance(fieldnames, list):
-            fieldnames = [fieldnames]
-
         formal = []
-        for f in fieldnames:
+        for f in listwrap(fieldnames):
             if isinstance(f, basestring):
                 f = {"field": f, "sort": 1}
             formal.append(f)
@@ -264,11 +259,20 @@ class Q:
                 left = nvl(left, Struct())
                 right = nvl(right, Struct())
                 for f in formal:
-                    result = f["sort"] * cmp(left[f["field"]], right[f["field"]])
-                    if result != 0: return result
+                    try:
+                        result = f["sort"] * cmp(left[f["field"]], right[f["field"]])
+                        if result != 0: return result
+                    except Exception, e:
+                        Log.error("problem with compare", e)
                 return 0
 
-            output = sorted(data, cmp=comparer)
+            if isinstance(data, list):
+                output = sorted(data, cmp=comparer)
+            elif hasattr(data, "__iter__"):
+                output = sorted(list(data), cmp=comparer)
+            else:
+                Log.error("Do not know how to handle")
+
             return output
         except Exception, e:
             Log.error("Problem sorting\n{{data}}", {"data": data}, e)
@@ -284,6 +288,7 @@ class Q:
                 if v != Null and v != Null:
                     total += v
         return total
+
 
     @staticmethod
     def filter(data, where):
@@ -390,7 +395,7 @@ def groupby_size(data, size):
         i += 1
 
 
-def groupby_multiset(data, min_size, max_size):
+def groupby_Multiset(data, min_size, max_size):
     # GROUP multiset BASED ON POPULATION OF EACH KEY, TRYING TO STAY IN min/max LIMITS
     if min_size == Null: min_size = 0
 
@@ -421,10 +426,10 @@ def groupby_min_max_size(data, min_size=0, max_size=Null, ):
 
     if isinstance(data, list):
         return [(i, data[i:i + max_size]) for i in range(0, len(data), max_size)]
-    elif not isinstance(data, multiset):
+    elif not isinstance(data, Multiset):
         return groupby_size(data, max_size)
     else:
-        return groupby_multiset(data, min_size, max_size)
+        return groupby_Multiset(data, min_size, max_size)
 
 
 class Cube():

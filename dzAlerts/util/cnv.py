@@ -7,31 +7,29 @@
 ################################################################################
 
 
-#DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
 import StringIO
 import datetime
 import re
 import time
-
+from .multiset import Multiset
+from .jsons import json_decoder, json_encoder
 from .logs import Log
 import struct
-from .strings import expand_template, NewJSONEncoder, json_decoder, json_scrub
+from .strings import expand_template
 from .struct import StructList, Null
-from .threads import Lock
 
-json_lock=Lock()
-json_encoder=NewJSONEncoder()
+
 
 
 class CNV:
+    """
+    DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
+    """
 
     @staticmethod
-    def object2JSON(obj):
+    def object2JSON(obj, pretty=False):
         try:
-            obj=json_scrub(obj)
-            with json_lock:
-                return json_encoder.encode(obj)
-            
+            return json_encoder.encode(obj, pretty=pretty)
         except Exception, e:
             Log.error("Can not encode into JSON: {{value}}", {"value":repr(obj)}, e)
 
@@ -39,7 +37,7 @@ class CNV:
     def JSON2object(json_string, params=Null, flexible=False):
         try:
             #REMOVE """COMMENTS""", #COMMENTS, //COMMENTS, AND \n \r
-            if flexible: json_string=re.sub(r"\"\"\".*?\"\"\"|^\s*//\n|#.*?\n|\n|\r", r" ", json_string)  #DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py#L58
+            if flexible: json_string=re.sub(r"\"\"\".*?\"\"\"|\s+//.*\n|#.*?\n|\n|\r", r" ", json_string)  #DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py#L58
 
             if params != Null:
                 params=dict([(k,CNV.value2quote(v)) for k,v in params.items()])
@@ -79,16 +77,39 @@ class CNV:
 
     @staticmethod
     def datetime2milli(d):
-        return int(time.mktime(d.timetuple())*1000)
+        try:
+            epoch = datetime.datetime(1970, 1, 1)
+            diff = d-epoch
+            return (diff.days * 86400000) + \
+                   (diff.seconds * 1000) + \
+                   (diff.microseconds / 1000)  # 86400000=24*3600*1000
+        except Exception, e:
+            Log.error("Can not convert {{value}}", {"value": d})
 
     @staticmethod
     def unix2datetime(u):
-        return datetime.datetime.fromtimestamp(u)
+        return datetime.datetime.utcfromtimestamp(u)
 
     @staticmethod
     def milli2datetime(u):
-        return datetime.datetime.fromtimestamp(u/1000)
+        return datetime.datetime.utcfromtimestamp(u/1000)
 
+
+
+    @staticmethod
+    def dict2Multiset(dic):
+        if dic == Null:
+            return Null
+
+        output = Multiset()
+        output.dic = struct.unwrap(dic).copy()
+        return output
+
+    @staticmethod
+    def multiset2dict(value):
+        if value == Null:
+            return Null
+        return dict(value.dic)
 
 
     @staticmethod
@@ -117,6 +138,7 @@ class CNV:
 
     @staticmethod
     def string2quote(value):
+        # return repr(value)
         return "\""+value.replace("\\", "\\\\").replace("\"", "\\\"")+"\""
 
     #RETURN PYTHON CODE FOR THE SAME

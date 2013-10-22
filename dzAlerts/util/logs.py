@@ -6,14 +6,14 @@
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
 
-from _functools import partial
-from datetime import datetime
+
+from datetime import datetime, timedelta
 import traceback
 import logging
 import sys
+from .basic import listwrap, nvl
 
 import struct, threads
-from .files import File
 from .strings import indent, expand_template
 from .threads import Thread
 from .struct import Null
@@ -42,6 +42,8 @@ class Log(object):
         if settings["class"] != Null:
             if not settings["class"].startswith("logging.handlers."):
                 return make_log_from_settings(settings)
+            # elif settings["class"]=="sys.stdout":
+                #CAN BE SUPER SLOW
             else:
                 return Log_usingLogger(settings)
         if settings.file != Null: return Log_usingFile(file)
@@ -53,7 +55,12 @@ class Log(object):
         logging_multi.add_log(log)
 
 
-
+    @staticmethod
+    def debug(template=Null, params=Null):
+        """
+        USE THIS FOR DEBUGGING (AND EVENTUAL REMOVAL)
+        """
+        Log.note(nvl(template, ""), params)
 
 
     @staticmethod
@@ -108,22 +115,21 @@ class Log(object):
 
 
     #RUN ME FIRST TO SETUP THE THREADED LOGGING
-    @classmethod
-    def start(cls, settings=Null):
+    @staticmethod
+    def start(settings=Null):
         ##http://victorlin.me/2012/08/good-logging-practice-in-python/
         if settings == Null: return
         if settings.log == Null: return
 
         globals()["logging_multi"]=Log_usingMulti()
-        globals()["main_log"]=Log_usingThread(logging_multi)
+        globals()["main_log"]=logging_multi
 
-        if not isinstance(settings.log, list): settings.log=[settings.log]
-        for log in settings.log:
+        for log in listwrap(settings.log):
             Log.add_log(Log.new_instance(log))
 
 
-    @classmethod
-    def stop(cls):
+    @staticmethod
+    def stop():
         main_log.stop()
 
 
@@ -183,10 +189,24 @@ class Except(Exception):
 
 
 
-class Log_usingFile(Log):
+
+
+
+class BaseLog(object):
+    def write(self, template, params):
+        pass
+
+    def stop(self):
+        pass
+
+
+
+class Log_usingFile(BaseLog):
 
     def __init__(self, file):
         assert file != Null
+
+        from files import File
         self.file=File(file)
         if self.file.exists:
             self.file.backup()
@@ -196,13 +216,14 @@ class Log_usingFile(Log):
 
 
     def write(self, template, params):
+        from files import File
         with self.file_lock:
             File(self.filename).append(expand_template(template, params))
 
 
 
 #WRAP PYTHON CLASSIC logger OBJECTS
-class Log_usingLogger(Log):
+class Log_usingLogger(BaseLog):
     def __init__(self, settings):
         self.logger=logging.Logger("unique name", level=logging.INFO)
         self.logger.addHandler(make_log_from_settings(settings))
@@ -222,6 +243,13 @@ def make_log_from_settings(settings):
     temp=__import__(path, globals(), locals(), [class_name], -1)
     constructor=object.__getattribute__(temp, class_name)
 
+    #IF WE NEED A FILE, MAKE SURE DIRECTORY EXISTS
+    if settings.filename != Null:
+        from files import File
+        f = File(settings.filename)
+        if not f.parent.exists:
+            f.parent.create()
+
     params = settings.dict
     del params['class']
     return constructor(**params)
@@ -229,35 +257,89 @@ def make_log_from_settings(settings):
 
 
 
-class Log_usingStream(Log):
-
+class Log_usingStream(BaseLog):
     #stream CAN BE AN OBJCET WITH write() METHOD, OR A STRING
     #WHICH WILL eval() TO ONE
     def __init__(self, stream):
         assert stream != Null
-        if isinstance(stream, basestring):
-            stream=eval(stream)
-        self.stream=stream
 
+        if isinstance(stream, basestring):
+            self.stream=eval(stream)
+            name=stream
+        else:
+            self.stream=stream
+            name="stream"
+
+        #WRITE TO STREAMS CAN BE *REALLY* SLOW, WE WILL USE A THREAD
+        from threads import Queue
+        self.queue=Queue()
+
+        def worker():
+            keep_running = True
+            queue=self.queue
+
+            while keep_running:
+                next_run = datetime.utcnow() + timedelta(seconds=0.3)
+                logs = queue.pop_all()
+                if len(logs)>0:
+                    lines=[]
+                    for log in logs:
+                        try:
+                            if log==Thread.STOP:
+                                keep_running = False
+                                next_run = datetime.utcnow()
+                                break
+                            lines.append(expand_template(log.get("template", Null), log.get("params", Null)))
+                        except Exception, e:
+                            pass
+                    try:
+                        self.stream.write("\n".join(lines))
+                        self.stream.write("\n")
+                    except Exception, e:
+                        pass
+                Thread.sleep(till=next_run)
+        self.thread=Thread("log to "+name, worker)
+        self.thread.start()
 
     def write(self, template, params):
         try:
-            self.stream.write(expand_template(template, params)+"\n")
+            self.queue.add({"template":template, "params":params})
+            return self
+        except Exception, e:
+            raise e  #OH NO!
+
+    def stop(self):
+        try:
+            self.queue.add(Thread.STOP)  #BE PATIENT, LET REST OF MESSAGE BE SENT
+            self.thread.join()
         except Exception, e:
             pass
 
-    def stop(self):
-        pass
+        try:
+            self.queue.close()
+        except Exception, f:
+            pass
 
 
-class Log_usingThread(Log):
+
+class Log_usingThread(BaseLog):
     def __init__(self, logger):
         #DELAYED LOAD FOR THREADS MODULE
-        from multithread import worker_thread
         from threads import Queue
 
         self.queue=Queue()
-        self.thread=worker_thread("log thread", self.queue, Null, partial(Log_usingMulti.write, logger))
+
+        def worker():
+            while True:
+                logs = self.queue.pop_all()
+                for log in logs:
+                    if log==Thread.STOP:
+                        break
+
+                    logger.write(**log)
+                Thread.sleep(1)
+        self.thread=Thread("log thread", worker)
+        self.thread.start()
 
     def write(self, template, params):
         try:
@@ -281,7 +363,7 @@ class Log_usingThread(Log):
 
 
 
-class Log_usingMulti(Log):
+class Log_usingMulti(BaseLog):
     def __init__(self):
         self.many=[]
 
@@ -289,7 +371,7 @@ class Log_usingMulti(Log):
         for m in self.many:
             try:
                 m.write(template, params)
-            except Exception:
+            except Exception, e:
                 pass
         return self
 
@@ -304,7 +386,14 @@ class Log_usingMulti(Log):
     def clear_log(self):
         self.many=[]
 
+    def stop(self):
+        for m in self.many:
+            try:
+                m.stop()
+            except Exception, e:
+                pass
+
 
 
 if main_log == Null:
-    main_log=Log_usingStream(sys.stdout)
+    main_log=Log_usingStream("sys.stdout")

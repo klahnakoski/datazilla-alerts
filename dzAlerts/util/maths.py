@@ -50,12 +50,23 @@ class Math():
 
     @staticmethod
     def round_sci(value, decimal=Null, digits=Null):
-
         if digits != Null:
             m=pow(10, math.floor(math.log10(digits)))
             return round(value/m, digits)*m
 
         return round(value, decimal)
+
+
+    @staticmethod
+    def floor(value, mod=Null):
+        """
+        x == floor(x, a) + mod(x, a)  FOR ALL a
+        """
+        if mod == Null:
+            mod = 1
+        v = int(math.floor(value))
+        return v - (v % mod)
+
 
     #RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(unicode(value))<len(unicode(value)):
     @staticmethod

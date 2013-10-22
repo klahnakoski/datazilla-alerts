@@ -131,13 +131,13 @@ class ElasticSearch():
                 
             if id == Null: id=sha.new(json).hexdigest()
 
-            lines.append('{"index":{"_id":"'+id+'"}}')
+            lines.append('{"index":{"_id":'+CNV.object2JSON(id)+'}}')
             lines.append(json)
 
         if len(lines)==0: return
         response=ElasticSearch.post(
             self.path+"/_bulk",
-            data="\n".join(lines)+"\n",
+            data="\n".join(lines).encode("utf8")+"\n",
             headers={"Content-Type":"text"}
         )
         items=response["items"]
@@ -161,11 +161,16 @@ class ElasticSearch():
         else:
             interval = unicode(seconds) + "s"
 
-        ElasticSearch.put(
+        response=ElasticSearch.put(
             self.settings.host + ":" + unicode(
                 self.settings.port) + "/" + self.settings.index + "/_settings",
             data="{\"index.refresh_interval\":\"" + interval + "\"}"
         )
+
+        if response.content != '{"ok":true}':
+            Log.error("Can not set refresh interval ({{error}})", {
+                "error": response.content
+            })
 
 
     def search(self, query):
