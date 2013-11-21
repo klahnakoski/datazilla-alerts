@@ -10,8 +10,8 @@ import pytest
 from dzAlerts.daemons.email_send import email_send
 from dzAlerts.util.db import DB
 from dzAlerts.util.logs import Log
-from dzAlerts.util.query import Q
-from dzAlerts.util.startup import startup
+from dzAlerts.util.queries import Q
+from dzAlerts.util import startup
 from dzAlerts.util.struct import Null
 from util import testing
 

@@ -15,8 +15,8 @@ from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB
 from dzAlerts.util.logs import Log
-from dzAlerts.util.startup import startup
-from dzAlerts.util.query import Q
+from dzAlerts.util import startup
+from dzAlerts.util.queries import Q
 from dzAlerts.util.maths import Math
 from dzAlerts.util.strings import between, expand_template
 from util.testing import make_test_database

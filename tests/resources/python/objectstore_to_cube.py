@@ -10,11 +10,11 @@
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.logs import Log
-from dzAlerts.util.startup import startup
+from dzAlerts.util import startup
 from dzAlerts.util.stats import z_moment2stats, Z_moment
 from dzAlerts.util.struct import Null
 from dzAlerts.util.timer import Timer
-from dzAlerts.util.query import Q
+from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE=1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG

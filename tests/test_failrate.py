@@ -13,7 +13,7 @@
 
 from dzAlerts.daemons.util.failrate import failure_rate, confident_fail_rate
 from dzAlerts.util.logs import Log
-from dzAlerts.util.startup import startup
+from dzAlerts.util import startup
 
 
 EPSILON = 0.000001

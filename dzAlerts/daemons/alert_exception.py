@@ -18,15 +18,15 @@ scipy.stats = stats
 
 from dzAlerts.util.timer import Timer
 from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
-from dzAlerts.util.basic import nvl
+from dzAlerts.util.struct import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
 from dzAlerts.util.logs import Log
 from dzAlerts.util.struct import Struct
-from dzAlerts.util.query import Q
+from dzAlerts.util.queries import Q
 from dzAlerts.util.stats import Z_moment, stats2z_moment, Stats, z_moment2stats
 from dzAlerts.util.db import DB
-from dzAlerts.util.startup import startup
+from dzAlerts.util import startup
 
 
 SEVERITY = 0.6              #THERE ARE MANY FALSE POSITIVES

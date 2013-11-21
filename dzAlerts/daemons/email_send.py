@@ -14,7 +14,7 @@ from dzAlerts.util.logs import Log
 #if there are emails, then send them
 from dzAlerts.util.db import DB
 from dzAlerts.util.emailer import Emailer
-from dzAlerts.util.startup import startup
+from dzAlerts.util import startup
 
 
 

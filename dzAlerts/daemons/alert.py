@@ -14,7 +14,7 @@ from dzAlerts.util.strings import expand_template
 from dzAlerts.util.maths import Math
 from dzAlerts.util.logs import Log
 from dzAlerts.util.db import DB
-from dzAlerts.util.startup import startup
+from dzAlerts.util import startup
 from dzAlerts.util.struct import Null
 
 

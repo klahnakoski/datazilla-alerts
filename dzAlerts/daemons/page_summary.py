@@ -18,9 +18,9 @@ scipy.stats = stats
 from dzAlerts.util import struct
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
-from dzAlerts.util.basic import nvl
+from dzAlerts.util.struct import nvl
 from dzAlerts.util.db import SQL
-from dzAlerts.util.query import Q
+from dzAlerts.util.queries import Q
 
 
 BASE_REASON = "alert_exception"     #name of the reason in alert_reason

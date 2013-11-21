@@ -13,7 +13,7 @@ from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.logs import Log
-from dzAlerts.util.startup import startup
+from dzAlerts.util import startup
 from util import testing
 
 

@@ -10,7 +10,7 @@
 
 from datetime import timedelta, datetime
 from dzAlerts.daemons.alert import update_h0_rejected
-from dzAlerts.util.basic import nvl
+from dzAlerts.util.struct import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
 from dzAlerts.util.logs import Log

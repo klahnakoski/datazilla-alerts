@@ -9,11 +9,11 @@
 import functools
 from math import floor
 import requests
-from dzAlerts.util.basic import nvl
+from dzAlerts.util.struct import nvl
 from dzAlerts.util.logs import Log
 from dzAlerts.util.maths import Math
-from dzAlerts.util.query import Q
-from dzAlerts.util.startup import startup
+from dzAlerts.util.queries import Q
+from dzAlerts.util import startup, sql
 from dzAlerts.util.struct import Null
 from dzAlerts.util.timer import Timer
 from dzAlerts.util.db import DB, SQL
@@ -173,8 +173,18 @@ def copy_objectstore(settings):
                 #FOR SMALL NUMBERS, JUST LOAD THEM ALL AGAIN
                 missing_ids=set(range(settings.source.service.min, settings.source.service.max))
             else:
-                existing_ids = get_existing_ids(db)
-                missing_ids=Q.sort(set(range(settings.source.service.min, settings.source.service.max)) - existing_ids)
+#                existing_ids = get_existing_ids(db)
+                missing_ids=set()
+                for hole in sql.find_holes(
+                    db,
+                    table_name="objectstore",
+                    column_name="id",
+                    filter={"script":"1=1"},
+                    _range=settings.source.service
+                ):
+                    missing_ids=missing_ids.union(set(range(hole.min, hole.max)))
+
+            Log.note("{{num}} missing ids", {"num": len(missing_ids)})
             settings.num_not_found=0
 
             with Multithread(functions) as many:

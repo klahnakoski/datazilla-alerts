@@ -13,9 +13,9 @@ from datetime import datetime, timedelta
 from dzAlerts.daemons import alert_exception
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB, SQL
-from dzAlerts.util.query import Q
+from dzAlerts.util.queries import Q
 from scipy.stats import binom
-from dzAlerts.util.basic import nvl
+from dzAlerts.util.struct import nvl
 from dzAlerts.daemons.alert import significant_difference
 
 

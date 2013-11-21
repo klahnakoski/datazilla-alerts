@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import threading
 import thread
 import time
-from dz2es.util.struct import nvl
+from .struct import nvl
 
 
 DEBUG = True

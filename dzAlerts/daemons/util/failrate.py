@@ -36,14 +36,14 @@ def failure_rate(previous_results, current_results, real_rate=REAL_REGRESSION_RA
 
 
 def confident_fail_rate(total_fail, total_pass, confidence):
-    '''
+    """
     WE CAN NOT BE OVERLY OPTIMISTIC (0.0) ABOUT PREVIOUS SAMPLES, NOR
     OVERLY PESSIMISTIC (1.0).  WE MODIFY THE RATIO OF fail/total TOWARD
     NEUTRAL (0.5) BY ACCOUNTING FOR SMALL total AND STILL BE WITHIN confidence
 
     stats.beta.ppf(x, a, b) ==  1 - stats.beta.ppf(1-x, b, a)
     betaincinv(a, b, y) == stats.beta.ppf(y, a, b)
-    '''
+    """
 
     # SMALL NAMES OF EQUAL LENGTH TO DEMONSTRATE THE SYMMETRY BELOW
     confi = confidence
