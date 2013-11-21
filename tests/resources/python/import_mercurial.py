@@ -1,32 +1,22 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
 import subprocess
 import urllib
-from dzAlerts.util import struct
-from dzAlerts.util.basic import nvl
+from dzAlerts.util import struct, sql
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB
 from dzAlerts.util.elasticsearch import ElasticSearch
 from dzAlerts.util.files import File
 from dzAlerts.util.logs import Log
-from dzAlerts.util.query import Q
-from dzAlerts.util.startup import startup
+from dzAlerts.util.queries import Q
+from dzAlerts.util import startup
 from dzAlerts.util.strings import between
-from dzAlerts.util.struct import Null
+from dzAlerts.util.struct import Null, nvl
 from dzAlerts.util.timer import Timer
 
 DEBUG = True
 
-TEMPLATE = """
-changeset = "{date|hgdate|urlescape}\\t{node}\\t{rev}\\t{author|urlescape}\\t{branches}\\t{files}\\t{file_adds}\\t{file_dels}\\t{parents}\\t{tags}\\t{desc|urlescape}\\n"
-branch = "{branch}%0A"
-file = "{file}%0A"
-file_add = "{file_add}%0A"
-file_del = "{file_del}%0A"
-parent = "{parent}%0A"
-tag = "{tag}%0A"
-"""
-TEMPLATE_FILE = File("C:/Users/klahnakoski/git/datazilla-alerts/tests/resources/hg/changeset.template")
+TEMPLATE_FILE = File("C:/Users/klahnakoski/git/datazilla-alerts/tests/resources/hg/changeset_nofiles.template")
 
 def pull_repo(repo):
     if not File(os.path.join(repo.directory, ".hg")).exists:
@@ -45,7 +35,7 @@ def pull_repo(repo):
                 while True:
                     line = proc.stdout.readline()
                     if line.startswith("abort:"):
-                        Log.error("Can not clone {{repo.url}}, beacuse {{problem}}", {
+                        Log.error("Can not clone {{repo.url}}, because {{problem}}", {
                             "repo": repo,
                             "problem": line
                         })
@@ -54,6 +44,7 @@ def pull_repo(repo):
                     Log.note("Mercurial cloning: {{status}}", {"status": line})
             finally:
                 proc.wait()
+
 
     else:
         hgrc_file = File(os.path.join(repo.directory, ".hg", "hgrc"))
@@ -76,6 +67,7 @@ def pull_repo(repo):
                 pull_repo(repo)
                 return
             if output.find("abort: abandoned transaction found") >= 0:
+                Log.error("Problem pulling repo, try \"hg recover\"\n{{reason|indent}}", {"reason": output})
                 File(repo.directory).delete()
                 pull_repo(repo)
                 return
@@ -86,21 +78,19 @@ def pull_repo(repo):
 
 
 
-def get_changesets(date_range, repo):
-    #MAKE TEMPLATE FILE
-    TEMPLATE_FILE.write(TEMPLATE)
-
-    if date_range.max == Null:
-        if date_range.min == Null:
-            drange = ">0 0"
+def get_changesets(date_range=None, revision_range=None, repo=None):
+    if date_range is not None:
+        if date_range.max == Null:
+            if date_range.min == Null:
+                drange = ">0 0"
+            else:
+                drange = ">" + unicode(CNV.datetime2unix(date_range.min)) + " 0"
         else:
-            drange = ">" + unicode(CNV.datetime2unix(date_range.min)) + " 0"
-    else:
-        if date_range.min == Null:
-            drange = "<" + unicode(CNV.datetime2unix(date_range.max) - 1) + " 0"
-        else:
-            drange = unicode(CNV.datetime2unix(date_range.min)) + " 0 to " + unicode(
-                CNV.datetime2unix(date_range.max) - 1) + " 0"
+            if date_range.min == Null:
+                drange = "<" + unicode(CNV.datetime2unix(date_range.max) - 1) + " 0"
+            else:
+                drange = unicode(CNV.datetime2unix(date_range.min)) + " 0 to " + unicode(
+                    CNV.datetime2unix(date_range.max) - 1) + " 0"
 
 
     #GET ALL CHANGESET INFO
@@ -110,11 +100,15 @@ def get_changesets(date_range, repo):
         "--cwd",
         File(repo.directory).filename,
         "-v",
-        "--date",
-        drange,
+        # "-p",   #TO GET PATCH CONTENTS
         "--style",
         TEMPLATE_FILE.filename
     ]
+
+    if date_range is not None:
+        args.extend(["--date", drange])
+    elif revision_range is not None:
+        args.extend(["-r", str(revision_range.min)+":"+str(revision_range.max)])
 
     proc = subprocess.Popen(
         args,
@@ -152,7 +146,10 @@ def get_changesets(date_range, repo):
                     files,
                     file_adds,
                     file_dels,
+                    p1rev,
+                    p1node,
                     parents,
+                    children,
                     tags,
                     desc
                 ) = (CNV.latin12unicode(urllib.unquote(c)) for c in line.split("\t"))
@@ -167,10 +164,11 @@ def get_changesets(date_range, repo):
                     "revision": rev,
                     "author": author,
                     "branches": set(branches.split("\n")) - {""},
-                    "file_changes": files - file_adds - file_dels,
+                    "file_changes": files - file_adds - file_dels - {""},
                     "file_adds": file_adds,
                     "file_dels": file_dels,
-                    "parents": set(parents.split("\n")) - {""},
+                    "parents": set(parents.split("\n")) - {""} | {p1rev+":"+p1node},
+                    "children": set(children.split("\n")) - {""},
                     "tags": set(tags.split("\n")) - {""},
                     "description": desc
                 }
@@ -192,8 +190,8 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        with DB(settings.database) as db:
-            for repo in settings.param.repos:
+        for repo in settings.param.repos:
+            with DB(settings.database) as db:
                 try:
                     pull_repo(repo)
 
@@ -201,7 +199,9 @@ def main():
                     existing_range = db.query("""
                         SELECT
                             max(`date`) `max`,
-                            min(`date`) `min`
+                            min(`date`) `min`,
+                            min(revision) min_rev,
+                            max(revision) max_rev
                         FROM
                             changesets
                         WHERE
@@ -214,14 +214,30 @@ def main():
                     ])
 
                     for r in ranges:
-                        for g, docs in Q.groupby(get_changesets(r, repo), size=100):
+                        for g, docs in Q.groupby(get_changesets(date_range=r, repo=repo), size=100):
                             for doc in docs:
                                 doc.file_changes = Null
                                 doc.file_adds = Null
                                 doc.file_dels = Null
                                 doc.description = doc.description[0:16000]
-                                db.insert("changesets", doc)
+
+                            db.insert_list("changesets", docs)
                             db.flush()
+
+                    missing_revisions = sql.find_holes(db, "changesets", "revision", {"term":{"repo":repo.name}}, {"min": 0, "max": existing_range.max_rev + 1})
+                    for _range in missing_revisions:
+                        for g, docs in Q.groupby(get_changesets(revision_range=_range, repo=repo), size=100):
+                            for doc in docs:
+                                doc.file_changes = Null
+                                doc.file_adds = Null
+                                doc.file_dels = Null
+                                doc.description = doc.description[0:16000]
+
+                            db.insert_list("changesets", docs)
+                            db.flush()
+
+
+
                 except Exception, e:
                     Log.warning("Failure to pull from {{repo.name}}", {"repo":repo}, e)
     finally:

@@ -1,14 +1,15 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 import threading
-from .basic import nvl
-from .struct import Null
+from .struct import nvl
 from .logs import Log
 from .threads import Queue, Thread
 
@@ -29,16 +30,18 @@ class worker_thread(threading.Thread):
         self.start()
 
     #REQUIRED TO DETECT KEYBOARD, AND OTHER, INTERRUPTS
-    def join(self, timeout=Null):
+    def join(self, timeout=None):
         while self.isAlive():
             Log.note("Waiting on thread {{thread}}", {"thread":self.name})
             threading.Thread.join(self, nvl(timeout, 0.5))
 
     def run(self):
+        got_stop=False
         while self.keep_running:
-            request=self.in_queue.pop()
-            if request==Thread.STOP:
-                if len(self.in_queue.queue)>0:
+            request = self.in_queue.pop()
+            if request == Thread.STOP:
+                got_stop=True
+                if self.in_queue.queue:
                     Log.warning("programmer error")
                 break
             if not self.keep_running:
@@ -46,18 +49,18 @@ class worker_thread(threading.Thread):
 
             try:
                 if DEBUG and hasattr(self.function, "func_name"):
-                    Log.note("run {{function}}", {"function":self.function.func_name})
-                result=self.function(**request)
-                if self.out_queue != Null:
-                    self.out_queue.add({"response":result})
+                    Log.note("run {{function}}", {"function": self.function.func_name})
+                result = self.function(**request)
+                if self.out_queue:
+                    self.out_queue.add({"response": result})
             except Exception, e:
                 Log.warning("Can not execute with params={{params}}", {"params": request}, e)
-                if self.out_queue != Null:
-                    self.out_queue.add({"exception":e})
+                if self.out_queue:
+                    self.out_queue.add({"exception": e})
             finally:
-                self.num_runs+=1
+                self.num_runs += 1
 
-        self.keep_running=False
+        self.keep_running = False
         if self.num_runs==0:
             Log.warning("{{name}} thread did no work", {"name":self.name})
         if DEBUG and self.num_runs!=1:
@@ -65,8 +68,8 @@ class worker_thread(threading.Thread):
                 "name":self.name,
                 "num":self.num_runs
             })
-        if len(self.in_queue.queue)>0:
-            Log.warning("programmer error")
+        if got_stop and self.in_queue.queue:
+            Log.warning("multithread programmer error")
         if DEBUG:
             Log.note("{{thread}} DONE", {"thread":self.name})
 
@@ -83,7 +86,7 @@ class worker_thread(threading.Thread):
 
 #PASS A SET OF FUNCTIONS TO BE EXECUTED (ONE PER THREAD)
 #PASS AN (ITERATOR/LIST) OF PARAMETERS TO BE ISSUED TO NEXT AVAILABLE THREAD
-class Multithread():
+class Multithread(object):
 
 
     def __init__(self, functions):

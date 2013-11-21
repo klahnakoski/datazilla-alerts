@@ -14,7 +14,13 @@ create table changesets (
   file_adds       VARCHAR(300),
   file_dels       VARCHAR(300),
   parents         VARCHAR(300),
-  tags            VARCHAR(300),
+  children        VARCHAR(300),
+  tags            VARCHAR(600),
   description     VARCHAR(16000)
 );
-  
+
+
+create index changesets_repo_revision on changesets(repo, revision);
+
+
+alter table changesets modify tags varchar(600)

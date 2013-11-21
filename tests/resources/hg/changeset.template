@@ -1,5 +1,5 @@
 
-changeset = "{date|hgdate|urlescape}\t{node}\t{rev}\t{author|urlescape}\t{branches}\t{files}\t{file_adds}\t{file_dels}\t{parents}\t{tags}\t{desc|urlescape}\n"
+changeset = "{date|hgdate|urlescape}\t{node}\t{rev}\t{author|urlescape}\t{branches}\t{files}\t{file_adds}\t{file_dels}\t{p1rev}\t{p1node}\t{parents}\t{tags}\t{desc|urlescape}\n"
 branch = "{branch}%0A"
 file = "{file}%0A"
 file_add = "{file_add}%0A"

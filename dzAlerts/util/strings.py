@@ -1,16 +1,18 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 import re
 from .jsons import json_encoder
 import struct
 
-from .struct import Null, Struct
+from .struct import Struct
 
 import sys
 reload(sys)
@@ -18,8 +20,8 @@ sys.setdefaultencoding("utf-8")
 
 
 
-def indent(value, prefix=u"\t", indent=Null):
-    if indent != Null:
+def indent(value, prefix=u"\t", indent=None):
+    if indent != None:
         prefix=prefix*indent
         
     try:
@@ -45,12 +47,12 @@ def outdent(value):
 
 def between(value, prefix, suffix):
     s = value.find(prefix)
-    if s==-1: return Null
+    if s==-1: return None
     s+=len(prefix)
 
     e=value.find(suffix, s)
     if e==-1:
-        return Null
+        return None
 
     s=value.rfind(prefix, 0, e)+len(prefix) #WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
     return value[s:e]
@@ -69,21 +71,22 @@ def find_first(value, find_arr, start=0):
     if i==len(value): return -1
     return i
 
-#TURNS OUT PYSTACHE MANGLES CHARS FOR HTML
-#def expand_template(template, values):
-#    if values == Null: values={}
-#    return pystache.render(template, values)
 
-pattern=re.compile(r"(\{\{[\w_\.]+\}\})")
+
+
+pattern=re.compile(r"\{\{([\w_\.]+(\|[\w_]+)*)\}\}")
 def expand_template(template, values):
-    # if values == Null: values={}
     values=struct.wrap(values)
 
     def replacer(found):
-        var=found.group(1)
+        seq=found.group(1).split("|")
+
+        var=seq[0]
         try:
-            val=values[var[2:-2]]
+            val=values[var]
             val=toString(val)
+            for filter in seq[1:]:
+                val=eval(filter+"(val)")
             return val
         except Exception, e:
             try:
@@ -92,16 +95,16 @@ def expand_template(template, values):
                     val=toString(val)
                     return val
             except Exception:
-                raise Exception(u"Can not find "+var[2:-2]+u" in template:\n"+indent(template), e)
+                raise Exception(u"Can not expand "+"|".join(seq)+u" in template:\n"+indent(template), e)
 
     return pattern.sub(replacer, template)
 
 
 def toString(val):
     if isinstance(val, Struct):
-        return json_encoder.encode(val.dict)
+        return json_encoder.encode(val.dict, pretty=True)
     elif isinstance(val, dict) or isinstance(val, list) or isinstance(val, set):
-        val=json_encoder.encode(val)
+        val=json_encoder.encode(val, pretty=True)
         return val
     return unicode(val)
 

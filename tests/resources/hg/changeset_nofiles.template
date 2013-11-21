@@ -1,0 +1,6 @@
+
+changeset = "{date|hgdate|urlescape}\t{node}\t{rev}\t{author|urlescape}\t{branches}\t\t\t\t{p1rev}\t{p1node}\t{parents}\t{children}\t{tags}\t{desc|urlescape}\n"
+branch = "{branch}%0A"
+parent = "{parent}%0A"
+tag = "{tag}%0A"
+child = "{child}%0A"

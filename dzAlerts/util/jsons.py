@@ -1,17 +1,20 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 
-from datetime import datetime, time
+from datetime import datetime
+import time
 from decimal import Decimal
 import json
 import re
-from .struct import Null
+
 
 try:
     # StringBuilder IS ABOUT 2x FASTER THAN list()
@@ -27,7 +30,7 @@ except Exception, e:
         def build(self):
             return "".join(self)
 
-
+append = StringBuilder.append
 
 class PyPyJSONEncoder(object):
     """
@@ -41,7 +44,7 @@ class PyPyJSONEncoder(object):
             return json.dumps(json_scrub(value), indent=4, sort_keys=True, separators=(',', ': '))
 
         _buffer = StringBuilder(1024)
-        _value2json(value, _buffer.append)
+        _value2json(value, _buffer)
         output = _buffer.build()
         return output
 
@@ -72,55 +75,55 @@ else:
 
 
 
-def _value2json(value, appender):
+def _value2json(value, _buffer):
     if isinstance(value, basestring):
-        _string2json(value, appender)
-    elif value == Null or value is None:
-        appender("null")
+        _string2json(value, _buffer)
+    elif value == None:
+        append(_buffer, "null")
     elif value is True:
-        appender('true')
+        append(_buffer, 'true')
     elif value is False:
-        appender('false')
+        append(_buffer, 'false')
     elif isinstance(value, (int, long, Decimal)):
-        appender(str(value))
+        append(_buffer, str(value))
     elif isinstance(value, float):
-        appender(repr(value))
+        append(_buffer, repr(value))
     elif isinstance(value, datetime):
-        appender(unicode(long(time.mktime(value.timetuple())*1000)))
+        append(_buffer, unicode(long(time.mktime(value.timetuple())*1000)))
     elif isinstance(value, dict):
-        _dict2json(value, appender)
+        _dict2json(value, _buffer)
     elif hasattr(value, '__iter__'):
-        _list2json(value, appender)
+        _list2json(value, _buffer)
     else:
         raise Exception(repr(value)+" is not JSON serializable")
 
 
-def _list2json(value, appender):
-    appender("[")
+def _list2json(value, _buffer):
+    append(_buffer, "[")
     first = True
     for v in value:
         if first:
             first = False
         else:
-            appender(", ")
-        _value2json(v, appender)
-    appender("]")
+            append(_buffer, ", ")
+        _value2json(v, _buffer)
+    append(_buffer, "]")
 
 
-def _dict2json(value, appender):
+def _dict2json(value, _buffer):
     items = value.iteritems()
 
-    appender("{")
+    append(_buffer, "{")
     first = True
     for k, v in value.iteritems():
         if first:
             first = False
         else:
-            appender(", ")
-        _string2json(unicode(k), appender)
-        appender(": ")
-        _value2json(v, appender)
-    appender("}")
+            append(_buffer, ", ")
+        _string2json(unicode(k), _buffer)
+        append(_buffer, ": ")
+        _value2json(v, _buffer)
+    append(_buffer, "}")
 
 
 special_find = u"\\\"\t\n\r".find
@@ -140,39 +143,41 @@ for i in range(0x20):
     ESCAPE_DCT.setdefault(chr(i), '\\u{0:04x}'.format(i))
 
 
-def _string2json(value, appender):
+def _string2json(value, _buffer):
     def replace(match):
         return ESCAPE_DCT[match.group(0)]
-    appender("\"")
-    appender(ESCAPE.sub(replace, value))
-    appender("\"")
+    append(_buffer, "\"")
+    append(_buffer, ESCAPE.sub(replace, value))
+    append(_buffer, "\"")
 
 
 
 #REMOVE VALUES THAT CAN NOT BE JSON-IZED
-def json_scrub(r):
-    return _scrub(r)
+def json_scrub(value):
+    return _scrub(value)
 
 
-def _scrub(r):
-    if r == Null:
+def _scrub(value):
+    if value == None:
         return None
-    elif isinstance(r, dict):
+    elif isinstance(value, datetime):
+        return long(time.mktime(value.timetuple())*1000)
+    elif isinstance(value, dict):
         output = {}
-        for k, v in r.iteritems():
+        for k, v in value.iteritems():
             v = _scrub(v)
             output[k] = v
         return output
-    elif hasattr(r, '__iter__'):
+    elif hasattr(value, '__iter__'):
         output = []
-        for v in r:
+        for v in value:
             v = _scrub(v)
             output.append(v)
         return output
-    elif isinstance(r, Decimal):
-        return float(r)
+    elif isinstance(value, Decimal):
+        return float(value)
     else:
-        return r
+        return value
 
 
 

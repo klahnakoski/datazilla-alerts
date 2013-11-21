@@ -1,10 +1,12 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 
 
@@ -12,15 +14,16 @@ import codecs
 from datetime import datetime
 import os
 import shutil
-from .basic import listwrap, nvl
-from bzETL.util.cnv import CNV
-from .struct import Null
+from .struct import listwrap, nvl
+from .cnv import CNV
 
 
-class File():
+class File(object):
 
     def __init__(self, filename):
-        assert filename != Null
+        if filename == None:
+            from .logs import Log
+            Log.error("File must be given a filename")
         #USE UNIX STANDARD
         self._filename = "/".join(filename.split(os.sep))
 
@@ -69,13 +72,32 @@ class File():
             for d in listwrap(data):
                 file.write(d)
 
-    def iter(self):
-        return codecs.open(self._filename, "r")
+    def __iter__(self):
+        #NOT SURE HOW TO MAXIMIZE FILE READ SPEED
+        #http://stackoverflow.com/questions/8009882/how-to-read-large-file-line-by-line-in-python
+        def output():
+            with codecs.open(self._filename, "r", encoding="utf-8") as f:
+                for line in f:
+                    yield line
+        return output()
 
     def append(self, content):
-        if not self.parent.exists: self.parent.create()
+        if not self.parent.exists:
+            self.parent.create()
         with open(self._filename, "a") as output_file:
             output_file.write(content)
+
+    def add(self, content):
+        return self.append(content)
+
+    def extend(self, content):
+        if not self.parent.exists:
+            self.parent.create()
+        with open(self._filename, "a") as output_file:
+            for c in content:
+                output_file.write(c)
+
+
 
     def delete(self):
         try:
@@ -88,7 +110,7 @@ class File():
             if e.strerror=="The system cannot find the path specified":
                 return
             from .logs import Log
-            Log.warning("Could not remove file", e)
+            Log.error("Could not remove file", e)
 
     def backup(self):
         names=self._filename.split("/")[-1].split(".")
