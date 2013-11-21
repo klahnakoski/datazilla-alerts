@@ -52,6 +52,8 @@ CREATE INDEX objectstore_test_run_id ON objectstore(test_run_id);;
 CREATE INDEX objectstore_processed_flag_plus ON objectstore(processed_flag, revision, branch, test_run_id);;
 CREATE INDEX objectstore_revision_branch ON objectstore(revision, branch);;
 CREATE INDEX objectstore_date_loaded ON objectstore(date_loaded);;
+CREATE INDEX objectstore_processed_flag on objectstore(processed_flag);
+
 
 # IF WE DO NOT GET THE FULL PUSHLOG, THEN MARK THE OLD TEST RESULTS AS DONE
 update ekyle_objectstore_1.objectstore set processed_flag='summary_complete' where date_loaded<@MIN_DATE

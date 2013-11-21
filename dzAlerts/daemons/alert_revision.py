@@ -15,7 +15,7 @@ from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB, SQL
 from dzAlerts.util.queries import Q
 from scipy.stats import binom
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.struct import nvl, Null
 from dzAlerts.daemons.alert import significant_difference
 
 
