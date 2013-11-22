@@ -21,6 +21,7 @@ create table changesets (
 
 
 create index changesets_repo_revision on changesets(repo, revision);
+create index changesets_repo_node on changesets(repo, node);
 
 
 alter table changesets modify tags varchar(600)
