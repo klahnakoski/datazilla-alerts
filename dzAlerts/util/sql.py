@@ -30,7 +30,7 @@ def find_holes(db, table_name, column_name, filter, _range):
     min_max=db.query("""
         SELECT
             min({{column_name}}) `min`,
-            max({{column_name}}) `max`
+            max({{column_name}})+1 `max`
         FROM
             {{table_name}} a
         WHERE
@@ -63,11 +63,11 @@ def find_holes(db, table_name, column_name, filter, _range):
 
 
     if ranges:
-        ranges.append({"min": ranges[len(ranges) - 1].max + 1, "max": _range.max})
+        ranges.append({"min": min_max.max, "max": _range.max})
     else:
         if min_max.min:
             ranges.append({"min": _range.min, "max": min_max.min})
-            ranges.append({"min": min_max.max+1, "max": _range.max})
+            ranges.append({"min": min_max.max, "max": _range.max})
         else:
             ranges.append(_range)
 

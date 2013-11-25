@@ -173,15 +173,16 @@ def copy_objectstore(settings):
                 #FOR SMALL NUMBERS, JUST LOAD THEM ALL AGAIN
                 missing_ids=set(range(settings.source.service.min, settings.source.service.max))
             else:
-#                existing_ids = get_existing_ids(db)
-                missing_ids=set()
-                for hole in sql.find_holes(
+                holes = sql.find_holes(
                     db,
                     table_name="objectstore",
                     column_name="id",
                     filter={"script":"1=1"},
                     _range=settings.source.service
-                ):
+                )
+
+                missing_ids=set()
+                for hole in holes:
                     missing_ids=missing_ids.union(set(range(hole.min, hole.max)))
 
             Log.note("{{num}} missing ids", {"num": len(missing_ids)})
@@ -204,7 +205,7 @@ def copy_objectstore(settings):
         Log.note("Done")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     try:
         settings=startup.read_settings()
         settings.source.service.threads=nvl(settings.source.service.threads, 1)
