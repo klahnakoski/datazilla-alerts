@@ -19,7 +19,7 @@ import struct, threads
 from .strings import indent, expand_template
 from .threads import Thread
 
-
+DEBUG_LOGGING = False
 ERROR="ERROR"
 WARNING="WARNING"
 NOTE="NOTE"
@@ -143,7 +143,7 @@ def format_trace(tbs, trim=0):
     tbs.reverse()
     list = []
     for filename, lineno, name, line in tbs[trim:]:
-        item = 'at %s:%d (%s)\n' % (filename,lineno,name)
+        item = 'at File "%s", line %d, in %s\n' % (filename.replace("\\", "/"), lineno, name)
         list.append(item)
     return "".join(list)
 
@@ -247,6 +247,24 @@ class Log_usingLogger(BaseLog):
         # http://docs.python.org/2/library/logging.html#logging.LogRecord
         self.queue.add({"template": template, "params": params})
 
+    def stop(self):
+        try:
+            if DEBUG_LOGGING:
+                sys.stdout.write("Log_usingLogger sees stop, adding stop to queue\n")
+            self.queue.add(Thread.STOP)  #BE PATIENT, LET REST OF MESSAGE BE SENT
+            self.thread.join()
+            if DEBUG_LOGGING:
+                sys.stdout.write("Log_usingLogger done\n")
+        except Exception, e:
+            pass
+
+        try:
+            self.queue.close()
+        except Exception, f:
+            pass
+
+
+
 
 def make_log_from_settings(settings):
     assert settings["class"]
@@ -281,7 +299,10 @@ def time_delta_pusher(please_stop, appender, queue, interval):
     if not isinstance(interval, timedelta):
         Log.error("Expecting interval to be a timedelta")
 
+    next_run = datetime.utcnow() + interval
+
     while not please_stop:
+        Thread.sleep(till=next_run)
         next_run = datetime.utcnow() + interval
         logs = queue.pop_all()
         if logs:
@@ -291,15 +312,22 @@ def time_delta_pusher(please_stop, appender, queue, interval):
                     if log == Thread.STOP:
                         please_stop.go()
                         next_run = datetime.utcnow()
-                        break
-                    lines.append(expand_template(log.get("template", None), log.get("params", None)))
+                    else:
+                        lines.append(expand_template(log.get("template", None), log.get("params", None)))
                 except Exception, e:
-                    pass
+                    if DEBUG_LOGGING:
+                        sys.stdout.write("Trouble formatting logs: "+e.message)
+                        raise e
             try:
-                appender("\n".join(lines)+"\n")
+                if DEBUG_LOGGING and please_stop:
+                    sys.stdout.write("Last call to appender with "+str(len(lines))+" lines\n")
+                appender(u"\n".join(lines)+u"\n")
+                if DEBUG_LOGGING and please_stop:
+                    sys.stdout.write("Done call to appender with "+str(len(lines))+" lines\n")
             except Exception, e:
-                pass
-        Thread.sleep(till=next_run)
+                if DEBUG_LOGGING:
+                    sys.stdout.write("Trouble with appender: "+e.message)
+                    raise e
 
 
 class Log_usingStream(BaseLog):
@@ -308,7 +336,11 @@ class Log_usingStream(BaseLog):
     def __init__(self, stream):
         assert stream
 
+        use_UTF8 = False
+
         if isinstance(stream, basestring):
+            if stream.startswith("sys."):
+                use_UTF8 = True  #sys.* ARE OLD AND CAN NOT HANDLE unicode
             self.stream = eval(stream)
             name = stream
         else:
@@ -318,8 +350,18 @@ class Log_usingStream(BaseLog):
         #WRITE TO STREAMS CAN BE *REALLY* SLOW, WE WILL USE A THREAD
         from threads import Queue
 
+        if use_UTF8:
+            def utf8_appender(value):
+                if isinstance(value, unicode):
+                    value = value.encode('utf-8')
+                self.stream.write(value)
+
+            appender = utf8_appender
+        else:
+            appender = self.stream.write
+
         self.queue = Queue()
-        self.thread = Thread("log to " + name, time_delta_pusher, appender=self.stream.write, queue=self.queue, interval=timedelta(seconds=0.3))
+        self.thread = Thread("log to " + name, time_delta_pusher, appender=appender, queue=self.queue, interval=timedelta(seconds=0.3))
         self.thread.start()
 
 
@@ -332,15 +374,21 @@ class Log_usingStream(BaseLog):
 
     def stop(self):
         try:
+            if DEBUG_LOGGING:
+                sys.stdout.write("Log_usingStream sees stop, adding stop to queue\n")
             self.queue.add(Thread.STOP)  #BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
+            if DEBUG_LOGGING:
+                sys.stdout.write("Log_usingStream done\n")
         except Exception, e:
-            pass
+            if DEBUG_LOGGING:
+                raise e
 
         try:
             self.queue.close()
         except Exception, f:
-            pass
+            if DEBUG_LOGGING:
+                raise f
 
 
 
@@ -350,6 +398,7 @@ class Log_usingThread(BaseLog):
         from threads import Queue
 
         self.queue=Queue()
+        self.logger=logger
 
         def worker(please_stop):
             while not please_stop:
@@ -357,10 +406,11 @@ class Log_usingThread(BaseLog):
                 logs = self.queue.pop_all()
                 for log in logs:
                     if log==Thread.STOP:
+                        if DEBUG_LOGGING:
+                            sys.stdout.write("Log_usingThread.worker() sees stop, filling rest of queue\n")
                         please_stop.go()
                     else:
-                        logger.write(**log)
-
+                        self.logger.write(**log)
         self.thread=Thread("log thread", worker)
         self.thread.start()
 
@@ -369,20 +419,28 @@ class Log_usingThread(BaseLog):
             self.queue.add({"template":template, "params":params})
             return self
         except Exception, e:
-            sys.stdout.write("IF YOU SEE THIS, IT IS LIKELY YOU FORGOT TO RUN Log.start() FIRST")
+            sys.stdout.write("IF YOU SEE THIS, IT IS LIKELY YOU FORGOT TO RUN Log.start() FIRST\n")
             raise e  #OH NO!
 
     def stop(self):
         try:
+            if DEBUG_LOGGING:
+                sys.stdout.write("injecting stop into queue\n")
             self.queue.add(Thread.STOP)  #BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
+            if DEBUG_LOGGING:
+                sys.stdout.write("Log_usingThread telling logger to stop\n")
+            self.logger.stop()
         except Exception, e:
-            pass
+            if DEBUG_LOGGING:
+                raise e
+
 
         try:
             self.queue.close()
         except Exception, f:
-            pass
+            if DEBUG_LOGGING:
+                raise f
 
 
 

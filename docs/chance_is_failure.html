@@ -203,7 +203,7 @@
 
 	<div class="indent">
 		<p>
-			There probably is not enough information to determine <span class="AM">k</span>
+			Usually, there is not enough information to determine <span class="AM">k</span>
 			ahead of time.  We can negate <span class="AM">k</span> if we are only interested in
 			proportional results.
 		</p>
@@ -212,15 +212,20 @@
 	</div>
 
 
-	<a href="#safe"></a>  <h2>Conservative Percentage Estimates</h2>
+	<a name="safe"></a><h2>Conservative Percentage Estimates</h2>
 
 	<div class="indent">
-		<p>
-			Since we are dealing with rare events, we must adjust our failure rate
-			measurements to account for possible bad samples:  In other words,
-			the number of failures we have seen in the recent past may be
-			lower than the actual failure rate.
-		</p>
+        <p>
+            Since we are dealing with rare events, we must adjust our failure rate
+            measurements to account for possible bad samples:  In other words,
+            the number of failures we have seen in the recent past may be
+            lower than the actual failure rate.
+        </p>
+
+        <p>
+            My objective is to find the expected confidence interval given the samples we have seen so far.
+            We can use this confidence interval to choose a conservative estimate of the error rate.
+        </p>
 
 		<p>Start with the familiar binomial distribution</p>
 		<div class="indent">
@@ -270,19 +275,19 @@
 		<p>
 			But it is easier to use the inverse of <span class="AM">"beta"_"cdf"</span>
 			(denoted as <span class="AM">"beta"_"cdf"^-1</span>) which maps the
-			desired confidence to a left-sided probability range <span class="AM">{rho in RR | 0 < p < rho_0}</span>:
+			desired confidence to a left-sided probability range <span class="AM">{rho in RR | 0 < p < rho_"max"}</span>:
 		</p>
 		<div class="indent">
-		<span class="AM">rho_0 = "beta"_"cdf"^-1 ("confidence"; alpha, beta)</span>
+		<span class="AM">rho_"max" = "beta"_"cdf"^-1 ("confidence"; alpha, beta)</span>
 		</div>
-		<p>Please notice some symmetry:
+		<p>Please notice some symmetry, which can be used to find both <span class="AM">rho_"min"</span> and <span class="AM">rho_"max"</span>:
 		</p>
 		<div class="indent">
 		<span class="AM">"beta"_"cdf"^-1 ("confidence"; alpha, beta) = 1 - "beta"_"cdf"^-1 (1-"confidence"; beta, alpha)</span>
 		</div>
 		<p>
 			If we are suspicious our measured <span class="AM">n_"fail"</span> is too low,
-			we can ask how high can the real false negative rate (<span class="AM">rho_0</span>) be:
+			we can ask how high can the real false negative rate (<span class="AM">rho_"max"</span>) be:
 		</p>
 
 		<p>Let</p>
@@ -291,18 +296,8 @@
 			<span class="AM">beta = n-k+1 = n_"pass" +1</span><br>
 		</div>
 		<div class="indent">
-		<span class="AM">rho_0 = "beta"_"cdf"^-1 ("confidence"; n_"fail" +1, n_"pass" +1)</span>
+		<span class="AM">rho_"max" = "beta"_"cdf"^-1 ("confidence"; n_"fail" +1, n_"pass" +1)</span>
 		</div>
-
-
-		
-
-
-
-
-
-
-		</p>
 
 
 

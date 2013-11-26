@@ -13,7 +13,7 @@ from .maths import Math
 from .queries import Q
 from .cnv import CNV
 from .logs import Log
-from .struct import nvl
+from .struct import nvl, Null
 from .struct import Struct, StructList
 
 DEBUG=False
@@ -92,12 +92,13 @@ class ElasticSearch(object):
         return self.get_metadata().indicies[self.settings.index]
 
 
-
     #DELETE ALL INDEXES WITH GIVEN PREFIX, EXCEPT name
     def delete_all_but(self, prefix, name):
+        if prefix == name:
+            Log.note("{{index_name}} will not be deleted", {"index_name": prefix})
         for a in self.get_aliases():
             # MATCH <prefix>YYMMDD_HHMMSS FORMAT
-            if re.match(re.escape(prefix)+"\\d{8}_\\d{6}", a.index) and a.index!=name:
+            if re.match(re.escape(prefix) + "\\d{8}_\\d{6}", a.index) and a.index != name:
                 ElasticSearch.delete_index(self.settings, a.index)
 
 
@@ -130,6 +131,24 @@ class ElasticSearch(object):
             if re.match(re.escape(alias)+"\\d{8}_\\d{6}", a.index) and not a.alias
         ])
         return output
+
+    def get_index(self, alias):
+        """
+        RETURN THE INDEX USED BY THIS alias
+        """
+        output = Q.sort([
+            a.index
+            for a in self.get_aliases()
+            if a.alias == alias
+        ])
+        if len(output) > 1:
+            Log.error("only one index with given alias==\"{{alias}}\" expected", {"alias": alias})
+
+        if not output:
+            return Null
+
+        return output.last()
+
 
     def is_proto(self, index):
         """
@@ -167,7 +186,7 @@ class ElasticSearch(object):
             if id == None:
                 id = sha.new(json).hexdigest()
 
-            lines.append('{"index":{"_id":'+CNV.object2JSON(id)+'}}')
+            lines.append(u'{"index":{"_id":'+CNV.object2JSON(id)+'}}')
             lines.append(json)
 
         if not lines: return

@@ -25,7 +25,7 @@ class Struct(dict):
     AND DOES NOT LOOK AT FIELD-DOES-NOT-EXIST-IN-THIS-CONTEXT (Database Null)
 
 
-    This is a common pattern in many frameworks:
+    This is a common pattern in many frameworks (I am still working on this list)
 
     jinja2.environment.Environment.getattr()
     argparse.Environment() - code performs setattr(e, name, value) on instances of Environment
@@ -70,7 +70,7 @@ class Struct(dict):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            raise Exception("expecting unicode keys")
+            key = key.encode("utf-8")
 
         try:
             d = object.__getattribute__(self, "__dict__")
@@ -96,7 +96,7 @@ class Struct(dict):
 
     def __getattribute__(self, key):
         if not isinstance(key, str):
-            raise Exception("expecting unicode keys")
+            key = key.encode("utf-8")
 
         d = object.__getattribute__(self, "__dict__")
         if key not in SPECIAL:
@@ -137,7 +137,7 @@ class Struct(dict):
 
     def __delitem__(self, key):
         if not isinstance(key, str):
-            raise Exception("expecting unicode keys")
+            key = key.encode("utf-8")
 
         d = object.__getattribute__(self, "__dict__")
 
@@ -225,10 +225,10 @@ class NullStruct(object):
         return False
 
     def __eq__(self, other):
-        return other is Null or other is None
+        return other is None or isinstance(other, NullStruct)
 
     def __ne__(self, other):
-        return other is not Null and other is not None
+        return other is not None and not isinstance(other, NullStruct)
 
     def __getitem__(self, key):
         return NullStruct(self, key)
