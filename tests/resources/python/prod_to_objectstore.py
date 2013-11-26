@@ -34,10 +34,6 @@ def etl(name, db, settings, id):
                 return False
             data=CNV.JSON2object(content)
 
-        if data.test_run_id == Null:
-            #DZ IS RESPONSIBLE FOR THIS NUMBER, WHICH MAY NOT BE SET YET
-            return False
-
         with Timer(str(name)+" push to local "+str(id)):
             with db_lock:
                 db.insert("objectstore", {
