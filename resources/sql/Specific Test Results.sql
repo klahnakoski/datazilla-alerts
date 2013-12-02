@@ -1,10 +1,10 @@
 use ekyle_perftest_1;
 
 
-SELECT 
+SELECT
 -- 	c.desc,
-	d.* 
-from 
+	d.*
+from
 	test_data_all_dimensions d
 -- left join
 -- 	pushlog_hgmozilla_1.changesets c on c.revision=d.revision
@@ -27,4 +27,4 @@ ORDER BY
 	page_id,
     test_run_id,
     page_id,
-    coalesce(push_date, date_received)
+    push_date

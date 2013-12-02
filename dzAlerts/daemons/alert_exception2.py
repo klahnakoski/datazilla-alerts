@@ -9,15 +9,15 @@
 
 from datetime import datetime
 
-
 import scipy
 from scipy import stats
 from dzAlerts.daemons.alert_exception import single_ttest
 from dzAlerts.util import struct
+from dzAlerts.util.cnv import CNV
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
 
-scipy.stats = stats  ## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
+scipy.stats = stats  # I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
 
 from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
 from dzAlerts.util.struct import nvl
@@ -30,11 +30,11 @@ from dzAlerts.util.db import DB
 from dzAlerts.util import startup
 
 
-SEVERITY = 0.6              #THERE ARE MANY FALSE POSITIVES
+SEVERITY = 0.6              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
 MIN_CONFIDENCE = 0.99
-REASON = "alert_exception"     #name of the reason in alert_reason
+REASON = "alert_exception"     # name of the reason in alert_reason
 WINDOW_SIZE = 10
-SAMPLE_LIMIT_FOR_DEBUGGING = 1000         #FOR LIMITING NUMBER OF TESTS IN SINGLE PULL, SET TO one million IN PROD
+SAMPLE_LIMIT_FOR_DEBUGGING = 10         # FOR LIMITING NUMBER OF TESTS IN SINGLE PULL, SET TO one million IN PROD
 DEBUG = True
 
 
@@ -44,6 +44,7 @@ def alert_exception(settings, db):
     """
 
     debug = nvl(settings.param.debug, DEBUG)
+    db.debug = debug
 
     # THE EVENTUAL GOAL IS TO PARAMETRIZE THE SQL, WHICH REALLY IS
     # SIMPLE EDGE SETS
@@ -67,7 +68,7 @@ def alert_exception(settings, db):
             "processor",
             "page_url"
         ],
-        "sort": {"name": "push_date", "value": "coalesce(push_date, date_received)"}
+        "sort": {"name": "push_date", "value": "push_date"}
     })
 
     #FIND NEW POINTS IN CUBE TO TEST
@@ -77,7 +78,7 @@ def alert_exception(settings, db):
     new_test_points = db.query("""
         SELECT
             {{edges}},
-            min(coalesce(push_date, date_received)) min_push_date
+            min(push_date) min_push_date
         FROM
             {{objectstore}}.objectstore o
         JOIN
@@ -96,7 +97,7 @@ def alert_exception(settings, db):
         "edges": db.quote_column(query.edges, table="t"),
         "sample_limit": SQL(SAMPLE_LIMIT_FOR_DEBUGGING),
         "where": db.esfilter2sqlwhere({"and": [
-            {"script": "o.processed_flag <> 'summary_complete'"},
+            {"not": {"term": {"o.processed_flag": "summary_complete"}}},
             {"exists": "t.n_replicates"}
         ]})
     })
@@ -104,7 +105,7 @@ def alert_exception(settings, db):
     #BRING IN ALL NEEDED DATA
     if debug:
         Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
-            "num":len(new_test_points),
+            "num": len(new_test_points),
             "groups": new_test_points
         })
 
@@ -200,7 +201,7 @@ def alert_exception(settings, db):
                     "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0)
                 }, {
                     "name": "pass",
-                    "value":lambda (r): MIN_CONFIDENCE < r.result.confidence and r.result.diff > 0
+                    "value": lambda (r): True if MIN_CONFIDENCE < r.result.confidence and r.result.diff > 0 else False
                 },
 
             ]
@@ -216,17 +217,14 @@ def alert_exception(settings, db):
         }))
 
         #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-        new_exceptions=Q.run({
-            "from": stats,
-            "where": lambda (r): MIN_CONFIDENCE < r.result.confidence and r.result.diff > 0
-        })
+        new_exceptions = [e for e in stats if e["pass"]]
 
         for v in new_exceptions:
-            v.stddev = v.result.diff
+            v.diff = v.result.diff
             v.confidence = v.result.confidence
             v.result = Null
 
-            alerts.append(Struct(
+            alert = Struct(
                 status="new",
                 create_time=datetime.utcnow(),
                 tdad_id=v.tdad_id,
@@ -234,7 +232,10 @@ def alert_exception(settings, db):
                 details=v,
                 severity=SEVERITY,
                 confidence=v.confidence
-            ))
+            )
+            alerts.append(alert)
+
+            # Log.debug(CNV.object2JSON(alert))
 
         if debug:
             Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
@@ -298,9 +299,9 @@ def alert_exception(settings, db):
         a = found_alerts[curr.tdad_id]
 
         if significant_difference(curr.severity, a.severity) or \
-            significant_difference(curr.confidence, a.confidence) or \
-            curr.reason != a.reason \
-        :
+                significant_difference(curr.confidence, a.confidence) or \
+                        curr.reason != a.reason \
+            :
             curr.last_updated = datetime.utcnow()
             db.update("alerts", {"id": a.id}, a)
 
@@ -322,12 +323,11 @@ def alert_exception(settings, db):
         db.execute("""
             UPDATE {{objectstore}}.objectstore
             SET processed_flag='summary_complete'
-            WHERE test_run_id IN {{touched}}
+            WHERE {{where}}
         """, {
             "objectstore": db.quote_column(settings.objectstore.schema),
-            "touched": SQL(all_touched)
+            "where": db.esfilter2sqlwhere({"term": {"test_run_id": all_touched}})
         })
-
 
 
 def main():
@@ -335,8 +335,10 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
-
         with DB(settings.perftest) as db:
+            #TEMP FIX UNTIL IMPORT DOES IT FOR US
+            db.execute("""update test_data_all_dimensions set push_date=date_received where push_date is null""")
+
             alert_exception(
                 settings,
                 db

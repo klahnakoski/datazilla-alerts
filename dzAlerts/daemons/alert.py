@@ -89,7 +89,7 @@ def send_alerts(settings, db):
         body=[HEADER]
         for alert in new_alerts:
             if alert.confidence>=1: alert.confidence = 0.999999
-            
+
             details = CNV.JSON2object(alert.details)
             for k,v in alert.items():
                 if k not in details:
@@ -126,12 +126,12 @@ def send_alerts(settings, db):
     except Exception, e:
         Log.error("Could not send alerts", e)
 
-        
+
 # REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
 # COLUMN REFLECTS THE ALERT STATI
 def update_h0_rejected(db, start_date):
     db.execute("""
-        UPDATE 
+        UPDATE
             test_data_all_dimensions t
         JOIN (
             SELECT
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     try:
         Log.note("Running alerts off of schema {{schema}}", {"schema":settings.database.schema})
 
-        with DB(settings.database) as db:
+        with DB(settings.perftest) as db:
             send_alerts(
                 settings=settings,
                 db = db

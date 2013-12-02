@@ -268,7 +268,7 @@ def sort(data, fieldnames=None):
             return Null
 
         if fieldnames == None:
-            return sorted(data)
+            return struct.wrap(sorted(data))
 
         if not isinstance(fieldnames, list):
             #SPECIAL CASE, ONLY ONE FIELD TO SORT BY
@@ -276,14 +276,14 @@ def sort(data, fieldnames=None):
                 def comparer(left, right):
                     return cmp(nvl(left, Struct())[fieldnames], nvl(right, Struct())[fieldnames])
 
-                return sorted(data, cmp=comparer)
+                return struct.wrap(sorted(data, cmp=comparer))
             else:
                 #EXPECTING {"field":f, "sort":i} FORMAT
                 def comparer(left, right):
                     return fieldnames["sort"] * cmp(nvl(left, Struct())[fieldnames["field"]],
                                                     nvl(right, Struct())[fieldnames["field"]])
 
-                return sorted(data, cmp=comparer)
+                return struct.wrap(sorted(data, cmp=comparer))
 
         formal = normalize_sort(fieldnames)
 
@@ -360,12 +360,12 @@ def window(data, param):
     """
     name = param.name            # column to assign window function result
     edges = param.edges          # columns to gourp by
-    sort = param.sort            # columns to sort by
+    sortColumns = param.sort            # columns to sort by
     value = wrap_function(param.value) # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
     _range = param.range          # of form {"min":-10, "max":0} to specify the size and relative position of window
 
-    if aggregate == None and sort == None and edges == None:
+    if aggregate == None and sortColumns == None and edges == None:
         #SIMPLE CALCULATED VALUE
         for rownum, r in enumerate(data):
             r[name] = value(r, rownum, data)
@@ -379,7 +379,7 @@ def window(data, param):
         if not values:
             continue     # CAN DO NOTHING WITH THIS ZERO-SAMPLE
 
-        sequence = struct.wrap(sort(values, sort))
+        sequence = sort(values, sortColumns)
         head = nvl(_range.max, _range.stop)
         tail = nvl(_range.min, _range.start)
 
@@ -395,7 +395,7 @@ def window(data, param):
             total.sub(sequence[i + tail].__temp__)
 
     for r in data:
-        r["__temp__"] = Null  #CLEANUP
+        r["__temp__"] = None  #CLEANUP
 
 
 def groupby_size(data, size):
@@ -518,7 +518,7 @@ class Domain():
 class Index(object):
     def __init__(self, keys):
         self._data = {}
-        self._keys = keys
+        self._keys = struct.unwrap(keys)
         self.count = 0
 
         #THIS ONLY DEPENDS ON THE len(keys), SO WE COULD SHARED lookup
@@ -567,7 +567,8 @@ class Index(object):
 
 
     def add(self, val):
-        if not isinstance(val, dict): val = {(self._keys[0], val)}
+        if not isinstance(val, dict):
+            val = {(self._keys[0], val)}
         d = self._data
         for k in self._keys[0:-1]:
             v = val[k]
@@ -593,7 +594,8 @@ class Index(object):
     def __sub__(self, other):
         output = Index(self._keys)
         for v in self:
-            if v not in other: output.add(v)
+            if v not in other:
+                output.add(v)
         return output
 
     def __and__(self, other):

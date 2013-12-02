@@ -9,8 +9,10 @@
 #
 
 from math import sqrt
+import numpy
 from .cnv import CNV
-from .struct import nvl
+from dzAlerts.util.queries import Q
+from .struct import nvl, Struct
 from .logs import Log
 
 
@@ -62,9 +64,10 @@ def z_moment2stats(z_moment, unbiased=True):
 
 
 
-class Stats(object):
+class Stats(Struct):
 
     def __init__(self, **args):
+        Struct.__init__(self)
         if "count" not in args:
             self.count=0
             self.mean=0
@@ -106,7 +109,6 @@ class Stats(object):
             args["unbiased"] if "unbiased" in args else \
             not args["biased"] if "biased" in args else \
             False
-
 
 
     @property
@@ -168,3 +170,12 @@ def z_moment2dict(z):
 
 
 setattr(CNV, "z_moment2dict", staticmethod(z_moment2dict))
+
+
+def median(values):
+    l = len(values)
+    _sorted = sorted(values)
+    if l % 2 == 0:
+        return (_sorted[l / 2] + _sorted[l / 2 + 1]) / 2
+    else:
+        return _sorted[l / 2]

@@ -266,7 +266,7 @@ class DB(object):
             sql = expand_template(sql, self.quote_param(param))
         sql = outdent(sql)
         self.backlog.append(sql)
-        if len(self.backlog) >= MAX_BATCH_SIZE:
+        if self.debug or len(self.backlog) >= MAX_BATCH_SIZE:
             self._execute_backlog()
 
 

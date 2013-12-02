@@ -80,9 +80,9 @@ def _value2json(value, _buffer):
         _string2json(value, _buffer)
     elif value == None:
         append(_buffer, "null")
-    elif value is True:
+    elif value==True:  # NUMPY HAS numpy.bool_True
         append(_buffer, 'true')
-    elif value is False:
+    elif value==False:
         append(_buffer, 'false')
     elif isinstance(value, (int, long, Decimal)):
         append(_buffer, str(value))

@@ -9,22 +9,22 @@ CREATE TABLE IF NOT EXISTS util_uid_next(
 );;
 
 DROP FUNCTION IF EXISTS util_newID;;
-CREATE FUNCTION util_newID () 
+CREATE FUNCTION util_newID ()
 	RETURNS BIGINT
 	READS SQL DATA
 BEGIN
 	IF @util_curr_id IS NULL THEN
 		SELECT max(id) INTO @util_curr_id FROM util_uid_next;
-		IF @util_curr_id IS NULL THEN 
+		IF @util_curr_id IS NULL THEN
 			INSERT INTO util_uid_next VALUES (0);
 			SET @util_curr_id=0;
-		END IF;		
+		END IF;
 		UPDATE util_uid_next SET id=@util_curr_id+1000;
 	ELSEIF @util_curr_id%1000=0 THEN
 		SELECT max(id) INTO @util_curr_id FROM util_uid_next;
 		UPDATE util_uid_next SET id=@util_curr_id+1000;
 	END IF;
-	
+
 	SET @util_curr_id=@util_curr_id+1;
 	RETURN @util_curr_id-1;
 END;;
@@ -59,19 +59,19 @@ CREATE PROCEDURE get_version(
 ) BEGIN
 	DECLARE is_version_1 INTEGER;
 	DECLARE schema_name VARCHAR(80);
-	
+
 	SELECT DATABASE() INTO schema_name FROM DUAL;
-	
+
 	SELECT count(1) INTO is_version_1 FROM information_schema.tables WHERE table_schema=schema_name AND table_name='database';
-	IF (is_version_1=0) THEN 
+	IF (is_version_1=0) THEN
 		CALL exec(concat('CREATE TABLE ', schema_name, '.database (version	VARCHAR(10))'), false);
 		CALL exec(concat('INSERT INTO ', schema_name, '.database VALUES (''1.0'')'), false);
 		SET version='1.0';
-	ELSE 
+	ELSE
 		SET @version='1.0';
 		CALL exec(concat('SELECT max(version) INTO @version FROM ', schema_name, '.database'), false);
 		SET version=@version;
-	END IF;	
+	END IF;
 END;;
 
 
@@ -79,7 +79,7 @@ DROP FUNCTION IF EXISTS bayesian_add;;
 CREATE FUNCTION bayesian_add (
 	a	DOUBLE,
 	b	DOUBLE
-) 
+)
 	RETURNS DOUBLE
  	DETERMINISTIC
 	NO SQL
@@ -93,19 +93,19 @@ DROP PROCEDURE IF EXISTS `migrate v1.1`;;
 CREATE PROCEDURE `migrate v1.1` ()
 m11: BEGIN
 	DECLARE version VARCHAR(10);
-	
+
 	CALL get_version(version);
 	IF (version<>'1.0') THEN
 		LEAVE m11;
 	END IF;
-	
-	
+
+
 	DROP TABLE IF EXISTS alerts;
 	DROP TABLE IF EXISTS alert_reasons;
 	DROP TABLE IF EXISTS alert_stati;
 	DROP TABLE IF EXISTS alert_listeners;
 	DROP TABLE IF EXISTS alert_page_thresholds;
-	
+
 	CREATE TABLE alert_stati(
 		code			VARCHAR(10) NOT NULL PRIMARY KEY
 	);
@@ -118,25 +118,28 @@ m11: BEGIN
 		description		VARCHAR(2000), ##MORE DETAILS ABOUT WHAT THIS IS
 		last_run		DATETIME NOT NULL,
 		config			VARCHAR(8000),
-		email_template	VARCHAR(8000)	 
+		email_template	VARCHAR(8000)
 	);
 	INSERT INTO alert_reasons VALUES (
-		'page_threshold_limit', 
+		'page_threshold_limit',
 		concat('The page has performed badly ({{actual}}), {{expected}} or less was expected'),
 		date_add(now(), INTERVAL -30 DAY),
-		null
-	);		
+		null,
+    null
+	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_exception',
 		concat('{{url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
-		'{"minOffset":0.999}'
+		'{"minOffset":0.999}',
+    null
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_revision',
 		concat('{{url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
-		'{"minOffset":0.999}'
+		'{"minOffset":0.999}',
+    null
 	);
 
 
@@ -144,13 +147,13 @@ m11: BEGIN
 		id				INTEGER NOT NULL PRIMARY KEY,
 		page			INTEGER NOT NULL,
 		threshold		DECIMAL(20, 10) NOT NULL,
-		severity		DOUBLE NOT NULL, 
+		severity		DOUBLE NOT NULL,
 		reason			VARCHAR(2000) NOT NULL,
 		time_added		DATETIME NOT NULL,
 		contact			VARCHAR(200) NOT NULL,
-		FOREIGN KEY (page) REFERENCES pages(id) 
+		FOREIGN KEY (page) REFERENCES pages(id)
 	);
-	
+
 	INSERT INTO alert_page_thresholds
 	SELECT
 		util_newID(),
@@ -161,11 +164,11 @@ m11: BEGIN
 		now(),
 		"klahnakoski@mozilla.com"
 	FROM
-		pages p 
+		pages p
 	WHERE
 		p.url='mozilla.com'
 	;
-	
+
 
 	CREATE TABLE alert_listeners (
 		email			VARCHAR(200) NOT NULL PRIMARY KEY
@@ -174,7 +177,7 @@ m11: BEGIN
 
 
 	#ALTER TABLE test_data_all_dimensions ADD UNIQUE INDEX tdad_id(id)
-	
+
 	CREATE TABLE alerts (
 		id 				INTEGER NOT NULL PRIMARY KEY,
 		status	 		VARCHAR(10) NOT NULL,  ##FOR ALERT LOGIC TO MARKUP, MAYBE AS obsolete
@@ -192,9 +195,9 @@ m11: BEGIN
 		FOREIGN KEY alert_status (status) REFERENCES alert_stati(code),
 		FOREIGN KEY alert_reason (reason) REFERENCES alert_reasons(code)
 	);
-	
+
 	UPDATE `database` SET version='1.1';
-	
+
 END;;
 
 

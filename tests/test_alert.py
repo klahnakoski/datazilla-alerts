@@ -19,6 +19,7 @@ from dzAlerts.util import startup
 from dzAlerts.util.queries import Q
 from dzAlerts.util.maths import Math
 from dzAlerts.util.strings import between, expand_template
+from dzAlerts.util.struct import Null
 from util.testing import make_test_database
 
 
@@ -113,7 +114,7 @@ class test_alert:
 
 
 
-        
+
 
     def test_send_zero_alerts(self):
         to_list=[]
@@ -149,7 +150,7 @@ class test_alert:
             if len(to_list)==0:
                 assert len(emails)==0
                 return
-            
+
             #VERIFY ONE MAIL SENT
             assert len(emails)==1
             #VERIFY to MATCHES WHAT WAS PASSED TO THIS FUNCTION
@@ -218,7 +219,7 @@ def settings(request):
     settings=startup.read_settings(filename="test_settings.json")
     Log.start(settings.debug)
     make_test_database(settings)
-    
+
     def fin():
         Log.stop()
     request.addfinalizer(fin)
