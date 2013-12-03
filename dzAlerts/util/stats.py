@@ -10,7 +10,7 @@
 
 from math import sqrt
 from .cnv import CNV
-from .struct import nvl, Struct
+from .struct import nvl, Struct, Null
 from .logs import Log
 
 
@@ -171,9 +171,15 @@ setattr(CNV, "z_moment2dict", staticmethod(z_moment2dict))
 
 
 def median(values):
-    l = len(values)
-    _sorted = sorted(values)
-    if l % 2 == 0:
-        return (_sorted[l / 2] + _sorted[l / 2 + 1]) / 2
-    else:
-        return _sorted[l / 2]
+    try:
+        if not values:
+            return Null
+
+        l = len(values)
+        _sorted = sorted(values)
+        if l % 2 == 0:
+            return (_sorted[l / 2 - 1] + _sorted[l / 2]) / 2
+        else:
+            return _sorted[l / 2]
+    except Exception, e:
+        Log.error("problem with median", e)
