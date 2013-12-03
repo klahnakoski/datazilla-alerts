@@ -9,9 +9,7 @@
 #
 
 from math import sqrt
-import numpy
 from .cnv import CNV
-from dzAlerts.util.queries import Q
 from .struct import nvl, Struct
 from .logs import Log
 
