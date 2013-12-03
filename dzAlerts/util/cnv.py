@@ -183,7 +183,7 @@ class CNV:
         if value == None:
             return None
         elif hasattr(value, '__iter__'):
-            output=[int(d) for d in value if d!=""]
+            output=[int(d) for d in value if d!="" and d!=None]
             return output
         elif value.strip()=="":
             return None

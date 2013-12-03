@@ -9,14 +9,14 @@ from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.logs import Log
 from dzAlerts.util import startup
-from dzAlerts.util.stats import z_moment2stats, Z_moment
+from dzAlerts.util.stats import z_moment2stats, Z_moment, median
 from dzAlerts.util.struct import Null, nvl
 from dzAlerts.util.timer import Timer
 from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN = 1000000
+TEST_RESULTS_PER_RUN = 100
 
 
 def objectstore_to_cube(db, r):
@@ -105,7 +105,10 @@ def main(settings):
                             {{where}}
                         """, {
                             "objectstore": SQL(settings.destination.objectstore.schema),
-                            "where": db.esfilter2sqlwhere({"terms": {"o.test_run_id": values}})
+                            "where": db.esfilter2sqlwhere({"and": [
+                                {"exists": "o.test_run_id"},
+                                {"terms": {"o.test_run_id": values}}
+                            ]})
                         },
                         _execute=lambda x: objectstore_to_cube(write_db, x)
                     )

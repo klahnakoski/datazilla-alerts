@@ -53,69 +53,6 @@ def etl(name, db, settings, id):
 
 
 
-def get_existing_ids(db):
-    #FIND WHAT'S MISSING IN LOCAL ALREADY
-    ranges = db.query("""
-        SELECT DISTINCT
-                id,
-                `end`
-        FROM (
-            SELECT STRAIGHT_JOIN
-                a.id,
-                "min" `end`
-            FROM
-                objectstore a
-            WHERE
-                a.id={{min}}
-        UNION ALL
-            SELECT
-                a.id,
-                "min" `end`
-            FROM
-                objectstore a
-            LEFT JOIN
-                objectstore c ON c.id=a.id-1
-            WHERE
-                c.id IS NULL AND
-                a.id BETWEEN {{min}} AND {{max}}
-        UNION ALL
-            SELECT STRAIGHT_JOIN
-                a.id,
-                "max" `end`
-            FROM
-                objectstore a
-            LEFT JOIN
-                objectstore b ON b.id=a.id+1
-            WHERE
-                b.id IS NULL AND
-                a.id BETWEEN {{min}} AND {{max}}
-        UNION ALL
-            SELECT STRAIGHT_JOIN
-                a.id,
-                "max" `end`
-            FROM
-                objectstore a
-            WHERE
-                a.id={{max}}
-        ) a
-        ORDER BY
-            id,
-            `end` desc
-    """, {"min":settings.source.service.min, "max":settings.source.service.max})
-    #RESULT COMES IN min/max PAIRS, IN ORDER
-    for i, r in enumerate(ranges):
-        r.index=int(floor(i/2))
-    unstacked_ranges = Q.unstack(ranges, keys=["index"], column='end', value="id")
-
-    existing_ids = set()
-    for r in unstacked_ranges:
-        existing_ids = existing_ids.union(
-            range(r.min, r.max + 1))
-
-    Log.note("Number of ids in local: "+str(len(existing_ids)))
-    return existing_ids
-
-
 def replicate_table(table_name, id_name, source, destination):
     """
      COPY TABLE FROM ONE SCHEMA TO ANOTHER.  MUST HAVE AN id COLUMN THAT IS STRICTLY INCREASING

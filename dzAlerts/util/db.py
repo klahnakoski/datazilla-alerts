@@ -523,12 +523,26 @@ class DB(object):
         elif esfilter.terms:
             for col, v in esfilter.terms.items():
                 try:
-                    int_list=CNV.value2intlist(v)
-                    filter = int_list_packer(col, int_list)
-                    return self._filter2where(filter)
+                    int_list = CNV.value2intlist(v)
+                    has_null = False
+                    for vv in v:
+                        if vv == None:
+                            has_null = True
+                            break
+                    if int_list:
+                        filter = int_list_packer(col, int_list)
+                        if has_null:
+                            return self._filter2where({"or": [{"missing": col}, filter]})
+                        else:
+                            return self._filter2where(filter)
+                    else:
+                        if has_null:
+                            return self._filter2where({"missing": col})
+                        else:
+                            return "false"
                 except Exception, e:
                     if not hasattr(e, "contains") or not e.contains("no packing possible"):
-                        Log.warning("WARNING: Not an int-list: {{list}}", {"list":v}, e)
+                        Log.warning("Not an int-list: {{list}}", {"list":v}, e)
                 return self.quote_column(col)+u" in ("+", ".join([self.quote_value(val) for val in v])+")"
         elif esfilter.script:
             return u"("+esfilter.script+u")"
@@ -554,6 +568,11 @@ class DB(object):
 
             output = self.isolate("AND", [single(col, ranges) for col, ranges in esfilter.range.items()])
             return output
+        elif esfilter.missing:
+            if isinstance(esfilter.missing, basestring):
+                return u"("+self.quote_column(esfilter.missing)+u" IS Null)"
+            else:
+                return u"("+self.quote_column(esfilter.missing.field)+u" IS Null)"
         elif esfilter.exists:
             if isinstance(esfilter.exists, basestring):
                 return u"("+self.quote_column(esfilter.exists)+u" IS NOT Null)"
