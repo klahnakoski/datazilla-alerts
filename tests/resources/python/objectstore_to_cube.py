@@ -76,7 +76,7 @@ def objectstore_to_cube(db, r):
                 "pushlog_id": r.pushlog_id,
                 "push_date": r.push_date,
                 "test_name": json.testrun.suite,
-                "page_url": p,
+                "page_url": p[:255],
                 "mean": median(m),
                 "std": S.std,
                 "n_replicates": S.count
