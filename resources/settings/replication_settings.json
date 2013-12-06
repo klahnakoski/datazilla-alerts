@@ -1,0 +1,64 @@
+{
+    "source": {
+        "pushlog": {
+            "host": "s4n4.qa.phx1.mozilla.com",
+            "port": 3306,
+            "username": "username",
+            "password": "password",
+            "schema": "pushlog_hgmozilla_1",
+            "debug": true
+        },
+        "service": {
+            "blob_url": "https://datazilla.mozilla.org/talos/refdata/objectstore/json_blob",
+            "threads": 1,
+            "min": 3000000,
+            "max": 4000000,
+            "summary": "https://datazilla.mozilla.org/refdata/pushlog/list",
+            "detail": "https://datazilla.mozilla.org/talos/testdata/raw"
+        }
+    },
+    "destination": {
+        "pushlog": {
+            "host": "klahnakoski-es.corp.tor1.mozilla.com",
+            "port": 3306,
+            "username": "username",
+            "password": "password",
+            "schema": "pushlog_hgmozilla_1",
+            "debug": true
+        },
+        "objectstore": {
+            "host": "klahnakoski-es.corp.tor1.mozilla.com",
+            "port": 3306,
+            "username": "username",
+            "password": "password",
+            "schema": "ekyle_objectstore_1",
+            "debug": true
+        },
+        "perftest": {
+            "schema": "ekyle_perftest_1"
+        }
+    },
+    "email": {
+        "from_address": "klahnakoski@mozilla.com",
+        "host": "mail.mozilla.com",
+        "port": 465,
+        "username": "username",
+        "password": "password",
+        "use_ssl": true
+    },
+    "debug": {
+        "log": [
+            {
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": "results/logs/replication.log",
+                "maxBytes": 10000000,
+                "backupCount": 100,
+                "encoding": "utf8"
+            },
+            {
+                "class": "dzAlerts.util.logs.Log_usingStream",
+                "stream": "sys.stdout"
+            }
+        ]
+    }
+}
