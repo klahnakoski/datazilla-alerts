@@ -3,3 +3,11 @@ revision='c9eb4218558d'  win 6.2.9200->dromaeo_dom
 bug 931060 revision='c65f2f5dfea5', xperf mainthread bytes readxperf mainthread bytes read
 
 revision='8b1346a125c4', tscroll-ASAP, Mozilla-Inbound-Non-PGO, WINNT 6.2 x64
+
+
+
+COMPLEX REGRESSION
+
+(3:18:29 PM) jmaher: jeads: ekyle1: http://graphs.mozilla.org/graph.html#tests=[[281,64,31]]&sel=none&displayrange=90&datatype=running
+(3:18:34 PM) jmaher: yeah, that is *awesome*
+(3:20:00 PM) jmaher: ekyle1: jeads: https://bugzilla.mozilla.org/show_bug.cgi?id=935008
