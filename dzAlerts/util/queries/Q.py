@@ -7,9 +7,12 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+import collections
+import functools
 
 import sys
 import __builtin__
+from dzAlerts.util.cnv import CNV
 from ..logs import Log
 from ..struct import nvl, listwrap
 from .. import struct
@@ -47,9 +50,7 @@ def run(query):
     if query.select != None:
         _from = select(_from, query.select)
 
-
     return _from
-
 
 
 def groupby(data, keys=None, size=None, min_size=None, max_size=None):
@@ -83,7 +84,6 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None):
         Log.error("Problem grouping", e)
 
 
-
 def index(data, keys=None):
 #return dict that uses keys to index data
     keys = struct.unwrap(listwrap(keys))
@@ -98,7 +98,6 @@ def index(data, keys=None):
         o = o.get(v, list())
         o.append(d)
     return output
-
 
 
 def unique_index(data, keys=None):
@@ -136,7 +135,7 @@ def map(data, relation):
         try:
             #relation[d] is expected to be a list
             # return set(cod for d in data for cod in relation[d])
-            output=set()
+            output = set()
             for d in data:
                 for cod in relation.get(d, []):
                     output.add(cod)
@@ -147,9 +146,9 @@ def map(data, relation):
         try:
             #relation[d] is expected to be a list
             # return set(cod for d in data for cod in relation[d])
-            output=set()
+            output = set()
             for d in data:
-                cod=relation(d)
+                cod = relation(d)
                 if cod == None:
                     continue
                 output.add(cod)
@@ -158,6 +157,7 @@ def map(data, relation):
             Log.error("Expecting a dict with lists in codomain", e)
     return Null
 
+
 def select(data, field_name):
 #return list with values from field_name
     if isinstance(data, Cube): Log.error("Do not know how to deal with cubes yet")
@@ -165,7 +165,6 @@ def select(data, field_name):
         return [d[field_name] for d in data]
 
     return [dict([(k, v) for k, v in x.items() if k in field_name]) for x in data]
-
 
 
 def get_columns(data):
@@ -179,7 +178,6 @@ def get_columns(data):
                 # IT WOULD BE NICE TO ADD DOMAIN ANALYSIS HERE
 
     return [{"name": n} for n in output]
-
 
 
 def stack(data, name=None, value_column=None, columns=None):
@@ -241,7 +239,6 @@ def unstack(data, keys=None, column=None, value=None):
     return StructList(output)
 
 
-
 def normalize_sort(fieldnames):
     """
     CONVERT SORT PARAMETERS TO A NORMAL FORM SO EASIER TO USE
@@ -256,7 +253,6 @@ def normalize_sort(fieldnames):
         formal.append(f)
 
     return formal
-
 
 
 def sort(data, fieldnames=None):
@@ -310,7 +306,6 @@ def sort(data, fieldnames=None):
         Log.error("Problem sorting\n{{data}}", {"data": data}, e)
 
 
-
 def add(*values):
     total = Null
     for v in values:
@@ -322,13 +317,78 @@ def add(*values):
     return total
 
 
-
 def filter(data, where):
     """
-    where  - a function that accepts (record, rownum, rows) and return s boolean
+    where  - a function that accepts (record, rownum, rows) and returns boolean
     """
-    where = wrap_function(where)
+    if isinstance(where, collections.Callable):
+        where = wrap_function(where)
+    elif len(data) < 10000:
+        # WITH SMALL NUMBERS, WE WILL SIMPLY READ THE FILTER SPEC DIRECTLY WHILE ITERATING THROUGH DATA
+        return [d for i, d in enumerate(data) if _filter(struct.wrap(where), d, i, data)]
+    else:
+        # THIS COMPILES PYTHON TO MAKE A FUNCTION
+        where = CNV.esfilter2where(where)
+
     return [d for i, d in enumerate(data) if where(d, i, data)]
+
+
+def _filter(esfilter, row, rownum, rows):
+    if esfilter[u"and"]:
+        for a in esfilter[u"and"]:
+            if not _filter(a, row, rownum, rows):
+                return False
+        return True
+    elif esfilter[u"or"]:
+        for a in esfilter[u"and"]:
+            if _filter(a, row, rownum, rows):
+                return True
+        return False
+    elif esfilter[u"not"]:
+        return not _filter(esfilter[u"not"], row, rownum, rows)
+    elif esfilter.term:
+        for col, val in esfilter.term.items():
+            if row[col] != val:
+                return False
+        return True
+    elif esfilter.terms:
+        for col, vals in esfilter.terms.items:
+            if not row[col] in vals:
+                return False
+        return True
+    elif esfilter.range:
+        for col, ranges in esfilter.range.items:
+            for sign, val in ranges:
+                if sign in ("gt", ">") and row[col] <= val:
+                    return False
+                if sign == "gte" and row[col] < val:
+                    return False
+                if sign == "lte" and row[col] > val:
+                    return False
+                if sign == "lt" and row[col] >= val:
+                    return False
+        return True
+    elif esfilter.missing:
+        if isinstance(esfilter.missing, basestring):
+            field = esfilter.missing
+        else:
+            field = esfilter.missing.field
+
+        if row[field] == None:
+            return True
+        return False
+
+    elif esfilter.exists:
+        if isinstance(esfilter.missing, basestring):
+            field = esfilter.missing
+        else:
+            field = esfilter.missing.field
+
+        if row[field] != None:
+            return True
+        return False
+    else:
+        Log.error(u"Can not convert esfilter to SQL: {{esfilter}}", {u"esfilter": esfilter})
 
 
 def wrap_function(func):
@@ -339,18 +399,20 @@ def wrap_function(func):
     if numarg == 0:
         def temp(row, rownum, rows):
             return func()
+
         return temp
     elif numarg == 1:
         def temp(row, rownum, rows):
             return func(row)
+
         return temp
     elif numarg == 2:
         def temp(row, rownum, rows):
             return func(row, rownum)
+
         return temp
     elif numarg == 3:
         return func
-
 
 
 def window(data, param):
@@ -459,16 +521,17 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
 
     if hasattr(data, "__iter__"):
         def _iter():
-            g=0
-            out=[]
+            g = 0
+            out = []
             for i, d in enumerate(data):
                 out.append(d)
-                if (i+1)%max_size==0:
+                if (i + 1) % max_size == 0:
                     yield g, out
-                    g+=1
-                    out=[]
+                    g += 1
+                    out = []
             if out:
                 yield g, out
+
         return _iter()
     elif not isinstance(data, Multiset):
         return groupby_size(data, max_size)

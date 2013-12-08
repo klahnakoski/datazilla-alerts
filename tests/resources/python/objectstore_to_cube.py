@@ -16,7 +16,7 @@ from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN = 1000000
+TEST_RESULTS_PER_RUN = 100000
 
 
 def objectstore_to_cube(db, r):
@@ -85,6 +85,30 @@ def objectstore_to_cube(db, r):
         Log.error("Conversion failed", e)
 
 
+def get_missing_ids(db, settings):
+    missing = db.query("""
+        SELECT STRAIGHT_JOIN
+            o.test_run_id,
+            o.processed_flag
+        FROM
+            ekyle_objectstore_1.objectstore o
+        LEFT JOIN
+            ekyle_perftest_1.test_data_all_dimensions t on t.test_run_id =o.test_run_id
+        WHERE
+            t.test_run_id is NULL OR
+            o.processed_flag in ('ready', 'loading')
+        LIMIT
+            {{limit}}
+        """, {
+        "objectstore": SQL(settings.destination.objectstore.schema),
+        "limit": TEST_RESULTS_PER_RUN
+    })
+
+    missing_ids = Q.select(missing, field_name="test_run_id")
+    Log.note("{{num}} objectstore records to be processed into cube", {"num": len(missing_ids)})
+    return missing_ids
+
+
 def main(settings):
     with DB(settings.destination.objectstore, settings.destination.perftest.schema) as db:
         missing_ids = get_missing_ids(db, settings)
@@ -104,12 +128,12 @@ def main(settings):
                         WHERE
                             {{where}}
                         """, {
-                            "objectstore": SQL(settings.destination.objectstore.schema),
-                            "where": db.esfilter2sqlwhere({"and": [
-                                {"exists": "o.test_run_id"},
-                                {"terms": {"o.test_run_id": values}}
-                            ]})
-                        },
+                        "objectstore": SQL(settings.destination.objectstore.schema),
+                        "where": db.esfilter2sqlwhere({"and": [
+                            {"exists": "o.test_run_id"},
+                            {"terms": {"o.test_run_id": values}}
+                        ]})
+                    },
                         _execute=lambda x: objectstore_to_cube(write_db, x)
                     )
 
@@ -123,28 +147,6 @@ def main(settings):
                         "values": values,
                         "where": db.esfilter2sqlwhere({"terms": {"test_run_id": values}})
                     })
-
-
-def get_missing_ids(db, settings):
-    missing = db.query("""
-        SELECT STRAIGHT_JOIN
-            o.test_run_id
-        FROM
-            {{objectstore}}.objectstore o
-        WHERE
-            o.processed_flag in ('ready', 'loading')
-        ORDER BY
-            o.test_run_id
-        LIMIT
-            {{limit}}
-        """, {
-        "objectstore": SQL(settings.destination.objectstore.schema),
-        "limit": TEST_RESULTS_PER_RUN
-    })
-
-    missing_ids = Q.select(missing, field_name="test_run_id")
-    Log.note("{{num}} objectstore records to be processed into cube", {"num": len(missing_ids)})
-    return missing_ids
 
 
 try:

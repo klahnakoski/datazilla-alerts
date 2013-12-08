@@ -38,14 +38,6 @@
             "schema": "ekyle_perftest_1"
         }
     },
-    "email": {
-        "from_address": "klahnakoski@mozilla.com",
-        "host": "mail.mozilla.com",
-        "port": 465,
-        "username": "username",
-        "password": "password",
-        "use_ssl": true
-    },
     "debug": {
         "log": [
             {

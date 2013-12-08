@@ -13,7 +13,6 @@ import scipy
 from scipy import stats
 from dzAlerts.daemons.alert_exception import single_ttest
 from dzAlerts.util import struct
-from dzAlerts.util.cnv import CNV
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
 
@@ -31,10 +30,10 @@ from dzAlerts.util import startup
 
 
 SEVERITY = 0.6              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
-MIN_CONFIDENCE = 0.99
+MIN_CONFIDENCE = 0.9999
 REASON = "alert_exception"     # name of the reason in alert_reason
 WINDOW_SIZE = 10
-SAMPLE_LIMIT_FOR_DEBUGGING = 10         # FOR LIMITING NUMBER OF TESTS IN SINGLE PULL, SET TO one million IN PROD
+SAMPLE_LIMIT_FOR_DEBUGGING = 1000         # FOR LIMITING NUMBER OF TESTS IN SINGLE PULL, SET TO one million IN PROD
 DEBUG = True
 
 
@@ -75,31 +74,50 @@ def alert_exception(settings, db):
     if debug:
         Log.note("Find tests that need summary statistics")
 
+    #SPLIT INTO TWO BECASUE MYSQL GOES PATHELOGICALLY SLOW ON SIMPLE QUERY
+    #   SELECT
+    # 	    `t`.`test_name`, `t`.`product`, `t`.`branch`, `t`.`branch_version`, `t`.`operating_system_name`, `t`.`operating_system_version`, `t`.`processor`, `t`.`page_url`,
+    # 	    min(push_date) min_push_date
+    # 	FROM
+    # 	    `ekyle_objectstore_1`.objectstore o
+    # 	JOIN
+    # 	    `ekyle_perftest_1`.test_data_all_dimensions t
+    # 	ON
+    # 	    t.test_run_id = o.test_run_id
+    # 	WHERE
+    # 	    NOT (`o`.`processed_flag`='summary_complete')
+    # 	LIMIT
+    # 	    1000
+    records_to_process = set(Q.select(db.query("""
+            SELECT
+                o.test_run_id
+            FROM
+                {{objectstore}}.objectstore o
+            WHERE
+                {{where}}
+            LIMIT
+                {{sample_limit}}
+        """, {
+            "objectstore": db.quote_column(settings.objectstore.schema),
+            "sample_limit": SQL(SAMPLE_LIMIT_FOR_DEBUGGING),
+            "where": db.esfilter2sqlwhere({"not": {"term": {"o.processed_flag": "summary_complete"}}})
+        }), "test_run_id"))
+
+
     new_test_points = db.query("""
         SELECT
             {{edges}},
             min(push_date) min_push_date
         FROM
-            {{objectstore}}.objectstore o
-        JOIN
             {{perftest}}.test_data_all_dimensions t
-        ON
-            t.test_run_id = o.test_run_id
         WHERE
             {{where}}
         GROUP BY
             {{edges}}
-        LIMIT
-            {{sample_limit}}
     """, {
         "perftest": db.quote_column(settings.perftest.schema),
-        "objectstore": db.quote_column(settings.objectstore.schema),
         "edges": db.quote_column(query.edges, table="t"),
-        "sample_limit": SQL(SAMPLE_LIMIT_FOR_DEBUGGING),
-        "where": db.esfilter2sqlwhere({"and": [
-            {"not": {"term": {"o.processed_flag": "summary_complete"}}},
-            {"exists": "t.n_replicates"}
-        ]})
+        "where": db.esfilter2sqlwhere({"terms": {"t.test_run_id": records_to_process}})
     })
 
     #BRING IN ALL NEEDED DATA
@@ -213,11 +231,11 @@ def alert_exception(settings, db):
         re_alert.extend(Q.run({
             "from": stats,
             "select": "tdad_id",
-            "where": lambda (r): r.past_stats.count == WINDOW_SIZE
+            "where": {"term": {"past_stats.count": WINDOW_SIZE}}
         }))
 
         #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-        new_exceptions = [e for e in stats if e["pass"]]
+        new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
         for v in new_exceptions:
             v.diff = v.result.diff
@@ -266,11 +284,14 @@ def alert_exception(settings, db):
             FROM
                 alerts a
             WHERE
-                a.tdad_id in {{re_alerts}} AND
-                reason={{type}}
+                {{where}}
             """, {
-            "re_alerts": SQL(re_alert),
-            "type": REASON
+            "where": db.esfilter2sqlwhere(
+                {"term": {
+                    "a.tdad_id": re_alert,
+                    "reason": REASON
+                }}
+            )
         })
 
     found_alerts = Q.unique_index(alerts, "tdad_id")
@@ -317,17 +338,16 @@ def alert_exception(settings, db):
 
     update_h0_rejected(db, all_min_date)
 
-    if len(all_touched) > 0:
-        if debug:
-            Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched)})
-        db.execute("""
-            UPDATE {{objectstore}}.objectstore
-            SET processed_flag='summary_complete'
-            WHERE {{where}}
-        """, {
-            "objectstore": db.quote_column(settings.objectstore.schema),
-            "where": db.esfilter2sqlwhere({"term": {"test_run_id": all_touched}})
-        })
+    if debug:
+        Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched | records_to_process)})
+    db.execute("""
+        UPDATE {{objectstore}}.objectstore
+        SET processed_flag='summary_complete'
+        WHERE {{where}}
+    """, {
+        "objectstore": db.quote_column(settings.objectstore.schema),
+        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": all_touched | records_to_process}})
+    })
 
 
 def main():
@@ -339,10 +359,11 @@ def main():
             #TEMP FIX UNTIL IMPORT DOES IT FOR US
             db.execute("""update test_data_all_dimensions set push_date=date_received where push_date is null""")
 
-            alert_exception(
-                settings,
-                db
-            )
+            while True:
+                alert_exception(
+                    settings,
+                    db
+                )
     except Exception, e:
         Log.warning("Failure to find exceptions", cause=e)
     finally:

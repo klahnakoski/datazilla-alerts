@@ -15,7 +15,7 @@ from dzAlerts.util.logs import Log
 from dzAlerts.util.db import DB
 from dzAlerts.util.emailer import Emailer
 from dzAlerts.util import startup
-
+from dzAlerts.util.struct import nvl
 
 
 def email_send(db, emailer, debug):
@@ -73,17 +73,16 @@ def email_send(db, emailer, debug):
         Log.error("Could not send emails", e)
 
 
-
 def main():
-    settings=startup.read_settings()
+    settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Running email using schema {{schema}}", {"schema":settings.database.schema})
+        Log.note("Running email using schema {{schema}}", {"schema": settings.database.schema})
         with DB(settings.database) as db:
             email_send(
                 db=db,
                 emailer=Emailer(settings.email),
-                debug=settings.debug != Null
+                debug=nvl(settings.debug, False)
             )
     except Exception, e:
         Log.warning("Failure to send emails", cause=e)
@@ -91,6 +90,5 @@ def main():
         Log.stop()
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
