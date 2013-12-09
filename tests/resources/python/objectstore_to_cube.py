@@ -88,8 +88,7 @@ def objectstore_to_cube(db, r):
 def get_missing_ids(db, settings):
     missing = db.query("""
         SELECT STRAIGHT_JOIN
-            o.test_run_id,
-            o.processed_flag
+            o.test_run_id
         FROM
             ekyle_objectstore_1.objectstore o
         LEFT JOIN
