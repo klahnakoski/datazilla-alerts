@@ -64,7 +64,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None):
     try:
         def keys2string(x):
             #REACH INTO dict TO GET PROPERTY VALUE
-            return "|".join([unicode(x[k]) for k in keys])
+            return u"|".join([unicode(x[k]) for k in keys])
 
         def get_keys(d):
             return struct.wrap({k: d[k] for k in keys})

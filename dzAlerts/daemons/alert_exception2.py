@@ -30,10 +30,10 @@ from dzAlerts.util import startup
 
 
 SEVERITY = 0.6              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
-MIN_CONFIDENCE = 0.9999
+# MIN_CONFIDENCE = 0.9999
 REASON = "alert_exception"     # name of the reason in alert_reason
-WINDOW_SIZE = 10
-SAMPLE_LIMIT_FOR_DEBUGGING = 1000         # FOR LIMITING NUMBER OF TESTS IN SINGLE PULL, SET TO one million IN PROD
+# WINDOW_SIZE = 10
+
 DEBUG = True
 
 
@@ -74,7 +74,7 @@ def alert_exception(settings, db):
     if debug:
         Log.note("Find tests that need summary statistics")
 
-    #SPLIT INTO TWO BECASUE MYSQL GOES PATHELOGICALLY SLOW ON SIMPLE QUERY
+    #SPLIT INTO TWO BECAUSE MYSQL GOES PATHOLOGICALLY SLOW ON SIMPLE QUERY
     #   SELECT
     # 	    `t`.`test_name`, `t`.`product`, `t`.`branch`, `t`.`branch_version`, `t`.`operating_system_name`, `t`.`operating_system_version`, `t`.`processor`, `t`.`page_url`,
     # 	    min(push_date) min_push_date
@@ -99,7 +99,7 @@ def alert_exception(settings, db):
                 {{sample_limit}}
         """, {
             "objectstore": db.quote_column(settings.objectstore.schema),
-            "sample_limit": SQL(SAMPLE_LIMIT_FOR_DEBUGGING),
+            "sample_limit": SQL(settings.param.max_test_results_per_run),
             "where": db.esfilter2sqlwhere({"not": {"term": {"o.processed_flag": "summary_complete"}}})
         }), "test_run_id"))
 
@@ -131,138 +131,133 @@ def alert_exception(settings, db):
     all_touched = set()
     re_alert = []
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
-
     for g, points in Q.groupby(new_test_points, query.edges):
-        min_date = Math.min(Q.select(points, "min_push_date"))
-        all_min_date = Math.min([all_min_date, min_date])
+        try:
+            min_date = Math.min(Q.select(points, "min_push_date"))
+            all_min_date = Math.min([all_min_date, min_date])
 
-        # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
-        first_in_window = db.query("""
-            SELECT
-                min(push_date) min_date
-            FROM (
+            # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
+            first_in_window = db.query("""
                 SELECT
-                    push_date
+                    min(push_date) min_date
+                FROM (
+                    SELECT
+                        push_date
+                    FROM
+                        {{from}} t
+                    WHERE
+                        {{where}}
+                    ORDER BY
+                        push_date DESC
+                    LIMIT
+                        {{window_size}}
+                ) t
+            """, {
+                "from": db.quote_column(query["from"]),
+                "edges": db.quote_column(query.edges),
+                "where": db.esfilter2sqlwhere({"and": [
+                    {"term": g},
+                    {"exists": "n_replicates"},
+                    {"range": {"push_date": {"lt": min_date}}}
+                ]}),
+                "window_size": settings.param.window_size + 1
+            })[0]
+
+            all_min_date = Math.min([all_min_date, first_in_window.min_date])
+
+            #LOAD TEST RESULTS FROM DATABASE
+            test_results = db.query("""
+                SELECT
+                    revision,
+                    {{edges}},
+                    {{sort}},
+                    {{select}}
                 FROM
                     {{from}} t
                 WHERE
                     {{where}}
-                ORDER BY
-                    push_date DESC
-                LIMIT
-                    {{window_size}}
-            ) t
-        """, {
-            "from": db.quote_column(query["from"]),
-            "edges": db.quote_column(query.edges),
-            "where": db.esfilter2sqlwhere({"and": [
-                {"term": g},
-                {"exists": "n_replicates"},
-                {"range": {"push_date": {"lt": min_date}}}
-            ]}),
-            "window_size": WINDOW_SIZE + 1
-        })[0]
+                """, {
+                "from": db.quote_column(query["from"]),
+                "sort": db.quote_column(query.sort),
+                "select": db.quote_column(query.select),
+                "edges": db.quote_column(query.edges),
+                "where": db.esfilter2sqlwhere({"and": [
+                    {"term": g},
+                    {"exists": "n_replicates"},
+                    {"range": {"push_date": {"gte": Math.min([min_date, first_in_window.min_date])}}}
+                ]})
+            })
 
-        all_min_date = Math.min([all_min_date, first_in_window.min_date])
+            Log.note("{{num}} test results found for\n{{group}}", {
+                "num": len(test_results),
+                "group": g
+            })
 
-        #LOAD TEST RESULTS FROM DATABASE
-        test_results = db.query("""
-            SELECT
-                revision,
-                {{edges}},
-                {{sort}},
-                {{select}}
-            FROM
-                {{from}} t
-            WHERE
-                {{where}}
-            """, {
-            "from": db.quote_column(query["from"]),
-            "sort": db.quote_column(query.sort),
-            "select": db.quote_column(query.select),
-            "edges": db.quote_column(query.edges),
-            "where": db.esfilter2sqlwhere({"and": [
-                {"term": g},
-                {"exists": "n_replicates"},
-                {"range": {"push_date": {"gte": Math.min([min_date, first_in_window.min_date])}}}
-            ]})
-        })
+            if debug:
+                Log.note("Find exceptions")
 
-        Log.note("{{num}} test results found for\n{{group}}", {
-            "num": len(test_results),
-            "group": g
-        })
+            #APPLY WINDOW FUNCTIONS
+            stats = Q.run({
+                "from": test_results,
+                "window": [
+                    {
+                        "name": "push_date_min",
+                        "value": lambda (r): r.push_date,
+                        "edges": query.edges,
+                        "sort": "push_date",
+                        "aggregate": windows.Min,
+                        "range": {"min": -settings.param.window_size, "max": 0}
+                    }, {
+                        "name": "past_stats",
+                        "value": lambda (r): Stats(count=1, mean=r.mean),
+                        "edges": query.edges,
+                        "sort": "push_date",
+                        "aggregate": windows.Stats,
+                        "range": {"min": -settings.param.window_size, "max": 0}
+                    }, {
+                        "name": "result",
+                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0)
+                    }, {
+                        "name": "pass",
+                        "value": lambda (r): True if settings.param.min_confidence < r.result.confidence and r.result.diff > 0 else False
+                    },
 
-        if debug:
-            Log.note("Find exceptions")
+                ]
+            })
 
-        #APPLY WINDOW FUNCTIONS
-        stats = Q.run({
-            "from": test_results,
-            "window": [
-                {
-                    "name": "push_date_min",
-                    "value": lambda (r): r.push_date,
-                    "edges": query.edges,
-                    "sort": "push_date",
-                    "aggregate": windows.Min,
-                    "range": {"min": -WINDOW_SIZE, "max": 0}
-                }, {
-                    "name": "past_stats",
-                    "value": lambda (r): Stats(count=1, mean=r.mean),
-                    "edges": query.edges,
-                    "sort": "push_date",
-                    "aggregate": windows.Stats,
-                    "range": {"min": -WINDOW_SIZE, "max": 0}
-                }, {
-                    "name": "result",
-                    "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0)
-                }, {
-                    "name": "pass",
-                    "value": lambda (r): True if MIN_CONFIDENCE < r.result.confidence and r.result.diff > 0 else False
-                },
+            all_touched.update(Q.select(test_results, "test_run_id"))
 
-            ]
-        })
+            # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
+            re_alert.extend(Q.run({
+                "from": stats,
+                "select": "tdad_id",
+                "where": {"term": {"past_stats.count": settings.param.window_size}}
+            }))
 
-        all_touched.update(Q.select(test_results, "test_run_id"))
+            #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
+            new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
-        # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-        re_alert.extend(Q.run({
-            "from": stats,
-            "select": "tdad_id",
-            "where": {"term": {"past_stats.count": WINDOW_SIZE}}
-        }))
+            for v in new_exceptions:
+                v.diff = v.result.diff
+                v.confidence = v.result.confidence
+                v.result = Null
 
-        #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-        new_exceptions = Q.filter(stats, {"term": {"pass": True}})
+                alert = Struct(
+                    status="new",
+                    create_time=datetime.utcnow(),
+                    tdad_id=v.tdad_id,
+                    reason=REASON,
+                    details=v,
+                    severity=SEVERITY,
+                    confidence=v.confidence
+                )
+                alerts.append(alert)
 
-        for v in new_exceptions:
-            v.diff = v.result.diff
-            v.confidence = v.result.confidence
-            v.result = Null
+            if debug:
+                Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
 
-            alert = Struct(
-                status="new",
-                create_time=datetime.utcnow(),
-                tdad_id=v.tdad_id,
-                reason=REASON,
-                details=v,
-                severity=SEVERITY,
-                confidence=v.confidence
-            )
-            alerts.append(alert)
-
-            # Log.debug(CNV.object2JSON(alert))
-
-        if debug:
-            Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
-
-
-    # if debug: Log.note(
-    #     "Testing {{num_tests}} samples, {{num_alerts}} alerts, on group {{key}}",
-    #     {"key": edges, "num_tests": len(values), "num_alerts": num_new}
-    # )
+        except Exception, e:
+            Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
     if debug:
         Log.note("Get Current Alerts")
@@ -348,6 +343,7 @@ def alert_exception(settings, db):
         "objectstore": db.quote_column(settings.objectstore.schema),
         "where": db.esfilter2sqlwhere({"terms": {"test_run_id": all_touched | records_to_process}})
     })
+    db.flush()
 
 
 def main():
@@ -355,11 +351,11 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
-        with DB(settings.perftest) as db:
-            #TEMP FIX UNTIL IMPORT DOES IT FOR US
-            db.execute("""update test_data_all_dimensions set push_date=date_received where push_date is null""")
-
-            while True:
+        while True:
+            with DB(settings.perftest) as db:
+                #TEMP FIX UNTIL IMPORT DOES IT FOR US
+                db.execute("""update test_data_all_dimensions set push_date=date_received where push_date is null""")
+                db.flush()
                 alert_exception(
                     settings,
                     db

@@ -1,4 +1,4 @@
-#PARSE OUT TEST 
+#PARSE OUT TEST
 
 DELIMITER ;;
 
@@ -123,7 +123,7 @@ SELECT json(" \"results\": {\"some thing\":[324,987], {\"other\":\"99\\\"}}, jum
 
 
 # JSON GET STRING
-# RETURN STRING REFERENCED BY TAG VALUE 
+# RETURN STRING REFERENCED BY TAG VALUE
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json_s;;
 CREATE FUNCTION json_s (
@@ -135,14 +135,14 @@ CREATE FUNCTION json_s (
 BEGIN
 	DECLARE s INTEGER;
 	DECLARE begin_tag VARCHAR(50);
-	
+
 	SET begin_tag=concat("\"", tag, "\":");
-	IF instr(value, begin_tag)=0 THEN 
+	IF instr(value, begin_tag)=0 THEN
 		RETURN NULL;
-	ELSE 
+	ELSE
 		RETURN string_between(substring(value, instr(value, begin_tag)+length(begin_tag), 65000), "\"", "\"", 1);
-	END IF;	
-END;;	
+	END IF;
+END;;
 
 # JSON GET NUMBER
 # RETURN A NUMERIC VALUE REFERNCED BY TAG
@@ -157,14 +157,14 @@ CREATE FUNCTION json_n (
 BEGIN
 	DECLARE s INTEGER;
 	DECLARE begin_tag VARCHAR(50);
-	
+
 	SET begin_tag=concat("\"", tag, "\":");
-	IF instr(value, begin_tag)=0 THEN 
+	IF instr(value, begin_tag)=0 THEN
 		RETURN NULL;
-	ELSE 
+	ELSE
 		RETURN string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 65000), ":", ",", 1);
-	END IF;	
-END;;	
+	END IF;
+END;;
 
 # JSON GET ARRAY
 # RETURN ARRAY REFERNCED BY TAG NAME
@@ -174,21 +174,21 @@ DROP FUNCTION IF EXISTS json_a;;
 CREATE FUNCTION json_a (
 	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
-) RETURNS 
+) RETURNS
 	varchar(65000) CHARSET latin1
     NO SQL
     DETERMINISTIC
 BEGIN
 	DECLARE s INTEGER;
 	DECLARE begin_tag VARCHAR(50);
-	
+
 	SET begin_tag=concat("\"", tag, "\":");
-	IF instr(value, begin_tag)=0 THEN 
+	IF instr(value, begin_tag)=0 THEN
 		RETURN NULL;
-	ELSE 
-		RETURN concat("[", string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 65000), "[", "]"), "]");
-	END IF;	
-END;;	
+	ELSE
+		RETURN concat("[", string_between(substring(value, instr(value, begin_tag)+length(begin_tag)-1, 65000), "[", "]", 1), "]");
+	END IF;
+END;;
 
 
 # RETURN A NUMERIC VALUE AT ARRAY INDEX
@@ -202,7 +202,7 @@ CREATE FUNCTION json_an (
     DETERMINISTIC
 BEGIN
 	RETURN trim(string_get_word(string_between(value, "[", "]", 1), ",", index_));
-END;;	
+END;;
 
 
 
@@ -210,24 +210,24 @@ DROP FUNCTION IF EXISTS string_word_count;;
 CREATE FUNCTION string_word_count(
 	value		VARCHAR(65000) character set latin1,
 	delimiter	VARCHAR(300)
-) 
+)
 	RETURNS INTEGER
 	NO SQL
 	DETERMINISTIC
 BEGIN
 	DECLARE s INTEGER;
 	DECLARE n INTEGER;
-	
+
 	SET n=1;
 	SET s=1;
 	LOOP
-		SET s=LOCATE(delimiter, value, s); 
+		SET s=LOCATE(delimiter, value, s);
 		IF (s=0) THEN
 			RETURN n;
 		END IF;
 		SET n=n+1;
 		SET s=s+length(delimiter);
-	END LOOP;	
+	END LOOP;
 END;;
 
 
@@ -236,7 +236,7 @@ CREATE FUNCTION string_get_word(
 	value		VARCHAR(65000) character set latin1,
 	delimiter	VARCHAR(300),
 	num			INTEGER
-) 
+)
 	RETURNS VARCHAR(65000) character set latin1
 	NO SQL
 	DETERMINISTIC
@@ -244,21 +244,21 @@ BEGIN
 	DECLARE n INTEGER;
 	DECLARE e INTEGER;
 	DECLARE s INTEGER;
-	
+
 	SET n=0;
 	SET e=0;
 	SET s=1;
 	l1: LOOP
-		SET e=LOCATE(delimiter, value, s); 
-		IF (e=0) THEN 
+		SET e=LOCATE(delimiter, value, s);
+		IF (e=0) THEN
 			#NO MORE DELIMITERS
-			SET e=length(value)+1; 
+			SET e=length(value)+1;
 			IF n<num THEN RETURN ''; END IF;
-		END IF;	
-		IF n=num THEN RETURN mid(value, s, e-s); END IF;		
+		END IF;
+		IF n=num THEN RETURN mid(value, s, e-s); END IF;
 		SET n=n+1;
 		SET s=e+length(delimiter);
-	END LOOP l1;	
+	END LOOP l1;
 END;;
 
 
@@ -268,17 +268,17 @@ CREATE FUNCTION json_substring(
 	value		VARCHAR(65000) character set latin1,
 	start_		INTEGER,
 	end_		INTEGER
-) 
+)
 	RETURNS VARCHAR(65000) character set latin1
 	NO SQL
 	DETERMINISTIC
 BEGIN
-	DECLARE n INTEGER;	
+	DECLARE n INTEGER;
 	DECLARE s INTEGER;
 	DECLARE e INTEGER;
 
 	IF end_=start_ THEN RETURN "[]"; END IF;
-	
+
 	SET n=start_;
 	SET s=LOCATE("[", value)+1;
 	ls: LOOP
@@ -291,20 +291,20 @@ BEGIN
 		END IF;
 		SET n=n-1;
 	END LOOP ls;
-	
+
 	SET n=end_-start_;
 	SET e=s-1;
 	le: LOOP
-		IF n=0 THEN 
-			RETURN concat("[", trim(substring(value, s, e-s)), "]");	
+		IF n=0 THEN
+			RETURN concat("[", trim(substring(value, s, e-s)), "]");
 		END IF;
 		SET e=LOCATE(",", value, e+1);
 		IF e=0 THEN
 			SET e=LOCATE("]", value, s);
-			RETURN concat("[", substring(value, s, e-s), "]");	
+			RETURN concat("[", substring(value, s, e-s), "]");
 		END IF;
 		SET n=n-1;
-	END LOOP;	
+	END LOOP;
 END;;
 
 SELECT json_substring("[23, 45, 32, 44, 99]", 1,3) from dual;;
@@ -318,7 +318,7 @@ SELECT json_substring("[23, 45, 32, 44, 99]", 0,9) from dual;;
 DROP FUNCTION IF EXISTS math_stats;;
 CREATE FUNCTION math_stats(
 	value		VARCHAR(65000) character set latin1
-) 
+)
 	RETURNS VARCHAR(200)
 	NO SQL
 	DETERMINISTIC
@@ -327,15 +327,15 @@ BEGIN
 	DECLARE e INTEGER;
 	DECLARE z0 DOUBLE;
 	DECLARE z1 DOUBLE;
-	DECLARE z2 DOUBLE;	
+	DECLARE z2 DOUBLE;
 	DECLARE v VARCHAR(20);
-	
+
 	SET z0=0;
 	SET z1=0;
 	SET z2=0;
 	SET s=LOCATE("[", value)+1;
 	LOOP
-		SET e=LOCATE(",", value, s); 
+		SET e=LOCATE(",", value, s);
 		IF (e=0) THEN
 			SET e=LOCATE("]", value, s);
 			SET v=trim(substring(value, s, e-s));
@@ -350,7 +350,7 @@ BEGIN
 		SET z1=z1+v;
 		SET z0=z0+1;
 		SET s=e+1;
-	END LOOP;	
+	END LOOP;
 END;;
 
 SELECT math_stats("[32,56,38,45,30]") FROM dual;;

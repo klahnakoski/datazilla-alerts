@@ -115,12 +115,10 @@ def main(settings):
             with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
                 with Timer("Process objectstore") as t:
                     ## GET EVERYTHING MISSING FROM tdad (AND JOIN IN PUSHLOG)
-                    num = db.forall("""
+                    blobs = db.query("""
                         SELECT STRAIGHT_JOIN
                             o.test_run_id `test_run_id`,
                             'non' build_type,
-                            NULL `pushlog_id`,
-                            NULL `push_date`,
                             json_blob
                         FROM
                             {{objectstore}}.objectstore o
@@ -132,9 +130,10 @@ def main(settings):
                             {"exists": "o.test_run_id"},
                             {"terms": {"o.test_run_id": values}}
                         ]})
-                    },
-                        _execute=lambda x: objectstore_to_cube(write_db, x)
-                    )
+                    })
+
+                    for b in blobs:
+                        objectstore_to_cube(write_db, b)
 
                     #MARK WE ARE DONE HERE
                     db.execute("""
