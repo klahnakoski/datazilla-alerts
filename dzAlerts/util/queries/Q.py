@@ -244,7 +244,7 @@ def normalize_sort(fieldnames):
     CONVERT SORT PARAMETERS TO A NORMAL FORM SO EASIER TO USE
     """
     if fieldnames == None:
-        return []
+        return StructList()
 
     formal = []
     for f in listwrap(fieldnames):
@@ -252,7 +252,7 @@ def normalize_sort(fieldnames):
             f = {"field": f, "sort": 1}
         formal.append(f)
 
-    return formal
+    return struct.wrap(formal)
 
 
 def sort(data, fieldnames=None):

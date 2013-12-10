@@ -1,5 +1,11 @@
 # encoding: utf-8
 #
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 from datetime import datetime
 import re
 import sha
@@ -16,27 +22,25 @@ from .logs import Log
 from .struct import nvl, Null
 from .struct import Struct, StructList
 
-DEBUG=False
+DEBUG = False
 
 
 class ElasticSearch(object):
-
-
-
-
     def __init__(self, settings):
         assert settings.host
         assert settings.index
         assert settings.type
 
+        if settings.index == settings.alias:
+            Log.error("must have a unique index name")
         self.metadata = None
-        if not settings.port: settings.port=9200
-        self.debug=nvl(settings.debug, DEBUG)
-        globals()["DEBUG"]=DEBUG or self.debug
+        if not settings.port:
+            settings.port = 9200
+        self.debug = nvl(settings.debug, DEBUG)
+        globals()["DEBUG"] = DEBUG or self.debug
 
-        self.settings=settings
-        self.path=settings.host+":"+unicode(settings.port)+"/"+settings.index+"/"+settings.type
-
+        self.settings = settings
+        self.path = settings.host + ":" + unicode(settings.port) + "/" + settings.index + "/" + settings.type
 
 
     @staticmethod
@@ -155,7 +159,7 @@ class ElasticSearch(object):
         RETURN True IF THIS INDEX HAS NOT BEEN ASSIGNED IT'S ALIAS
         """
         for a in self.get_aliases():
-            if a.index==index and a.alias:
+            if a.index == index and a.alias:
                 return False
         return True
 
