@@ -100,7 +100,7 @@ def alert_exception(settings, db):
         """, {
             "objectstore": db.quote_column(settings.objectstore.schema),
             "sample_limit": SQL(settings.param.max_test_results_per_run),
-            "where": db.esfilter2sqlwhere({"not": {"term": {"o.processed_flag": "summary_complete"}}})
+            "where": db.esfilter2sqlwhere({"terms": {"o.processed_flag": ['complete', 'summary_ready', 'summary_loading']}})
         }), "test_run_id"))
 
 

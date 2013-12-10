@@ -113,7 +113,7 @@ def main(settings):
         missing_ids = get_missing_ids(db, settings)
         for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
             with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
-                with Timer("Process objectstore") as t:
+                with Timer("Process {{num}} objectstore", {"num": len(values)}) as t:
                     ## GET EVERYTHING MISSING FROM tdad (AND JOIN IN PUSHLOG)
                     blobs = db.query("""
                         SELECT STRAIGHT_JOIN

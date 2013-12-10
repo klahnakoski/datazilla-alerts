@@ -129,14 +129,14 @@ m11: BEGIN
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_exception',
-		concat('{{url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
+		concat('{{page_url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}',
     null
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_revision',
-		concat('{{url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
+		concat('{{page_url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}',
     null

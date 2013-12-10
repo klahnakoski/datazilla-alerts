@@ -191,7 +191,7 @@ class DB(object):
         try:
             self.cursor.callproc(proc_name, params)
             self.cursor.close()
-            self.cursor=self.db.cursor()
+            self.cursor = self.db.cursor()
         except Exception, e:
             Log.error(u"Problem calling procedure "+proc_name, e)
 

@@ -8,9 +8,9 @@
 
 
 from datetime import timedelta, datetime
-from numpy.lib.scimath import power, sqrt
 
 ## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
+from math import sqrt
 import scipy
 from scipy import stats
 
@@ -253,8 +253,8 @@ def welchs_ttest(stats1, stats2):
     vpooled = v1 / n1 + v2 / n2
     tt = abs(m1 - m2) / sqrt(vpooled)
 
-    df_numerator = power(vpooled, 2)
-    df_denominator = power(v1 / n1, 2) / (n1 - 1) + power(v2 / n2, 2) / (n2 - 1)
+    df_numerator = vpooled**2
+    df_denominator = ((v1 / n1)**2) / (n1 - 1) + ((v2 / n2)**2) / (n2 - 1)
     df = df_numerator / df_denominator
 
     t_distribution = scipy.stats.distributions.t(df)

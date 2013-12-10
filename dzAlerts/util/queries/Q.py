@@ -417,7 +417,7 @@ def wrap_function(func):
 
 def window(data, param):
     """
-    MAYBE WE CAN DO THIS WITH NUMPY??
+    MAYBE WE CAN DO THIS WITH NUMPY (no, the edges of windows are not graceful with numpy??
     data - list of records
     """
     name = param.name            # column to assign window function result

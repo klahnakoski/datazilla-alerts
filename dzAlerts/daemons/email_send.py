@@ -77,8 +77,8 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Running email using schema {{schema}}", {"schema": settings.database.schema})
-        with DB(settings.database) as db:
+        Log.note("Running email using schema {{schema}}", {"schema": settings.perftest.schema})
+        with DB(settings.perftest) as db:
             email_send(
                 db=db,
                 emailer=Emailer(settings.email),
