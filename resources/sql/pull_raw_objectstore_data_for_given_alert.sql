@@ -15,7 +15,8 @@ SELECT
 	t.`test_name`,
 	t.`branch_version`,
 	t.`processor`,
-	t.`page_url`
+	t.`page_url`,
+	t.revision
 FROM 
 	ekyle_perftest_1.test_data_all_dimensions p
 LEFT JOIN
@@ -30,11 +31,12 @@ ON
 	t.`processor`=p.`processor` AND
 	t.`page_url`=p.`page_url`
 WHERE
-	p.id=23794811
+	p.test_run_id=2631066  #id=23794811
+	and p.page_url='imgur.com'
 ORDER BY
 	t.push_date DESC
 ;
-	
+-- 	https://datazilla.mozilla.org/?start=1383306067&stop=1383910867&product=Firefox&repository=Mozilla-Inbound-Non-PGO&os=win&os_version=6.2.9200&test=dromaeo_dom&graph_search=c9eb4218558d&tr_id=3460240&graph=modify.html&x86=false&error_bars=false&project=talos
 
 
 # PULL DATA
@@ -74,6 +76,9 @@ JOIN
 	ekyle_perftest_1.temp_results t ON t.test_run_id=o.test_run_id
 WHERE
 	o.test_run_id in (SELECT test_run_id FROM ekyle_perftest_1.temp_results)
+-- 	and t.revision='c9eb4218558d'
 ORDER BY
+	t.test_name,
+	t.page_url,
 	t.push_date
 

@@ -1,4 +1,3 @@
-
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -14,12 +13,10 @@ from dzAlerts.util.struct import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
 from dzAlerts.util.logs import Log
-from dzAlerts.util.struct import Struct
 
 
-
-REASON="page_threshold_limit"     #name of the reason in alert_reason
-LOOK_BACK=timedelta(weeks=4)
+REASON = "page_threshold_limit"     #name of the reason in alert_reason
+LOOK_BACK = timedelta(weeks=4)
 
 
 def page_threshold_limit(db, debug):
@@ -32,9 +29,9 @@ def page_threshold_limit(db, debug):
 
     try:
         #CALCULATE HOW FAR BACK TO LOOK
-        lasttime = db.query("SELECT last_run, description FROM alert_reasons WHERE code={{type}}", {"type":REASON})[0]
+        lasttime = db.query("SELECT last_run, description FROM alert_reasons WHERE code={{type}}", {"type": REASON})[0]
         lasttime = nvl(lasttime.last_run, datetime.utcnow())
-        min_date=lasttime+LOOK_BACK
+        min_date = lasttime + LOOK_BACK
 
         #FIND ALL PAGES THAT HAVE LIMITS TO TEST
         #BRING BACK ONES THAT BREAK LIMITS
@@ -60,7 +57,7 @@ def page_threshold_limit(db, debug):
                 t.push_date>{{min_date}} AND
                 (m.id IS NULL OR m.status='obsolete')
             """,
-            {"type":REASON, "min_date":min_date}
+                         {"type": REASON, "min_date": min_date}
         )
 
         #FOR EACH PAGE THAT BREAKS LIMITS
@@ -68,17 +65,17 @@ def page_threshold_limit(db, debug):
             if page.alert_id != None: break
 
             alert = {
-                "id":SQL("util_newID()"),
-                "status":"new",
-                "create_time":datetime.utcnow(),
-                "last_updated":datetime.utcnow(),
-                "tdad_id":page.tdad_id,
-                "reason":REASON,
-                "details":CNV.object2JSON({"expected":float(page.threshold), "actual":float(page.mean), "reason":page.reason}),
-                "severity":page.severity,
-                "confidence":1.0    # USING NORMAL DIST ASSUMPTION WE CAN ADJUST
-                                    # CONFIDENCE EVEN BEFORE THRESHOLD IS HIT!
-                                    # FOR NOW WE KEEP IT SIMPLE
+                "id": SQL("util_newID()"),
+                "status": "new",
+                "create_time": datetime.utcnow(),
+                "last_updated": datetime.utcnow(),
+                "tdad_id": page.tdad_id,
+                "reason": REASON,
+                "details": CNV.object2JSON({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
+                "severity": page.severity,
+                "confidence": 1.0    # USING NORMAL DIST ASSUMPTION WE CAN ADJUST
+                # CONFIDENCE EVEN BEFORE THRESHOLD IS HIT!
+                # FOR NOW WE KEEP IT SIMPLE
             }
 
             db.insert("alerts", alert)
@@ -103,19 +100,19 @@ def page_threshold_limit(db, debug):
                 h.threshold>=t.mean AND
                 t.push_date>{{time}}
             """,
-            {
-                "reason":REASON,
-                "time":min_date
-            }
+                            {
+                                "reason": REASON,
+                                "time": min_date
+                            }
         )
         obsolete = [o["id"] for o in obsolete]
 
-        if len(obsolete)>0:
-            db.execute("UPDATE alerts SET status='obsolete' WHERE id IN {{list}}", {"list":obsolete})
+        if len(obsolete) > 0:
+            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": db.esfilter2sqlwhere({"terms": {"id": obsolete}})})
 
         db.execute(
             "UPDATE alert_reasons SET last_run={{now}} WHERE code={{reason}}",
-            {"now":datetime.utcnow(), "reason":REASON}
+            {"now": datetime.utcnow(), "reason": REASON}
         )
 
         update_h0_rejected(db, min_date)

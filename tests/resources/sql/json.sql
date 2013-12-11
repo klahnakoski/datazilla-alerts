@@ -1,64 +1,9 @@
-#PARSE OUT TEST
 
 DELIMITER ;;
 
-USE ekyle_perftest_1;;
-
-
-DROP TABLE IF EXISTS util_digits;;
-CREATE TABLE util_digits (
-	digit  DECIMAL(1)
-);;
-INSERT INTO util_digits VALUES (0);;
-INSERT INTO util_digits VALUES (1);;
-INSERT INTO util_digits VALUES (2);;
-INSERT INTO util_digits VALUES (3);;
-INSERT INTO util_digits VALUES (4);;
-INSERT INTO util_digits VALUES (5);;
-INSERT INTO util_digits VALUES (6);;
-INSERT INTO util_digits VALUES (7);;
-INSERT INTO util_digits VALUES (8);;
-INSERT INTO util_digits VALUES (9);;
-
-
-
-
--- {
---     "test_machine" : {
---         "platform"  : "x86_64",
---         "osversion" : "OS X 10.8",
---         "os"        : "mac",
---         "name"      : "talos-mtnlion-r5-067"
---     },
---     "testrun" : {
---         "date"    : 1370501293,
---         "suite"   : "tspaint_places_generated_med",
---         "options" : {
---             "responsiveness"  : false,
---             "tpmozafterpaint" : false,
---             "tpchrome"        : true,
---             "tppagecycles"    : 1,
---             "tpcycles"        : 10,
---             "tprender"        : false,
---             "shutdown"        : false,
---             "extensions"      : [{"name" : "pageloader@mozilla.org"}],
--- 			"rss"             : false
---         }
---     },
---     "results" : {
---         "tspaint_places_generated_med" : [996.0,770.0,786.0,883.0,745.0,734.0,788.0,866.0,695.0,711.0,713.0,676.0,699.0,693.0,675.0,682.0,698.0,747.0,770.0,788.0]
---     },
---     "test_build" : {
---         "version"  : "24.0a1",
---         "revision" : "fd3eb4b73292",
---         "name"     : "Firefox",
---         "branch"   : "Mozilla-Inbound",
---         "id"       : "20130605230639"
---     }
--- }
-
-
-
+DROP DATABASE IF EXISTS json;;
+CREATE DATABASE json;;
+USE json;;
 
 
 # JSON GET OBJECT
@@ -125,8 +70,8 @@ SELECT json(" \"results\": {\"some thing\":[324,987], {\"other\":\"99\\\"}}, jum
 # JSON GET STRING
 # RETURN STRING REFERENCED BY TAG VALUE
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
-DROP FUNCTION IF EXISTS json_s;;
-CREATE FUNCTION json_s (
+DROP FUNCTION IF EXISTS string;;
+CREATE FUNCTION string (
 	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
 ) RETURNS varchar(65000) CHARSET latin1
@@ -147,8 +92,8 @@ END;;
 # JSON GET NUMBER
 # RETURN A NUMERIC VALUE REFERNCED BY TAG
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
-DROP FUNCTION IF EXISTS json_n;;
-CREATE FUNCTION json_n (
+DROP FUNCTION IF EXISTS number;;
+CREATE FUNCTION number (
 	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
 ) RETURNS varchar(65000) CHARSET latin1
@@ -170,8 +115,8 @@ END;;
 # RETURN ARRAY REFERNCED BY TAG NAME
 # FOR NOW, ONLY ARRAYS OF PRIMITIVES CAN BE RETURNED
 # FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
-DROP FUNCTION IF EXISTS json_a;;
-CREATE FUNCTION json_a (
+DROP FUNCTION IF EXISTS array;;
+CREATE FUNCTION array (
 	value		VARCHAR(65000) character set latin1,
 	tag			VARCHAR(40)
 ) RETURNS
@@ -193,8 +138,8 @@ END;;
 
 # RETURN A NUMERIC VALUE AT ARRAY INDEX
 # FINDS FIRST INSTANCE OF AN ARRAY WITH NO REGARD FOR DEPTH
-DROP FUNCTION IF EXISTS json_an;;
-CREATE FUNCTION json_an (
+DROP FUNCTION IF EXISTS arrayn;;
+CREATE FUNCTION arrayn (
 	value		VARCHAR(65000) character set latin1,
 	index_		INTEGER
 ) RETURNS varchar(65000) CHARSET latin1
@@ -263,8 +208,8 @@ END;;
 
 
 
-DROP FUNCTION IF EXISTS json_substring;;
-CREATE FUNCTION json_substring(
+DROP FUNCTION IF EXISTS slice;;
+CREATE FUNCTION slice(
 	value		VARCHAR(65000) character set latin1,
 	start_		INTEGER,
 	end_		INTEGER
@@ -307,10 +252,10 @@ BEGIN
 	END LOOP;
 END;;
 
-SELECT json_substring("[23, 45, 32, 44, 99]", 1,3) from dual;;
-SELECT json_substring("[23, 45, 32, 44, 99]", 0,3) from dual;;
-SELECT json_substring("[23, 45, 32, 44, 99]", 0,0) from dual;;
-SELECT json_substring("[23, 45, 32, 44, 99]", 0,9) from dual;;
+SELECT slice("[23, 45, 32, 44, 99]", 1,3) from dual;;
+SELECT slice("[23, 45, 32, 44, 99]", 0,3) from dual;;
+SELECT slice("[23, 45, 32, 44, 99]", 0,0) from dual;;
+SELECT slice("[23, 45, 32, 44, 99]", 0,9) from dual;;
 
 
 
@@ -354,9 +299,4 @@ BEGIN
 END;;
 
 SELECT math_stats("[32,56,38,45,30]") FROM dual;;
-
-
-
-
-
 

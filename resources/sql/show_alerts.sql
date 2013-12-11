@@ -7,6 +7,6 @@ select
 	a.*
 from
 	alerts a
-	
 order by
-	from_unixtime(arcavia_string.between(details, 'sh_date":', ',', 1)) DESC
+	id desc
+;

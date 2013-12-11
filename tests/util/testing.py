@@ -1,4 +1,3 @@
-
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -15,47 +14,48 @@ class Emailer:
     dummy emailer
     """
 
-    
+
     def __init__(self, settings):
-        self.settings=settings
-        self.sent=StructList()
+        self.settings = settings
+        self.sent = StructList()
 
 
     def send_email(self, **args):
         self.sent.append(args)      #SIMPLY RECORD THE CALL FOR LATER VERIFICATION
 
 
-
-        
 def make_test_database(settings):
     try:
-        settings.database.debug=True
-        no_schema=settings.database.copy()
-        no_schema.schema=""
+        settings.perftest.debug = True
+        no_schema = settings.perftest.copy()
+        no_schema.schema = ""
 
-        Log.note("CLEAR DATABASE {{database}}", {"database":settings.database.schema})
+        Log.note("CLEAR DATABASE {{database}}", {"database": settings.perftest.schema})
         with DB(no_schema) as db:
-            db.execute("DROP DATABASE IF EXISTS "+settings.database.schema)
+            db.execute("DROP DATABASE IF EXISTS " + settings.perftest.schema)
             db.flush()
-            db.execute("CREATE DATABASE "+settings.database.schema)
-
+            db.execute("CREATE DATABASE " + settings.perftest.schema)
 
         #TEMPLATE HAS {engine} TAG THAT MUST BE REPLACED
-        Log.note("BUILD NEW DATABASE {{database}}", {"database":settings.database.schema})
-        DB.execute_file(settings.database, "tests/resources/sql/schema_perftest.sql")
-        DB.execute_file(settings.database, "tests/resources/sql/Add test_data_all_dimensions.sql")
+        Log.note("BUILD NEW DATABASE {{database}}", {"database": settings.perftest.schema})
+        DB.execute_file(settings.perftest, "tests/resources/sql/schema_perftest.sql")
+        DB.execute_file(settings.perftest, "tests/resources/sql/Add test_data_all_dimensions.sql")
 
-        Log.note("MIGRATE {{database}} TO NEW SCHEMA", {"database":settings.database.schema})
-        DB.execute_file(settings.database, "resources/migration/v1.1 alerts.sql")
-        DB.execute_file(settings.database, "resources/migration/v1.2 email.sql")
+        Log.note("MIGRATE {{database}} TO NEW SCHEMA", {"database": settings.perftest.schema})
+        DB.execute_file(settings.perftest, "resources/migration/v1.1 alerts.sql")
+        DB.execute_file(settings.perftest, "resources/migration/v1.2 email.sql")
 
-        with DB(settings.database) as db:
+        with DB(settings.perftest) as db:
             db.execute("ALTER TABLE test_data_all_dimensions DROP FOREIGN KEY `fk_test_run_id_tdad`")
             db.execute("ALTER TABLE pages DROP FOREIGN KEY `fk_pages_test`")
             db.execute("DELETE FROM email_delivery")
             db.execute("DELETE FROM email_attachment")
             db.execute("DELETE FROM email_content")
 
-        Log.note("DATABASE READY {{database}}", {"database":settings.database.schema})
+        #ADD FUNCTIONS FOR TEST VERIFICATION
+        DB.execute_file(settings.perftest, "tests/resources/sql/add_objectstore.sql")
+        DB.execute_file(settings.perftest, "tests/resources/sql/json.sql")
+
+        Log.note("DATABASE READY {{database}}", {"database": settings.perftest.schema})
     except Exception, e:
         Log.error("Database setup failed", e)

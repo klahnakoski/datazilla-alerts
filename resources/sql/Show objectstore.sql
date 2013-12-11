@@ -6,17 +6,18 @@ SELECT
     test_run_id,
     date_loaded,
     processed_flag,
-    error_flag,
-    error_msg,
+--    error_flag,
+--    error_msg,
  	substring(json_blob, 1, 8000) json,
 -- 	substring(json_blob, locate("revision\":", json_blob), 100) rev,
 -- 	ekyle_perftest_1.string_between( substring(json_blob, 1, 60000), "yelp.com", "]", 1),
-    string_between( substring(json_blob, locate("revision\":", json_blob), 100), "revision\": \"", "\",", 1) revision,
-    worker_id
+    string_between( substring(json_blob, locate("revision\":", json_blob), 100), "revision\": \"", "\",", 1) revision
+--    worker_id
 FROM
     objectstore
 WHERE
-	instr(json_blob, "tp5o")>0
+	test_run_id=3577944
+#	instr(json_blob, "tp5o")>0
 # 	instr(lower(json_blob), "693b4eafd936")>0 
 #    instr(lower(json_blob), "897654df47b6")>0 #AND
 # 	and id between 78851 and 131926

@@ -328,6 +328,11 @@ def alert_exception(settings, db):
             a.last_updated = datetime.utcnow()
             db.update("alerts", {"id": a.id}, a)
 
+    db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
+        "now": datetime.utcnow(),
+        "where": db.esfilter2sqlwhere({"term": {"code": REASON}})
+    })
+
     if debug:
         Log.note("Reviewing h0")
 

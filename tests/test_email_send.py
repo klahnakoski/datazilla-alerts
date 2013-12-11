@@ -11,7 +11,6 @@ from dzAlerts.util.db import DB
 from dzAlerts.util.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util import startup
-from dzAlerts.util.struct import Null
 from util import testing
 
 
@@ -131,16 +130,16 @@ def settings(request):
 
 
 def test_1(settings):
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         test_email_send(db, settings).test_zero_receivers()
 
 
 def test_2(settings):
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         test_email_send(db, settings).test_one_receivers()
 
 
 def test_3(settings):
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         test_email_send(db, settings).test_many_receivers()
 

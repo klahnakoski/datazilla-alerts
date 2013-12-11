@@ -113,7 +113,6 @@ class test_alert:
         self.test_data = CNV.table2list(test_data.header, test_data.data)
         self.db.insert_list("alerts", self.test_data)
 
-
     def test_send_zero_alerts(self):
         to_list = []
         self.help_send_alerts(to_list)
@@ -127,7 +126,6 @@ class test_alert:
         to_list = ["_" + str(i) + "@mozilla.com" for i in range(0, 10)]
         self.help_send_alerts(to_list)
 
-
     def help_send_alerts(self, to_list):
         try:
             self.setup(to_list)
@@ -136,8 +134,8 @@ class test_alert:
             # TEST
             ########################################################################
             send_alerts(
-                db=self.db,
-                debug=True
+                settings=struct.wrap({"param": {"debug": True}}),
+                db=self.db
             )
 
             ########################################################################
@@ -226,15 +224,15 @@ def settings(request):
 
 
 def test_1(settings):
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         test_alert(db).test_send_zero_alerts()
 
 
 def test_2(settings):
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         test_alert(db).test_send_one_alert()
 
 
 def test_3(settings):
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         test_alert(db).test_send_many_alerts()

@@ -76,7 +76,7 @@ def send_alerts(settings, db):
                 a.solution IS NULL
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC,
-                json_n(details, "diff") DESC
+                json.number(details, "diff") DESC
             """, {
                 "last_sent":datetime.utcnow()-RESEND_AFTER,
                 "alert_limit":ALERT_LIMIT-EPSILON
@@ -98,7 +98,8 @@ def send_alerts(settings, db):
                     details[k] = v
             details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence)*100, 0))+"%"  #AS A PERCENT
             details.ulr=details.page_url
-            details.push_date_max = (2 * details.push_date) - details.push_date_min
+            if details.push_date != None and details.push_date_min != None:
+                details.push_date_max = (2 * details.push_date) - details.push_date_min
             details.reason = expand_template(alert.description, details)
 
             body.append(expand_template(TEMPLATE, details))

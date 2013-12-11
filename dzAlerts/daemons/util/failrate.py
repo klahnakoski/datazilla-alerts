@@ -5,11 +5,9 @@
 ################################################################################
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
-from scipy.stats import stats
-from dzAlerts.util.maths import Math
+from scipy.stats import beta
 
-import scipy
-scipy.stats = stats  ## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
+from dzAlerts.util.maths import Math
 
 REAL_REGRESSION_RATE = 0.01    # CHOOSE SOMETHING SMALL TO REFLECT RARITY
 CONFIDENCE = 0.70
@@ -50,8 +48,8 @@ def confident_fail_rate(total_fail, total_pass, confidence):
     error = 1 - confi
 
     # ppf() IS THE PERCENT POINT FUNCTION (INVERSE OF cdf()
-    max1 = Math.min([stats.beta.ppf(confi, total_fail + 1, total_pass), 1])
-    min1 = Math.max([stats.beta.ppf(error, total_fail, total_pass + 1), 0])
+    max1 = Math.min([beta.ppf(confi, total_fail + 1, total_pass), 1])
+    min1 = Math.max([beta.ppf(error, total_fail, total_pass + 1), 0])
 
     # PICK THE probability CLOSEST TO 0.5
     if min1 < 0.5 and 0.5 < max1:

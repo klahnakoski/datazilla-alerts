@@ -1,4 +1,3 @@
-
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -6,11 +5,11 @@
 ################################################################################
 ## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 ################################################################################
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from math import sqrt
 import pytest
 import dzAlerts
-from dzAlerts.daemons.alert_exception import alert_exception, REASON, MIN_CONFIDENCE
+from dzAlerts.daemons.alert_exception2 import alert_exception, REASON
 from dzAlerts.util import struct
 
 from dzAlerts.util.cnv import CNV
@@ -22,27 +21,25 @@ from dzAlerts.util.stats import closeEnough
 from util.testing import make_test_database
 
 
-EXPECTED_SEVERITY=dzAlerts.daemons.alert_exception.SEVERITY
+EXPECTED_SEVERITY = dzAlerts.daemons.alert_exception2.SEVERITY
 
 
 class test_alert_exception():
-
     def __init__(self, db):
-        self.db=db
-        self.db.debug=True
-        self.url="mozilla.com"
+        self.db = db
+        self.db.debug = True
+        self.url = "mozilla.com"
 
-
-    def test_alert_generated(self, test_data):
+    def test_alert_generated(self, settings, test_data):
         self._setup(test_data)
 
-        alert_exception (
-            db=self.db,
-            debug=True
+        alert_exception(
+            settings=settings,
+            db=self.db
         )
 
         ## VERIFY AN ALERT IS GENERATED
-        alert=self.db.query("""
+        alert = self.db.query("""
             SELECT
                 id,
                 status,
@@ -57,24 +54,24 @@ class test_alert_exception():
             WHERE
                 reason={{reason}}
             """, {
-                "reason":REASON
+            "reason": REASON
         })
 
-        assert len(alert)==1
-        assert alert[0].status=='new'
+        assert len(alert) == 1
+        assert alert[0].status == 'new'
         assert closeEnough(alert[0].severity, EXPECTED_SEVERITY)
-        assert alert[0].confidence>MIN_CONFIDENCE
+        assert alert[0].confidence > settings.param.min_confidence
 
-        #VERIFY last_run HAS BEEEN UPDATED
-        last_run=self.db.query(
+        #VERIFY last_run HAS BEEN UPDATED
+        last_run = self.db.query(
             "SELECT last_run FROM alert_reasons WHERE code={{type}}",
-            {"type":REASON}
+            {"type": REASON}
         )[0].last_run
-        expected_run_after=datetime.utcnow()+timedelta(minutes=-1)
-        assert last_run>=expected_run_after
+        expected_run_after = datetime.utcnow() + timedelta(minutes=-1)
+        assert last_run >= expected_run_after
 
         #REMEMEBER id FOR CHECKING OBSOLETE
-        self.alert_id=alert[0].id
+        self.alert_id = alert[0].id
 
         #VERIFY test_data_all_dimensions HAS BEEN MARKED PROPERLY
         h0_rejected = self.db.query("""
@@ -86,22 +83,19 @@ class test_alert_exception():
                 alerts a ON a.tdad_id=t.id
             WHERE
                 a.id={{alert_id}}
-            """,
-            {"alert_id":alert[0].id}
+            """, {
+            "alert_id": alert[0].id
+        }
         )
 
-        assert len(h0_rejected)==1
-        assert h0_rejected[0].h0_rejected==1
-
-
-
-
+        assert len(h0_rejected) == 1
+        assert h0_rejected[0].h0_rejected == 1
 
     def _setup(self, test_data):
-        uid=self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
+        uid = self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
 
         ## VERFIY THE alert_reason EXISTS
-        exists=self.db.query("""
+        exists = self.db.query("""
             SELECT
                 count(1) num
             FROM
@@ -109,90 +103,105 @@ class test_alert_exception():
             WHERE
                 code={{reason}}
             """,
-            {"reason":REASON}
+                               {"reason": REASON}
         )[0].num
-        if exists==0:
-            Log.error("Expecting the database to have an alert_reason={{reason}}", {"reason":REASON})
+        if exists == 0:
+            Log.error("Expecting the database to have an alert_reason={{reason}}", {"reason": REASON})
 
         ## MAKE A 'PAGE' TO TEST
         self.db.execute("DELETE FROM pages")
         self.db.insert("pages", {
-            "test_id":0,
-            "url":self.url
+            "test_id": 0,
+            "url": self.url
         })
-        self.page_id=self.db.query("SELECT id FROM pages")[0].id
+        self.page_id = self.db.query("SELECT id FROM pages")[0].id
 
         ## ENSURE THERE ARE NO ALERTS IN DB
-        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason":REASON})
+        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason": REASON})
         self.insert_test_results(test_data)
-
 
     def insert_test_results(self, test_data):
         ## diff_time IS REQUIRED TO TRANSLATE THE TEST DATE DATES TO SOMETHING MORE CURRENT
-        now_time=CNV.datetime2unix(datetime.utcnow())
-        max_time=max(Q.select(test_data, "timestamp"))
-        diff_time=now_time-max_time
-
+        now_time = CNV.datetime2unix(datetime.utcnow())
+        max_time = max(Q.select(test_data, "timestamp"))
+        diff_time = now_time - max_time
 
         ## INSERT THE TEST RESULTS
         for t in test_data:
-            time=t.timestamp
-            time+=diff_time
+            time = t.timestamp
+            time += diff_time
 
-            self.db.insert("test_data_all_dimensions",{
-                "id":SQL("util_newid()"),
-                "test_run_id":SQL("util_newid()"),
-                "product_id":0,
-                "operating_system_id":0,
-                "test_id":0,
-                "page_id":self.page_id,
-                "date_received":time,
-                "revision":"ba928cbd5191",
-                "product":"Firefox",
-                "branch":"Mozilla-Inbound",
-                "branch_version":"23.0a1",
-                "operating_system_name":"mac",
-                "operating_system_version":"OS X 10.8",
-                "processor":"x86_64",
-                "build_type":"opt",
-                "machine_name":"talos-mtnlion-r5-049",
-                "pushlog_id":19998363,
-                "push_date":time,
-                "test_name":"tp5o",
-                "page_url":self.url,
-                "mean":float(t.mean),
-                "std":sqrt(t.variance),
-                "h0_rejected":None,
-                "p":None,
-                "n_replicates":t.count,
-                "fdr":0,
-                "trend_mean":None,
-                "trend_std":None,
-                "test_evaluation":0,
-                "status":1
+            self.db.insert("test_data_all_dimensions", {
+                "id": SQL("util_newid()"),
+                "test_run_id": SQL("util_newid()"),
+                "product_id": 0,
+                "operating_system_id": 0,
+                "test_id": 0,
+                "page_id": self.page_id,
+                "date_received": time,
+                "revision": "ba928cbd5191",
+                "product": "Firefox",
+                "branch": "Mozilla-Inbound",
+                "branch_version": "23.0a1",
+                "operating_system_name": "mac",
+                "operating_system_version": "OS X 10.8",
+                "processor": "x86_64",
+                "build_type": "opt",
+                "machine_name": "talos-mtnlion-r5-049",
+                "pushlog_id": 19998363,
+                "push_date": time,
+                "test_name": "tp5o",
+                "page_url": self.url,
+                "mean": float(t.mean),
+                "std": sqrt(t.variance),
+                "h0_rejected": None,
+                "p": None,
+                "n_replicates": t.count,
+                "fdr": 0,
+                "trend_mean": None,
+                "trend_std": None,
+                "test_evaluation": 0,
+                "status": 1
             })
 
-
+        self.db.flush()
+        self.db.execute("""
+            INSERT INTO objectstore (id, test_run_id, date_loaded, processed_flag, branch, json_blob)
+            SELECT
+                {{id}},
+                test_run_id,
+                {{now}},
+                'complete',
+                branch,
+                '{}'
+            FROM
+                test_data_all_dimensions
+            GROUP BY
+                test_run_id
+        """, {
+            "id": SQL("util_newid()"),
+            "now": CNV.datetime2unix(datetime.utcnow())
+        })
 
 
 @pytest.fixture()
 def settings(request):
-    settings=startup.read_settings(filename="test_settings.json")
+    settings = startup.read_settings(filename="test_settings.json")
     Log.start(settings.debug)
     make_test_database(settings)
 
     def fin():
         Log.stop()
+
     request.addfinalizer(fin)
 
     return settings
 
 
-
 def test_1(settings):
-    test_data1=struct.wrap({
-        "header":("date", "count", "mean-std", "mean", "mean+std", "reject"),
-        "rows":[
+    test_data1 = struct.wrap({
+        "header": ("date", "count", "mean-std", "mean", "mean+std", "reject"),
+        "rows": [
             ("2013-Apr-05 13:55:00", "23", "655.048136994614", "668.5652173913044", "682.0822977879948"),
             ("2013-Apr-05 13:59:00", "23", "657.8717192954238", "673.3478260869565", "688.8239328784892"),
             ("2013-Apr-05 14:05:00", "23", "658.3247270429598", "673", "687.6752729570402"),
@@ -210,41 +219,40 @@ def test_1(settings):
             ("2013-Apr-05 16:31:00", "23", "661.011102554583", "673.4347826086956", "685.8584626628083"),
             ("2013-Apr-05 16:55:00", "23", "655.9407699325201", "671.304347826087", "686.6679257196539"),
             ("2013-Apr-05 17:07:00", "23", "657.6412277100247", "667.5217391304348", "677.4022505508448"),
-#        ("2013-Apr-05 17:12:00", "23", "598.3432138277318", "617.7391304347826", "637.1350470418334"),   # <--DIP IN DATA
+            #        ("2013-Apr-05 17:12:00", "23", "598.3432138277318", "617.7391304347826", "637.1350470418334"),   # <--DIP IN DATA
             ("2013-Apr-05 17:23:00", "23", "801.0537973113723", "822.1739130434783", "843.2940287755843", 1)  # <--SPIKE IN DATA
         ]
     })
-    test_data1=[
+    test_data1 = [
         struct.wrap({
-            "timestamp":CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
-            "datetime":CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
-            "count":int(t.count),
-            "mean":float(t.mean),
-            "variance":pow(float(t["mean+std"])-float(t.mean), 2),
-            "reject":t.reject
+            "timestamp": CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
+            "datetime": CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
+            "count": int(t.count),
+            "mean": float(t.mean),
+            "variance": pow(float(t["mean+std"]) - float(t.mean), 2),
+            "reject": t.reject
         })
         for t in CNV.table2list(test_data1.header, test_data1.rows)
     ]
 
-    with DB(settings.database) as db:
-        tester=test_alert_exception(db)
-        tester.test_alert_generated(test_data1)
-
+    with DB(settings.perftest) as db:
+        tester = test_alert_exception(db)
+        tester.test_alert_generated(settings, test_data1)
 
 
 def not_test_2(settings):
     """
     THIS WAS TESTING FOR A DECREASE IN THE MEAN, BUT THE CURRENT CODE IGNORES THOSE
     """
-    test_data2=struct.wrap({
-        "header":("timestamp", "mean", "std", "h0_rejected", "count"),
-        "rows":[
+    test_data2 = struct.wrap({
+        "header": ("timestamp", "mean", "std", "h0_rejected", "count"),
+        "rows": [
             (1366388389, 295.36, 32.89741631, 0, 25),
             (1366387915, 307.92, 32.86198412, 0, 25),
             (1366390777, 309, 41.22802445, 0, 25),
             (1366398771, 309.24, 34.18488945, 0, 25),
             (1366401499, 308.2, 30.36170834, 0, 25),
-            (1366412504, 192.8, 46.27634385, 1, 25),    # Should be an alert
+            (1366412504, 192.8, 46.27634385, 1, 25), # Should be an alert
             (1366421699, 298.04, 29.09249617, 0, 25),
             (1366433920, 324.52, 28.13378752, 0, 25),
             (1366445744, 302.2, 28.19131072, 0, 25),
@@ -255,21 +263,20 @@ def not_test_2(settings):
             (1366507773, 291.08, 27.86562996, 0, 25)
         ]
     })
-    test_data2=[
+    test_data2 = [
         struct.wrap({
-            "timestamp":t.timestamp,
-            "datetime":CNV.unix2datetime(t.timestamp),
-            "count":t.count,
-            "mean":t.mean,
-            "variance":pow(t.std, 2),
-            "reject":t.h0_rejected
+            "timestamp": t.timestamp,
+            "datetime": CNV.unix2datetime(t.timestamp),
+            "count": t.count,
+            "mean": t.mean,
+            "variance": pow(t.std, 2),
+            "reject": t.h0_rejected
         })
         for t in CNV.table2list(test_data2.header, test_data2.rows)
     ]
 
-
-    with DB(settings.database) as db:
-        tester=test_alert_exception(db)
+    with DB(settings.perftest) as db:
+        tester = test_alert_exception(db)
         tester.test_alert_generated(test_data2)
 
 

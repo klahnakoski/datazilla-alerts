@@ -278,7 +278,7 @@ def test_1(settings):
         ]
     })
 
-    with DB(settings.database) as db:
+    with DB(settings.perftest) as db:
         tester = test_alert_threshold(db, test_data)
         tester.test_alert_generated()
         tester.test_alert_obsolete()

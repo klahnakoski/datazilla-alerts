@@ -191,7 +191,7 @@ def main():
     Log.start(settings.debug)
     try:
         for repo in settings.param.repos:
-            with DB(settings.database) as db:
+            with DB(settings.perftest) as db:
                 try:
                     pull_repo(repo)
 
