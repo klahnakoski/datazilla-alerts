@@ -66,7 +66,7 @@ def replicate_table(table_name, id_name, source, destination):
         "id": destination.quote_column(id_name)
     })[0].max
 
-    if max_id == Null: max_id=-1
+    if max_id == None: max_id=-1
 
     while True:
         missing = source.query("SELECT * FROM {{table}} WHERE {{id}}>{{max}} ORDER BY {{id}} LIMIT {{limit}}", {

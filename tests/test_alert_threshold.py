@@ -1,4 +1,3 @@
-
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -17,30 +16,25 @@ from dzAlerts.util import startup
 from util import testing
 
 
-
-
-
 class test_alert_threshold:
-
     def __init__(self, db, test_data):
-        self.db=db
-        self.test_data=test_data
-        self.db.debug=True
-        self.url="mozilla.com"  
-        self.severity=0.5
-
+        self.db = db
+        self.test_data = test_data
+        self.db.debug = True
+        self.url = "mozilla.com"
+        self.severity = 0.5
 
 
     def test_alert_generated(self):
         self._setup()
 
-        page_threshold_limit (
+        page_threshold_limit(
             db=self.db,
             debug=True
         )
 
         ## VERIFY AN ALERT IS GENERATED
-        alert=self.db.query("""
+        alert = self.db.query("""
             SELECT
                 id,
                 status,
@@ -55,23 +49,23 @@ class test_alert_threshold:
             WHERE
                 reason={{reason}}
             """, {
-                "reason":REASON
+            "reason": REASON
         })
 
-        assert len(alert)==1
-        assert alert[0].status=='new'
-        assert alert[0].severity==self.severity
-        assert alert[0].confidence==1.0
+        assert len(alert) == 1
+        assert alert[0].status == 'new'
+        assert alert[0].severity == self.severity
+        assert alert[0].confidence == 1.0
 
         #VERIFY last_run HAS BEEEN UPDATED
-        last_run=self.db.query(
+        last_run = self.db.query(
             "SELECT last_run FROM alert_reasons WHERE code={{type}}",
-            {"type":REASON}
+            {"type": REASON}
         )[0].last_run
-        assert last_run>=datetime.utcnow()+timedelta(minutes=-1)
+        assert last_run >= datetime.utcnow() + timedelta(minutes=-1)
 
         #REMEMEBER id FOR CHECKING OBSOLETE
-        self.alert_id=alert[0].id
+        self.alert_id = alert[0].id
 
         #VERIFY test_data_all_dimensions HAS BEEN MARKED PROPERLY
         h0_rejected = self.db.query("""
@@ -84,42 +78,36 @@ class test_alert_threshold:
             WHERE
                 a.id={{alert_id}}
             """,
-            {"alert_id":alert[0].id}
+                                    {"alert_id": alert[0].id}
         )
 
-        assert len(h0_rejected)==1
-        assert h0_rejected[0].h0_rejected==1
-
-
-
-
-
-
+        assert len(h0_rejected) == 1
+        assert h0_rejected[0].h0_rejected == 1
 
 
     ## TEST AN INCREASE IN THE THRESHOLD OBSOLETES THE ALERT
     def test_alert_obsolete(self):
         ##SETUP
-        assert self.alert_id != Null  #EXPECTING test_alert_generated TO BE RUN FIRST
+        assert self.alert_id != None  #EXPECTING test_alert_generated TO BE RUN FIRST
 
-        self.db.execute("UPDATE alert_page_thresholds SET threshold={{threshold}} WHERE page={{page_id}}",{
-            "threshold":900,
-            "page_id":self.page_id
+        self.db.execute("UPDATE alert_page_thresholds SET threshold={{threshold}} WHERE page={{page_id}}", {
+            "threshold": 900,
+            "page_id": self.page_id
         })
 
         ## TEST
-        page_threshold_limit (
+        page_threshold_limit(
             db=self.db,
             debug=True
         )
 
         ## VERIFY SHOWING OBSOLETE
-        new_state=self.db.query(
+        new_state = self.db.query(
             "SELECT status FROM alerts WHERE id={{alert_id}}",
-            {"alert_id":self.alert_id}
+            {"alert_id": self.alert_id}
         )
-        assert len(new_state)==1
-        assert new_state[0].status=="obsolete"
+        assert len(new_state) == 1
+        assert new_state[0].status == "obsolete"
 
         #VERIFY test_data_all_dimensions HAS BEEN UNMARKED PROPERLY
         h0_rejected = self.db.query("""
@@ -132,21 +120,17 @@ class test_alert_threshold:
             WHERE
                 a.id={{alert_id}}
             """,
-            {"alert_id":self.alert_id}
+                                    {"alert_id": self.alert_id}
         )
-        assert len(h0_rejected)==1
-        assert h0_rejected[0].h0_rejected==0
-
-
-
-
+        assert len(h0_rejected) == 1
+        assert h0_rejected[0].h0_rejected == 0
 
 
     def _setup(self):
-        uid=self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
+        uid = self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
 
         ## VERFIY THE alert_reason EXISTS
-        exists=self.db.query("""
+        exists = self.db.query("""
             SELECT
                 count(1) num
             FROM
@@ -154,18 +138,18 @@ class test_alert_threshold:
             WHERE
                 code={{reason}}
             """,
-            {"reason":REASON}
+                               {"reason": REASON}
         )[0].num
-        if exists==0:
-            Log.error("Expecting the database to have an alert_reason={{reason}}", {"reason":REASON})
+        if exists == 0:
+            Log.error("Expecting the database to have an alert_reason={{reason}}", {"reason": REASON})
 
         ## MAKE A 'PAGE' TO TEST
         self.db.execute("DELETE FROM pages")
         self.db.insert("pages", {
-            "test_id":0,
-            "url":self.url
+            "test_id": 0,
+            "url": self.url
         })
-        self.page_id=self.db.query("SELECT id FROM pages")[0].id
+        self.page_id = self.db.query("SELECT id FROM pages")[0].id
 
         ## ADD A THRESHOLD TO TEST WITH
         self.db.execute("""
@@ -187,83 +171,78 @@ class test_alert_threshold:
                 "klahnakoski@mozilla.com"
             )
             """, {
-            "uid":uid,
-            "url":self.url,
-            "page_id":self.page_id,
-            "severity":self.severity,
-            "threshold":800
+            "uid": uid,
+            "url": self.url,
+            "page_id": self.page_id,
+            "severity": self.severity,
+            "threshold": 800
         })
 
         ## ENSURE THERE ARE NO ALERTS IN DB
-        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason":REASON})
+        self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason": REASON})
 
         ## diff_time IS REQUIRED TO TRANSLATE THE TEST DATE DATES TO SOMETHING MORE CURRENT
-        now_time=CNV.datetime2unix(datetime.utcnow())
-        max_time=max([CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")) for t in CNV.table2list(self.test_data.header, self.test_data.rows)])
-        diff_time=now_time-max_time
+        now_time = CNV.datetime2unix(datetime.utcnow())
+        max_time = max([CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")) for t in CNV.table2list(self.test_data.header, self.test_data.rows)])
+        diff_time = now_time - max_time
 
         ## INSERT THE TEST RESULTS
         for t in CNV.table2list(self.test_data.header, self.test_data.rows):
-            time=CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"))
-            time+=diff_time
+            time = CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"))
+            time += diff_time
 
-            self.db.insert("test_data_all_dimensions",{
-                "id":SQL("util_newid()"),
-                "test_run_id":SQL("util_newid()"),
-                "product_id":0,
-                "operating_system_id":0,
-                "test_id":0,
-                "page_id":self.page_id,
-                "date_received":time,
-                "revision":"ba928cbd5191",
-                "product":"Firefox",
-                "branch":"Mozilla-Inbound",
-                "branch_version":"23.0a1",
-                "operating_system_name":"mac",
-                "operating_system_version":"OS X 10.8",
-                "processor":"x86_64",
-                "build_type":"opt",
-                "machine_name":"talos-mtnlion-r5-049",
-                "pushlog_id":19998363,
-                "push_date":time,
-                "test_name":"tp5o",
-                "page_url":self.url,
-                "mean":float(t.mean),
-                "std":float(t["mean+std"])-float(t.mean),
-                "h0_rejected":Null,
-                "p":Null,
-                "n_replicates":t.count,
-                "fdr":0,
-                "trend_mean":Null,
-                "trend_std":Null,
-                "test_evaluation":0,
-                "status":1
+            self.db.insert("test_data_all_dimensions", {
+                "id": SQL("util_newid()"),
+                "test_run_id": SQL("util_newid()"),
+                "product_id": 0,
+                "operating_system_id": 0,
+                "test_id": 0,
+                "page_id": self.page_id,
+                "date_received": time,
+                "revision": "ba928cbd5191",
+                "product": "Firefox",
+                "branch": "Mozilla-Inbound",
+                "branch_version": "23.0a1",
+                "operating_system_name": "mac",
+                "operating_system_version": "OS X 10.8",
+                "processor": "x86_64",
+                "build_type": "opt",
+                "machine_name": "talos-mtnlion-r5-049",
+                "pushlog_id": 19998363,
+                "push_date": time,
+                "test_name": "tp5o",
+                "page_url": self.url,
+                "mean": float(t.mean),
+                "std": float(t["mean+std"]) - float(t.mean),
+                "h0_rejected": None,
+                "p": None,
+                "n_replicates": t.count,
+                "fdr": 0,
+                "trend_mean": None,
+                "trend_std": None,
+                "test_evaluation": 0,
+                "status": 1
             })
-
-
-
-
-
 
 
 @pytest.fixture()
 def settings(request):
-    settings=startup.read_settings(filename="test_settings.json")
+    settings = startup.read_settings(filename="test_settings.json")
     Log.start(settings.debug)
     testing.make_test_database(settings)
 
     def fin():
         Log.stop()
+
     request.addfinalizer(fin)
 
     return settings
 
 
-
 def test_1(settings):
-    test_data=struct.wrap({
-        "header":("date", "count", "mean-std", "mean", "mean+std"),
-        "rows":[
+    test_data = struct.wrap({
+        "header": ("date", "count", "mean-std", "mean", "mean+std"),
+        "rows": [
             ("2013-Apr-05 13:53:00", "23", "458.4859477694967", "473.30434782608694", "488.1227478826772"),
             ("2013-Apr-05 13:55:00", "23", "655.048136994614", "668.5652173913044", "682.0822977879948"),
             ("2013-Apr-05 13:56:00", "23", "452.89061649510194", "466.9130434782609", "480.9354704614198"),
@@ -300,7 +279,7 @@ def test_1(settings):
     })
 
     with DB(settings.database) as db:
-        tester=test_alert_threshold(db, test_data)
+        tester = test_alert_threshold(db, test_data)
         tester.test_alert_generated()
         tester.test_alert_obsolete()
 

@@ -13,14 +13,14 @@ CREATE FUNCTION util_newID ()
 	RETURNS BIGINT
 	READS SQL DATA
 BEGIN
-	IF @util_curr_id IS NULL THEN
+	IF @util_curr_id IS None THEN
 		SELECT max(id) INTO @util_curr_id FROM util_uid_next;
-		IF @util_curr_id IS NULL THEN
+		IF @util_curr_id IS None THEN
 			INSERT INTO util_uid_next VALUES (0);
 			SET @util_curr_id=0;
 		END IF;
 		UPDATE util_uid_next SET id=@util_curr_id+1000;
-	ELSEIF @util_curr_id%1000=0 THEN
+	ELSEIF mod(@util_curr_id, 1000)=0 THEN
 		SELECT max(id) INTO @util_curr_id FROM util_uid_next;
 		UPDATE util_uid_next SET id=@util_curr_id+1000;
 	END IF;
@@ -107,16 +107,16 @@ m11: BEGIN
 	DROP TABLE IF EXISTS alert_page_thresholds;
 
 	CREATE TABLE alert_stati(
-		code			VARCHAR(10) NOT NULL PRIMARY KEY
+		code			VARCHAR(10) NOT None PRIMARY KEY
 	);
 	INSERT INTO alert_stati VALUES ('new');
 	INSERT INTO alert_stati VALUES ('obsolete');	##MAYBE THIS IS USEFUL
 
 
 	CREATE TABLE alert_reasons (
-		code			VARCHAR(80) NOT NULL PRIMARY KEY,
+		code			VARCHAR(80) NOT None PRIMARY KEY,
 		description		VARCHAR(2000), ##MORE DETAILS ABOUT WHAT THIS IS
-		last_run		DATETIME NOT NULL,
+		last_run		DATETIME NOT None,
 		config			VARCHAR(8000),
 		email_template	VARCHAR(8000)
 	);
@@ -124,33 +124,33 @@ m11: BEGIN
 		'page_threshold_limit',
 		concat('The page has performed badly ({{actual}}), {{expected}} or less was expected'),
 		date_add(now(), INTERVAL -30 DAY),
-		null,
-    null
+		None,
+    None
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_exception',
 		concat('{{page_url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}',
-    null
+    None
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_revision',
 		concat('{{page_url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}',
-    null
+    None
 	);
 
 
 	CREATE TABLE alert_page_thresholds (
-		id				INTEGER NOT NULL PRIMARY KEY,
-		page			INTEGER NOT NULL,
-		threshold		DECIMAL(20, 10) NOT NULL,
-		severity		DOUBLE NOT NULL,
-		reason			VARCHAR(2000) NOT NULL,
-		time_added		DATETIME NOT NULL,
-		contact			VARCHAR(200) NOT NULL,
+		id				INTEGER NOT None PRIMARY KEY,
+		page			INTEGER NOT None,
+		threshold		DECIMAL(20, 10) NOT None,
+		severity		DOUBLE NOT None,
+		reason			VARCHAR(2000) NOT None,
+		time_added		DATETIME NOT None,
+		contact			VARCHAR(200) NOT None,
 		FOREIGN KEY (page) REFERENCES pages(id)
 	);
 
@@ -171,7 +171,7 @@ m11: BEGIN
 
 
 	CREATE TABLE alert_listeners (
-		email			VARCHAR(200) NOT NULL PRIMARY KEY
+		email			VARCHAR(200) NOT None PRIMARY KEY
 	);
 	INSERT INTO alert_listeners VALUES ('klahnakoski@mozilla.com');
 
@@ -179,16 +179,16 @@ m11: BEGIN
 	#ALTER TABLE test_data_all_dimensions ADD UNIQUE INDEX tdad_id(id)
 
 	CREATE TABLE alerts (
-		id 				INTEGER NOT NULL PRIMARY KEY,
-		status	 		VARCHAR(10) NOT NULL,  ##FOR ALERT LOGIC TO MARKUP, MAYBE AS obsolete
-		create_time		DATETIME NOT NULL,		##WHEN THIS ISSUE WAS FIRST IDENTIFIED
-		last_updated	DATETIME NOT NULL, 	##WHEN THIS ISSUE WAS LAST UPDATED WITH NEW INFO
+		id 				INTEGER NOT None PRIMARY KEY,
+		status	 		VARCHAR(10) NOT None,  ##FOR ALERT LOGIC TO MARKUP, MAYBE AS obsolete
+		create_time		DATETIME NOT None,		##WHEN THIS ISSUE WAS FIRST IDENTIFIED
+		last_updated	DATETIME NOT None, 	##WHEN THIS ISSUE WAS LAST UPDATED WITH NEW INFO
 		last_sent		DATETIME,			##WHEN THIS ISSUE WAS LAST SENT TO EMAIL
-		tdad_id			INTEGER NOT NULL, 	##REFERENCE THE SMALLEST TESTING OBJECT (AT THIS TIME)
-		reason			VARCHAR(20) NOT NULL,  ##REFERNCE TO STANDARD SET OF REASONS
-		details			VARCHAR(2000) NOT NULL, ##JSON OF SPECIFIC DETAILS
-		severity		DOUBLE NOT NULL,		##ABSTRACT SEVERITY 1.0==HIGH, 0.0==LOW
-		confidence		DOUBLE NOT NULL,		##CONFIDENCE INTERVAL 1.0==100% CONFIDENCE
+		tdad_id			INTEGER NOT None, 	##REFERENCE THE SMALLEST TESTING OBJECT (AT THIS TIME)
+		reason			VARCHAR(20) NOT None,  ##REFERNCE TO STANDARD SET OF REASONS
+		details			VARCHAR(2000) NOT None, ##JSON OF SPECIFIC DETAILS
+		severity		DOUBLE NOT None,		##ABSTRACT SEVERITY 1.0==HIGH, 0.0==LOW
+		confidence		DOUBLE NOT None,		##CONFIDENCE INTERVAL 1.0==100% CONFIDENCE
 		solution		VARCHAR(40), ##INTENT FOR HUMANS TO MARKUP THIS ALERT SO MACHINE KNOWS IF REAL, OR START ESCALATING
 		INDEX alert_lookup (tdad_id),
 		#FOREIGN KEY alert_tdad_id (tdad_id) REFERENCES test_data_all_dimensions(id),

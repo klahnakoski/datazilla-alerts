@@ -219,7 +219,7 @@ def alert_exception(settings, db):
                         "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0)
                     }, {
                         "name": "pass",
-                        "value": lambda (r): True if settings.param.min_confidence < r.result.confidence and r.result.diff > 0 else False
+                        "value": lambda (r): True if settings.param.min_confidence < r.result.confidence else False
                     },
 
                 ]
@@ -240,7 +240,7 @@ def alert_exception(settings, db):
             for v in new_exceptions:
                 v.diff = v.result.diff
                 v.confidence = v.result.confidence
-                v.result = Null
+                v.result = None
 
                 alert = Struct(
                     status="new",

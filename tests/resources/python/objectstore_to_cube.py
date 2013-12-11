@@ -46,10 +46,10 @@ def objectstore_to_cube(db, r):
                 "pushlog_id": r.pushlog_id,
                 "push_date": nvl(r.push_date, json.testrun.date),
                 "test_name": json.testrun.suite,
-                "page_url": Null,
-                "mean": Null,
-                "std": Null,
-                "n_replicates": Null
+                "page_url": None,
+                "mean": None,
+                "std": None,
+                "n_replicates": None
             })
             return
 

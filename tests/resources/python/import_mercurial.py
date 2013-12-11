@@ -80,13 +80,13 @@ def pull_repo(repo):
 
 def get_changesets(date_range=None, revision_range=None, repo=None):
     if date_range is not None:
-        if date_range.max == Null:
-            if date_range.min == Null:
+        if date_range.max == None:
+            if date_range.min == None:
                 drange = ">0 0"
             else:
                 drange = ">" + unicode(CNV.datetime2unix(date_range.min)) + " 0"
         else:
-            if date_range.min == Null:
+            if date_range.min == None:
                 drange = "<" + unicode(CNV.datetime2unix(date_range.max) - 1) + " 0"
             else:
                 drange = unicode(CNV.datetime2unix(date_range.min)) + " 0 to " + unicode(
@@ -216,9 +216,9 @@ def main():
                     for r in ranges:
                         for g, docs in Q.groupby(get_changesets(date_range=r, repo=repo), size=100):
                             for doc in docs:
-                                doc.file_changes = Null
-                                doc.file_adds = Null
-                                doc.file_dels = Null
+                                doc.file_changes = None
+                                doc.file_adds = None
+                                doc.file_dels = None
                                 doc.description = doc.description[0:16000]
 
                             db.insert_list("changesets", docs)
@@ -228,9 +228,9 @@ def main():
                     for _range in missing_revisions:
                         for g, docs in Q.groupby(get_changesets(revision_range=_range, repo=repo), size=100):
                             for doc in docs:
-                                doc.file_changes = Null
-                                doc.file_adds = Null
-                                doc.file_dels = Null
+                                doc.file_changes = None
+                                doc.file_adds = None
+                                doc.file_dels = None
                                 doc.description = doc.description[0:16000]
 
                             db.insert_list("changesets", docs)

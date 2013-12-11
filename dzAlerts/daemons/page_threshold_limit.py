@@ -65,7 +65,7 @@ def page_threshold_limit(db, debug):
 
         #FOR EACH PAGE THAT BREAKS LIMITS
         for page in pages:
-            if page.alert_id != Null: break
+            if page.alert_id != None: break
 
             alert = {
                 "id":SQL("util_newID()"),
@@ -84,8 +84,8 @@ def page_threshold_limit(db, debug):
             db.insert("alerts", alert)
 
         for page in pages:
-            if page.alert_id == Null: break
-            db.update("alerts", Null)  #ERROR FOR NOW
+            if page.alert_id == None: break
+            db.update("alerts", None)  #ERROR FOR NOW
 
 
         #OBSOLETE THE ALERTS THAT SHOULD NO LONGER GET SENT
@@ -125,4 +125,4 @@ def page_threshold_limit(db, debug):
         Log.error("Could not perform threshold comparisons", e)
 
 
-      
+

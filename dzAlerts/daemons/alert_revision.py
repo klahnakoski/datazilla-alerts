@@ -49,7 +49,7 @@ TEMPLATE=[
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
 def alert_revision(settings):
-    assert settings.db != Null
+    assert settings.db != None
     settings.db.debug=settings.debug
     db=DB(settings.db)
 
@@ -135,8 +135,8 @@ def alert_revision(settings):
             "test_name":r.test_name,
             "num_exceptions":r.num_exceptions,
             "num_tests":r.num_tdad,
-            "branch":Null,
-            "bug_id":Null,
+            "branch":None,
+            "bug_id":None,
             "pages":Q.sort(exception_lookup[r.revision], {"value":"severity", "sort":-1})
         },
         "severity":SEVERITY,

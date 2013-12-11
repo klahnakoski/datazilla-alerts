@@ -162,12 +162,12 @@ class test_alert_exception():
                 "page_url":self.url,
                 "mean":float(t.mean),
                 "std":sqrt(t.variance),
-                "h0_rejected":Null,
-                "p":Null,
+                "h0_rejected":None,
+                "p":None,
                 "n_replicates":t.count,
                 "fdr":0,
-                "trend_mean":Null,
-                "trend_std":Null,
+                "trend_mean":None,
+                "trend_std":None,
                 "test_evaluation":0,
                 "status":1
             })
@@ -231,7 +231,7 @@ def test_1(settings):
         tester.test_alert_generated(test_data1)
 
 
-        
+
 def not_test_2(settings):
     """
     THIS WAS TESTING FOR A DECREASE IN THE MEAN, BUT THE CURRENT CODE IGNORES THOSE
