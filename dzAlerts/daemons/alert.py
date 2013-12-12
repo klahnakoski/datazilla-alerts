@@ -45,6 +45,10 @@ EPSILON = 0.0001
 
 
 def send_alerts(settings, db):
+    """
+    BLINDLY SENDS ALERTS FROM THE ALERTS TABLE, ASSUMING ALL HAVE THE SAME STRUCTURE.
+    THIS SHOULD BE CHANGED SO EACH TYPE OF ALERT IS RESPONSBLE FOR IT'S OWN TEMPLATE
+    """
     debug = settings.param.debug
     db.debug = debug
 

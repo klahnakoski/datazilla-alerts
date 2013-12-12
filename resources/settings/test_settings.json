@@ -1,24 +1,45 @@
 {
 	"README":"settings for running tests",
-	"database":{
+    "param": {
+        "min_confidence": 0.999,
+        "window_size": 20,
+        "max_test_results_per_run": 50,  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
+        "debug": true,
+        "email": {
+            "title": "Regressions found with datazilla-alerts"
+        }
+    },
+    "perftest": {
 		"host":"localhost",
 		"port":3306,
 		"username":"manager",
 		"password":"password",
 		"schema":"test_alerts",
 		"debug":true
-	},
+    },
+    "objectstore": {
+        "schema": "test_alerts"
+    },
+    "pushlog": {
+        "schema": "test_alerts"
+    },
+    "email": {
+        "README": "testing will use a dummy emailer, but not so dumb to ignore a from_address",
+        "from_address": "klahnakoski@mozilla.com"
+    },
 	"debug":{
 		"log":[
 		{
 			"class": "logging.handlers.RotatingFileHandler",
-			"filename": "tests/resources/logs/testing.log",
+                "filename": "tests/results/logs/testing.log",
 			"maxBytes": 10000000,
-			"backupCount": "100",
+                "backupCount": 100,
 			"encoding": "utf8"
-		},{
-			"class":"dzAlerts.util.logs.Log_usingStream",
-			"stream":"sys.stdout"
-		}]
-	}
+            },
+            {
+                "class": "dzAlerts.util.logs.Log_usingStream",
+                "stream": "sys.stdout"
+            }
+        ]
+    }
 }      
