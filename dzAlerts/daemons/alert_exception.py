@@ -7,291 +7,364 @@
 ################################################################################
 
 
-from datetime import timedelta, datetime
+from datetime import datetime
 
-## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
-from math import sqrt
 import scipy
 from scipy import stats
+from dzAlerts.daemons.alert_exception import single_ttest
+from dzAlerts.util import struct
+from dzAlerts.util.maths import Math
+from dzAlerts.util.queries import windows
 
-scipy.stats = stats
+scipy.stats = stats  # I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
 
-from dzAlerts.util.timer import Timer
 from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
 from dzAlerts.util.logs import Log
-from dzAlerts.util.struct import Struct
+from dzAlerts.util.struct import Struct, Null
 from dzAlerts.util.queries import Q
-from dzAlerts.util.stats import Z_moment, stats2z_moment, Stats, z_moment2stats
+from dzAlerts.util.stats import Stats
 from dzAlerts.util.db import DB
 from dzAlerts.util import startup
 
 
-SEVERITY = 0.6              #THERE ARE MANY FALSE POSITIVES
-MIN_CONFIDENCE = 0.99
-REASON = "alert_exception"     #name of the reason in alert_reason
-LOOK_BACK = timedelta(days=41)
-WINDOW_SIZE = 10
-TEMPLATE = """
-            test = {{test_name}}<br>
-            product = {{product}}<br>
-            repository = {{branch}}<br>
-            os = {{os}} ({{os_version}})<br>
-            revision = {{revision}}<br>
-            page = {{page_url}}<br>
-            <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
-            <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
-            <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
-            <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date}}&product={{product}}&repository={{branch}}&os={{os}}&os_version={{os_version}}&test={{test_name}}&graph_search={{revision}}\">Datazilla</a><br>
-            <a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
-            </div>
-            """
+SEVERITY = 0.6              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
+# MIN_CONFIDENCE = 0.9999
+REASON = "alert_exception"     # name of the reason in alert_reason
+# WINDOW_SIZE = 10
+
+DEBUG = True
 
 
-def alert_exception(db, debug):
+def alert_exception(settings, db):
     """
     find single points that deviate from the trend
     """
+
+    debug = nvl(settings.param.debug, DEBUG)
     db.debug = debug
 
+    # THE EVENTUAL GOAL IS TO PARAMETRIZE THE SQL, WHICH REALLY IS
+    # SIMPLE EDGE SETS
+    query = struct.wrap({
+        "from": "test_data_all_dimensions",
+        "select": [
+            {"value": "id", "name": "tdad_id"},
+            "test_run_id",
+            "revision",
+            {"value": "n_replicates", "name": "count"},
+            "mean",
+            "std"
+        ],
+        "edges": [
+            "test_name",
+            "product",
+            "branch",
+            "branch_version",
+            "operating_system_name",
+            "operating_system_version",
+            "processor",
+            "page_url"
+        ],
+        "sort": {"name": "push_date", "value": "push_date"}
+    })
 
-    #LOAD CONFIG
+    #FIND NEW POINTS IN CUBE TO TEST
+    if debug:
+        Log.note("Find tests that need summary statistics")
 
-    #CALCULATE HOW FAR BACK TO LOOK
+    #SPLIT INTO TWO BECAUSE MYSQL GOES PATHOLOGICALLY SLOW ON SIMPLE QUERY
+    #   SELECT
+    # 	    `t`.`test_name`, `t`.`product`, `t`.`branch`, `t`.`branch_version`, `t`.`operating_system_name`, `t`.`operating_system_version`, `t`.`processor`, `t`.`page_url`,
+    # 	    min(push_date) min_push_date
+    # 	FROM
+    # 	    `ekyle_objectstore_1`.objectstore o
+    # 	JOIN
+    # 	    `ekyle_perftest_1`.test_data_all_dimensions t
+    # 	ON
+    # 	    t.test_run_id = o.test_run_id
+    # 	WHERE
+    # 	    NOT (`o`.`processed_flag`='summary_complete')
+    # 	LIMIT
+    # 	    1000
+    records_to_process = set(Q.select(db.query("""
+            SELECT
+                o.test_run_id
+            FROM
+                {{objectstore}}.objectstore o
+            WHERE
+                {{where}}
+            LIMIT
+                {{sample_limit}}
+        """, {
+            "objectstore": db.quote_column(settings.objectstore.schema),
+            "sample_limit": SQL(settings.param.max_test_results_per_run),
+            "where": db.esfilter2sqlwhere({"terms": {"o.processed_flag": ['complete', 'summary_ready', 'summary_loading']}})
+        }), "test_run_id"))
+
+
+    new_test_points = db.query("""
+        SELECT
+            {{edges}},
+            min(push_date) min_push_date
+        FROM
+            {{perftest}}.test_data_all_dimensions t
+        WHERE
+            {{where}}
+        GROUP BY
+            {{edges}}
+    """, {
+        "perftest": db.quote_column(settings.perftest.schema),
+        "edges": db.quote_column(query.edges, table="t"),
+        "where": db.esfilter2sqlwhere({"terms": {"t.test_run_id": records_to_process}})
+    })
+
     #BRING IN ALL NEEDED DATA
-    start_time = datetime.utcnow() - LOOK_BACK
-    if debug: Log.note("Pull all data")
-
-    test_results = db.query("""
-        SELECT
-            test_name,
-            product,
-            branch,
-            branch_version,
-            operating_system_name os,
-            operating_system_version os_version,
-            processor,
-            page_id,
-            page_url,
-
-            push_date push_date,
-
-            id tdad_id,
-            test_run_id,
-            revision,
-            n_replicates `count`,
-            mean,
-            std
-        FROM
-            test_data_all_dimensions t
-        WHERE
-            test_name="tp5o" AND
-            push_date>unix_timestamp({{begin_time}}) AND
-            n_replicates IS NOT NULL
-        ORDER BY   #THE ONLY IMPORTANT ORDERING IS THE push_date, THE REST JUST CLUSTER THE RESULTS
-            test_name,
-            product,
-            branch,
-            branch_version,
-            operating_system_name,
-            operating_system_version,
-            processor,
-            page_url,
-
-            push_date
-        """, {
-        "begin_time": start_time
-    }
-    )
-
-    alerts = []   #PUT ALL THE EXCEPTION ITEMS HERE
-
-    Log.note("{{num}} test results found", {"num": len(test_results)})
-    if debug: Log.note("Find exceptions")
-
-    for keys, values in Q.groupby(test_results, [
-        "test_name",
-        "product",
-        "branch",
-        "branch_version",
-        "operating_system_name",
-        "operating_system_version",
-        "processor",
-        "page_url"
-    ]):
-        total = Z_moment()                #total ROLLING STATS ACCUMULATION
-        if len(values) <= 1: continue     #CAN DO NOTHING WITH THIS ONE SAMPLE
-        num_new = 0
-
-        with Timer("stats on revisions"):
-            for count, v in enumerate(values):
-                s = Stats(
-                    count=1, #THE INTER-TEST VARIANCE IS SIGNIFICANT AND CAN
-                    #NOT BE EXPLAINED.  WE SIMPLY CONSIDER TEST SERIES
-                    #A SINGLE SAMPLE
-                    mean=v.mean,
-                    biased=True
-                )
-                if count > 1: #NEED AT LEAST 2 SAMPLES TO GET A VARIANCE
-                    #SEE HOW MUCH THE CURRENT STATS DEVIATES FROM total
-                    t = z_moment2stats(total, unbiased=False)
-                    confidence, diff = single_ttest(s.mean, t, min_variance=1.0 / 12.0) #ASSUME UNIFORM DISTRIBUTION IF VARIANCE IS TOO SMALL
-                    if MIN_CONFIDENCE < confidence and diff > 0:
-                        num_new += 1
-                        v.stddev = diff
-                        v.confidence = confidence
-                        v.push_date_min = values[max(0, count - WINDOW_SIZE)].push_date #FOR VISUALIZATION
-
-                        alerts.append(Struct(
-                            status="new",
-                            create_time=datetime.utcnow(),
-                            tdad_id=v.tdad_id,
-                            reason=REASON,
-                            details=CNV.object2JSON(v),
-                            severity=SEVERITY,
-                            confidence=0.5    #*v.confidence #DO NOT ALLOW CONFIDENCE GO BEYOND severity
-                        ))
-                    #accumulate v
-                m = stats2z_moment(s)
-                v.m = m
-                total = total + m
-                if count >= WINDOW_SIZE:
-                    total = total - values[count - WINDOW_SIZE].m  #WINDOW LIMITED TO 5 SAMPLES
-
-            if debug: Log.note(
-                "Testing {{num_tests}} samples, {{num_alerts}} alerts, on group  {{key}}",
-                {"key": keys, "num_tests": len(values), "num_alerts": num_new}
-            )
-
-    if debug: Log.note("Get Current Alerts")
-
-    #CHECK THE CURRENT ALERTS
-    current_alerts = db.query("""
-        SELECT
-            a.id,
-            a.tdad_id,
-            a.status,
-            a.last_updated,
-            a.severity,
-            a.confidence,
-            a.details,
-            a.solution
-        FROM
-            alerts a
-        LEFT JOIN
-            test_data_all_dimensions t on t.id=a.tdad_id
-        WHERE
-            coalesce(t.push_date, t.date_received)>unix_timestamp({{begin_time}}) AND
-            reason={{type}}
-        """, {
-        "begin_time": start_time,
-        "list": Q.select(alerts, "tdad_id"),
-        "type": REASON
-    }
-    )
-
-    lookup_alert = Q.unique_index(alerts, "tdad_id")
-    lookup_current = Q.unique_index(current_alerts, "tdad_id")
-
-    if debug: Log.note("Update alerts")
-
-    for a in alerts:
-        #CHECK IF ALREADY AN ALERT
-        if a.tdad_id in lookup_current:
-            if len(nvl(a.solution, "").strip()) != 0: continue  # DO NOT TOUCH SOLVED ALERTS
-
-            c = lookup_current[a.tdad_id]
-            if significant_difference(a.severity, c.severity) or \
-                    significant_difference(a.confidence, c.confidence) or \
-                            a.reason != c.reason \
-                :
-                a.last_updated = datetime.utcnow()
-                db.update("alerts", {"id": c.id}, a)
-        else:
-            a.id = SQL("util_newid()")
-            a.last_updated = datetime.utcnow()
-            db.insert("alerts", a)
-
-    #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
-    for c in current_alerts:
-        if c.tdad_id not in lookup_alert and c.status != "obsolete":
-            c.status = "obsolete"
-            c.last_updated = datetime.utcnow()
-            db.update("alerts", {"id": c.id}, c)
-
-    db.execute(
-        "UPDATE alert_reasons SET last_run={{run_time}} WHERE code={{reason}}", {
-            "run_time": datetime.utcnow(),
-            "reason": REASON
+    if debug:
+        Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
+            "num": len(new_test_points),
+            "groups": new_test_points
         })
 
-    if debug: Log.note("Reviewing h0")
+    all_min_date = Null
+    all_touched = set()
+    re_alert = []
+    alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
+    for g, points in Q.groupby(new_test_points, query.edges):
+        try:
+            min_date = Math.min(Q.select(points, "min_push_date"))
+            all_min_date = Math.min([all_min_date, min_date])
 
-    update_h0_rejected(db, start_time)
+            # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
+            first_in_window = db.query("""
+                SELECT
+                    min(push_date) min_date
+                FROM (
+                    SELECT
+                        push_date
+                    FROM
+                        {{from}} t
+                    WHERE
+                        {{where}}
+                    ORDER BY
+                        push_date DESC
+                    LIMIT
+                        {{window_size}}
+                ) t
+            """, {
+                "from": db.quote_column(query["from"]),
+                "edges": db.quote_column(query.edges),
+                "where": db.esfilter2sqlwhere({"and": [
+                    {"term": g},
+                    {"exists": "n_replicates"},
+                    {"range": {"push_date": {"lt": min_date}}}
+                ]}),
+                "window_size": settings.param.window_size + 1
+            })[0]
 
+            all_min_date = Math.min([all_min_date, first_in_window.min_date])
 
-def welchs_ttest(stats1, stats2):
-    """
-    SNAGGED FROM https://github.com/mozilla/datazilla-metrics/blob/master/dzmetrics/ttest.py#L56
-    Execute one-sided Welch's t-test given pre-calculated means and stddevs.
+            #LOAD TEST RESULTS FROM DATABASE
+            test_results = db.query("""
+                SELECT
+                    revision,
+                    {{edges}},
+                    {{sort}},
+                    {{select}}
+                FROM
+                    {{from}} t
+                WHERE
+                    {{where}}
+                """, {
+                "from": db.quote_column(query["from"]),
+                "sort": db.quote_column(query.sort),
+                "select": db.quote_column(query.select),
+                "edges": db.quote_column(query.edges),
+                "where": db.esfilter2sqlwhere({"and": [
+                    {"term": g},
+                    {"exists": "n_replicates"},
+                    {"range": {"push_date": {"gte": Math.min([min_date, first_in_window.min_date])}}}
+                ]})
+            })
 
-    Accepts summary data (N, stddev, and mean) for two datasets and performs
-    one-sided Welch's t-test, returning p-value.
+            Log.note("{{num}} test results found for\n{{group}}", {
+                "num": len(test_results),
+                "group": g
+            })
 
-    """
+            if debug:
+                Log.note("Find exceptions")
 
-    n1 = stats1.count
-    m1 = stats1.mean
-    v1 = stats1.variance
+            #APPLY WINDOW FUNCTIONS
+            stats = Q.run({
+                "from": test_results,
+                "window": [
+                    {
+                        "name": "push_date_min",
+                        "value": lambda (r): r.push_date,
+                        "edges": query.edges,
+                        "sort": "push_date",
+                        "aggregate": windows.Min,
+                        "range": {"min": -settings.param.window_size, "max": 0}
+                    }, {
+                        "name": "past_stats",
+                        "value": lambda (r): Stats(count=1, mean=r.mean),
+                        "edges": query.edges,
+                        "sort": "push_date",
+                        "aggregate": windows.Stats,
+                        "range": {"min": -settings.param.window_size, "max": 0}
+                    }, {
+                        "name": "result",
+                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0)
+                    }, {
+                        "name": "pass",
+                        "value": lambda (r): True if settings.param.min_confidence < r.result.confidence else False
+                    },
 
-    n2 = stats2.count
-    m2 = stats2.mean
-    v2 = stats2.variance
+                ]
+            })
 
-    vpooled = v1 / n1 + v2 / n2
-    tt = abs(m1 - m2) / sqrt(vpooled)
+            all_touched.update(Q.select(test_results, "test_run_id"))
 
-    df_numerator = vpooled**2
-    df_denominator = ((v1 / n1)**2) / (n1 - 1) + ((v2 / n2)**2) / (n2 - 1)
-    df = df_numerator / df_denominator
+            # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
+            re_alert.extend(Q.run({
+                "from": stats,
+                "select": "tdad_id",
+                "where": {"term": {"past_stats.count": settings.param.window_size}}
+            }))
 
-    t_distribution = scipy.stats.distributions.t(df)
-    return t_distribution.cdf(tt), tt
+            #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
+            new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
+            for v in new_exceptions:
+                v.diff = v.result.diff
+                v.confidence = v.result.confidence
+                v.result = None
 
-def single_ttest(point, stats, min_variance=0):
-    n1 = stats.count
-    m1 = stats.mean
-    v1 = stats.variance
+                alert = Struct(
+                    status="new",
+                    create_time=datetime.utcnow(),
+                    tdad_id=v.tdad_id,
+                    reason=REASON,
+                    details=v,
+                    severity=SEVERITY,
+                    confidence=v.confidence
+                )
+                alerts.append(alert)
 
-    if n1 < 2:
-        return {"confidence": 0, "diff": 0}
+            if debug:
+                Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
 
-    try:
-        tt = (point - m1) / max(min_variance, sqrt(v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
-        t_distribution = scipy.stats.distributions.t(n1 - 1)
-        confidence = t_distribution.cdf(tt)
-        return {"confidence": confidence, "diff": tt}
-    except Exception, e:
-        Log.error("error with t-test", e)
+        except Exception, e:
+            Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
+
+    if debug:
+        Log.note("Get Current Alerts")
+
+    #CHECK THE CURRENT ALERTS
+    if len(re_alert) == 0:
+        current_alerts = []
+    else:
+        current_alerts = db.query("""
+            SELECT
+                a.id,
+                a.tdad_id,
+                a.status,
+                a.last_updated,
+                a.severity,
+                a.confidence,
+                a.details,
+                a.solution
+            FROM
+                alerts a
+            WHERE
+                {{where}}
+            """, {
+            "where": db.esfilter2sqlwhere(
+                {"term": {
+                    "a.tdad_id": re_alert,
+                    "reason": REASON
+                }}
+            )
+        })
+
+    found_alerts = Q.unique_index(alerts, "tdad_id")
+    current_alerts = Q.unique_index(current_alerts, "tdad_id")
+
+    new_alerts = found_alerts - current_alerts
+    changed_alerts = current_alerts & found_alerts
+    obsolete_alerts = current_alerts - found_alerts
+
+    if debug:
+        Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
+            "num_new": len(new_alerts),
+            "num_change": len(changed_alerts),
+            "num_delete": len(obsolete_alerts)
+        })
+
+    for a in new_alerts:
+        a.id = SQL("util_newid()")
+        a.last_updated = datetime.utcnow()
+        db.insert("alerts", a)
+
+    for curr in changed_alerts:
+        if len(nvl(curr.solution, "").strip()) != 0:
+            continue  # DO NOT TOUCH SOLVED ALERTS
+
+        a = found_alerts[curr.tdad_id]
+
+        if significant_difference(curr.severity, a.severity) or \
+                significant_difference(curr.confidence, a.confidence) or \
+                        curr.reason != a.reason \
+            :
+            curr.last_updated = datetime.utcnow()
+            db.update("alerts", {"id": a.id}, a)
+
+    #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
+    for a in obsolete_alerts:
+        if a.status != "obsolete":
+            a.status = "obsolete"
+            a.last_updated = datetime.utcnow()
+            db.update("alerts", {"id": a.id}, a)
+
+    db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
+        "now": datetime.utcnow(),
+        "where": db.esfilter2sqlwhere({"term": {"code": REASON}})
+    })
+
+    if debug:
+        Log.note("Reviewing h0")
+
+    update_h0_rejected(db, all_min_date)
+
+    if debug:
+        Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched | records_to_process)})
+    db.execute("""
+        UPDATE {{objectstore}}.objectstore
+        SET processed_flag='summary_complete'
+        WHERE {{where}}
+    """, {
+        "objectstore": db.quote_column(settings.objectstore.schema),
+        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": all_touched | records_to_process}})
+    })
+    db.flush()
 
 
 def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.database.schema})
-
-        with DB(settings.perftest) as db:
-            db.debug = settings.param.debug
-            db.update("alert_reasons", {"code": REASON}, {"email_template": TEMPLATE})
-
-            alert_exception(
-                db=db,
-                debug=settings.param.debug
-            )
+        Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
+        while True:
+            with DB(settings.perftest) as db:
+                #TEMP FIX UNTIL IMPORT DOES IT FOR US
+                db.execute("""update test_data_all_dimensions set push_date=date_received where push_date is null""")
+                db.flush()
+                alert_exception(
+                    settings,
+                    db
+                )
     except Exception, e:
         Log.warning("Failure to find exceptions", cause=e)
     finally:

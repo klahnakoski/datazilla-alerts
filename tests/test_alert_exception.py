@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, date
 from math import sqrt
 import pytest
 import dzAlerts
-from dzAlerts.daemons.alert_exception2 import alert_exception, REASON
+from dzAlerts.daemons.alert_exception import alert_exception, REASON
 from dzAlerts.util import struct
 
 from dzAlerts.util.cnv import CNV
@@ -21,7 +21,7 @@ from dzAlerts.util.stats import closeEnough
 from util.testing import make_test_database
 
 
-EXPECTED_SEVERITY = dzAlerts.daemons.alert_exception2.SEVERITY
+EXPECTED_SEVERITY = dzAlerts.daemons.alert_exception.SEVERITY
 
 
 class test_alert_exception():
