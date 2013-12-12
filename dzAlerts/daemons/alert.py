@@ -141,22 +141,30 @@ def send_alerts(settings, db):
         Log.error("Could not send alerts", e)
 
 
-# REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
-# COLUMN REFLECTS THE ALERT STATI
+
 def update_h0_rejected(db, start_date):
+    """
+    REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
+    COLUMN REFLECTS THE ALERT STATI
+    TODO: GETTING EXPENSIVE TO RUN (at 200K alerts)
+    """
     db.execute("""
-        UPDATE
-            test_data_all_dimensions t
-        JOIN (
-            SELECT
-                tdad_id,
-                max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
-            FROM
-                alerts
-            GROUP BY
-                tdad_id
-            ) a ON a.tdad_id = t.id
+        DROP TABLE IF EXISTS temp_obsolete;
+        CREATE TABLE temp_obsolete AS
+        SELECT
+            tdad_id,
+            max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
+        FROM
+            alerts
+        GROUP BY
+            tdad_id
+        ;
+        CREATE INDEX temp_obsolete_id ON temp_obsolete(tdad_id);
+
+        UPDATE test_data_all_dimensions t
+        JOIN temp_obsolete a ON a.tdad_id = t.id
         SET t.h0_rejected = a.h0
+        ;
     """)
 
 

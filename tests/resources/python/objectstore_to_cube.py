@@ -19,13 +19,13 @@ BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
 TEST_RESULTS_PER_RUN = 100000
 
 
-def objectstore_to_cube(db, r):
+def objectstore_to_cube(r):
     try:
         json = CNV.JSON2object(r.json_blob)
 
         if len(json.results.keys()) == 0:
             #DUMMY RECORD SO FUTURE QUERIES KNOW THIS objectstore HAS BEEN PROCESSED
-            db.insert("test_data_all_dimensions", {
+            return [{
                 "test_run_id": r.test_run_id,
                 "product_id": 0,
                 "operating_system_id": 0,
@@ -50,12 +50,12 @@ def objectstore_to_cube(db, r):
                 "mean": None,
                 "std": None,
                 "n_replicates": None
-            })
-            return
+            }]
 
+        output = []
         for p, m in json.results.items():
             S = z_moment2stats(Z_moment.new_instance(m[5:]))
-            db.insert("test_data_all_dimensions", {
+            output.append({
                 "test_run_id": r.test_run_id,
                 "product_id": 0,
                 "operating_system_id": 0,
@@ -81,6 +81,7 @@ def objectstore_to_cube(db, r):
                 "std": S.std,
                 "n_replicates": S.count
             })
+        return output
     except Exception, e:
         Log.error("Conversion failed", e)
 
@@ -111,8 +112,9 @@ def get_missing_ids(db, settings):
 def main(settings):
     with DB(settings.destination.objectstore, settings.destination.perftest.schema) as db:
         missing_ids = get_missing_ids(db, settings)
-        for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
-            with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
+
+        with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
+            for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
                 values = set(values)
 
                 with Timer("Process {{num}} objectstore", {"num": len(values)}) as t:
@@ -134,8 +136,11 @@ def main(settings):
                         ]})
                     })
 
+                    tdads = []
                     for b in blobs:
-                        objectstore_to_cube(write_db, b)
+                        tdads.extend(objectstore_to_cube(b))
+                    write_db.insert_list("test_data_all_dimensions", tdads)
+                    write_db.flush()
 
                     #MARK WE ARE DONE HERE
                     db.execute("""
@@ -147,6 +152,7 @@ def main(settings):
                         "values": values,
                         "where": db.esfilter2sqlwhere({"terms": {"test_run_id": values}})
                     })
+                    db.flush()
 
 
 try:
