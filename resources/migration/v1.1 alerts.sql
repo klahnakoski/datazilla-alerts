@@ -129,14 +129,14 @@ m11: BEGIN
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_exception',
-		concat('{{page_url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
+		concat('{{page_url}} has performed worse then usual by {{diff}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}',
     NULL
 	);
 	INSERT INTO alert_reasons VALUES (
 		'alert_revision',
-		concat('{{page_url}} has performed worse then usual by {{stddev}} standard deviations ({{confidence}})'),
+		concat('{{page_url}} has performed worse then usual by {{diff}} standard deviations ({{confidence}})'),
 		date_add(now(), INTERVAL -30 DAY),
 		'{"minOffset":0.999}',
     NULL
@@ -187,6 +187,7 @@ m11: BEGIN
 		tdad_id			INTEGER NOT NULL, 	##REFERENCE THE SMALLEST TESTING OBJECT (AT THIS TIME)
 		reason			VARCHAR(20) NOT NULL,  ##REFERNCE TO STANDARD SET OF REASONS
 		details			VARCHAR(2000) NOT NULL, ##JSON OF SPECIFIC DETAILS
+    revision    VARCHAR(20),            ##FOR ALERTS THAT APPLY TO A REVISION
 		severity		DOUBLE NOT NULL,		##ABSTRACT SEVERITY 1.0==HIGH, 0.0==LOW
 		confidence		DOUBLE NOT NULL,		##CONFIDENCE INTERVAL 1.0==100% CONFIDENCE
 		solution		VARCHAR(40), ##INTENT FOR HUMANS TO MARKUP THIS ALERT SO MACHINE KNOWS IF REAL, OR START ESCALATING
