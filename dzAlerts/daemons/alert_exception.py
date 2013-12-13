@@ -8,10 +8,10 @@
 
 
 from datetime import datetime
+from math import sqrt
 
 import scipy
 from scipy import stats
-from dzAlerts.daemons.alert_exception import single_ttest
 from dzAlerts.util import struct
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
@@ -349,6 +349,24 @@ def alert_exception(settings, db):
         "where": db.esfilter2sqlwhere({"terms": {"test_run_id": all_touched | records_to_process}})
     })
     db.flush()
+
+
+def single_ttest(point, stats, min_variance=0):
+    n1 = stats.count
+    m1 = stats.mean
+    v1 = stats.variance
+
+    if n1 < 2:
+        return {"confidence": 0, "diff": 0}
+
+    try:
+        tt = (point - m1) / max(min_variance, sqrt(v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
+        t_distribution = scipy.stats.distributions.t(n1 - 1)
+        confidence = t_distribution.cdf(tt)
+        return {"confidence": confidence, "diff": tt}
+    except Exception, e:
+        Log.error("error with t-test", e)
+
 
 
 def main():
