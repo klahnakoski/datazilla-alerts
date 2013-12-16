@@ -214,6 +214,10 @@ class CNV:
         return unicode(value.decode('utf8'))
 
     @staticmethod
+    def unicode2utf8(value):
+        return value.encode('utf8')
+
+    @staticmethod
     def latin12unicode(value):
         return unicode(value.decode('iso-8859-1'))
 

@@ -22,7 +22,7 @@
 		`page_url` varchar(255) COLLATE utf8_bin NOT NULL,
 		`mean` double NOT NULL,
 		`std` double NOT NULL,
-		`h0_rejected` tinyint(4) DEFAULT NULL,
+		`h0_rejected` tinyint(4) NOT NULL DEFAULT 0,
 		`p` double DEFAULT NULL,
 		`n_replicates` int(11) DEFAULT NULL,
 		`fdr` tinyint(4) DEFAULT NULL,

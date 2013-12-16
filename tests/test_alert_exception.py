@@ -85,8 +85,7 @@ class test_alert_exception():
                 a.id={{alert_id}}
             """, {
             "alert_id": alert[0].id
-        }
-        )
+        })
 
         assert len(h0_rejected) == 1
         assert h0_rejected[0].h0_rejected == 1
@@ -154,7 +153,7 @@ class test_alert_exception():
                 "page_url": self.url,
                 "mean": float(t.mean),
                 "std": sqrt(t.variance),
-                "h0_rejected": None,
+                "h0_rejected": 0,
                 "p": None,
                 "n_replicates": t.count,
                 "fdr": 0,

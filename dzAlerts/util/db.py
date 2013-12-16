@@ -49,8 +49,8 @@ class DB(object):
         if isinstance(settings, DB):
             settings = settings.settings
 
-        self.settings = settings.copy()
-        self.settings.schema = nvl(schema, self.settings.schema)
+        self.settings=settings.copy()
+        self.settings.schema=nvl(schema, self.settings.schema, self.settings.database)
 
         preamble = nvl(preamble, self.settings.preamble)
         if preamble == None:

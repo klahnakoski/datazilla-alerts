@@ -142,31 +142,31 @@ def send_alerts(settings, db):
 
 
 
-def update_h0_rejected(db, start_date):
+def update_h0_rejected(db, start_date, possible_alerts):
     """
     REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
     COLUMN REFLECTS THE ALERT STATI
     TODO: GETTING EXPENSIVE TO RUN (at 200K alerts)
     """
-    db.execute("DROP TABLE IF EXISTS temp_obsolete")
+
     db.execute("""
-        CREATE TABLE temp_obsolete AS
-        SELECT
-            tdad_id,
-            max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
-        FROM
-            alerts
-        GROUP BY
-            tdad_id
-    """)
-    db.execute("""
-        CREATE INDEX temp_obsolete_id ON temp_obsolete(tdad_id)
-    """)
-    db.execute("""
-        UPDATE test_data_all_dimensions t
-        JOIN temp_obsolete a ON a.tdad_id = t.id
+        UPDATE
+            test_data_all_dimensions t
+        JOIN (
+            SELECT
+                tdad_id,
+                max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
+            FROM
+                alerts a
+            WHERE
+                {{where}}
+            GROUP BY
+                tdad_id
+            ) a ON a.tdad_id = t.id
         SET t.h0_rejected = a.h0
-    """)
+    """, {
+        "where": db.esfilter2sqlwhere({"terms": {"a.tdad_id": possible_alerts}})
+    })
 
 
 #ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN

@@ -1,4 +1,3 @@
-
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -19,19 +18,19 @@ from dzAlerts.util.struct import nvl, Null
 from dzAlerts.daemons.alert import significant_difference
 
 
-FALSE_POSITIVE_RATE=.95
-REASON="alert_revision"     #name of the reason in alert_reason
-LOOK_BACK=timedelta(days=41)
-SEVERITY=0.9
-TEMPLATE=[
+FALSE_POSITIVE_RATE = .95
+REASON = "alert_revision"     #name of the reason in alert_reason
+LOOK_BACK = timedelta(days=41)
+SEVERITY = 0.9
+TEMPLATE = [
     """
     <div><h2>{{score}} - {{revision}}</h2>
     {{num_exceptions}} exceptional events<br>
     <a href="https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}">Datazilla</a><br>
     <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}">Bugzilla - {{bug_description}}</a><br>
-    """,{
-        "from":"pages",
-        "template":"""
+    """, {
+        "from": "pages",
+        "template": """
             <hr>
             On page {{.page_url}}<br>
             <a href="https://tbpl.mozilla.org/?tree={{.branch}}&rev={{.revision}}">TBPL</a><br>
@@ -40,7 +39,7 @@ TEMPLATE=[
             <a href="http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{.page_url}}&sampleMax={{.push_date}}000&sampleMin={{.push_date_min}}000&branch={{.branch}}">Kyle's ES</a><br>
             Raw data: {{.raw_data}}
             """,
-        "between":"<hr>"
+        "between": "<hr>"
     }
 ]
 
@@ -50,11 +49,11 @@ TEMPLATE=[
 
 def alert_revision(settings):
     assert settings.db != None
-    settings.db.debug=settings.debug
-    db=DB(settings.db)
+    settings.db.debug = settings.debug
+    db = DB(settings.db)
 
     #ALL EXISTING ALERTS
-    single_exceptions=db.query("""
+    single_exceptions = db.query("""
         SELECT
             id,
             tdad_id,
@@ -77,14 +76,14 @@ def alert_revision(settings):
             t.push_date>{{min_time}} and
             h0_rejected=1
     """, {
-        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK),
-        "reason":alert_exception.REASON
+        "min_time": CNV.datetime2unix(datetime.utcnow() - LOOK_BACK),
+        "reason": alert_exception.REASON
     })
-    exception_lookup=Q.index(single_exceptions, ["test_name", "revision"])
+    exception_lookup = Q.index(single_exceptions, ["test_name", "revision"])
 
 
     #EXISTING REVISION-LEVEL ALERTS
-    existing=db.query("""
+    existing = db.query("""
         SELECT
             id,
             tdad_id,
@@ -97,16 +96,16 @@ def alert_revision(settings):
             reason={{reason}} AND
             t.push_date>{{min_time}}
     """, {
-        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK),
-        "reason":REASON
+        "min_time": CNV.datetime2unix(datetime.utcnow() - LOOK_BACK),
+        "reason": REASON
     })
     for e in existing:
-        e.details=CNV.JSON2object(e.details)
+        e.details = CNV.JSON2object(e.details)
 
-    existing=Q.unique_index(existing, ["details.test_name", "details.revision"])
+    existing = Q.unique_index(existing, ["details.test_name", "details.revision"])
 
     #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-    revisions=db.query("""
+    revisions = db.query("""
         SELECT
             revision,
             test_name,
@@ -120,51 +119,51 @@ def alert_revision(settings):
         WHERE
             revision IN {{revisions}}
     """, {
-        "revisions":set(Q.select(single_exceptions, "revision")),
-        "min_time":CNV.datetime2unix(datetime.utcnow()-LOOK_BACK)
+        "revisions": set(Q.select(single_exceptions, "revision")),
+        "min_time": CNV.datetime2unix(datetime.utcnow() - LOOK_BACK)
     })
 
 
     #SUMMARIZE
-    new_alerts=[{
-        "status":"new",
-        "create_time":datetime.utcnow(),
-        "reason":REASON,
-        "details":{
-            "revision":r.revision,
-            "test_name":r.test_name,
-            "num_exceptions":r.num_exceptions,
-            "num_tests":r.num_tdad,
-            "branch":None,
-            "bug_id":None,
-            "pages":Q.sort(exception_lookup[r.revision], {"value":"severity", "sort":-1})
-        },
-        "severity":SEVERITY,
-        "confidence":binom(r.num_tdad, FALSE_POSITIVE_RATE).sf(r.num_exceptions)  #sf=(1-cdf)
-    } for r in revisions]
+    new_alerts = [{
+                      "status": "new",
+                      "create_time": datetime.utcnow(),
+                      "reason": REASON,
+                      "details": {
+                          "revision": r.revision,
+                          "test_name": r.test_name,
+                          "num_exceptions": r.num_exceptions,
+                          "num_tests": r.num_tdad,
+                          "branch": None,
+                          "bug_id": None,
+                          "pages": Q.sort(exception_lookup[r.revision], {"value": "severity", "sort": -1})
+                      },
+                      "severity": SEVERITY,
+                      "confidence": binom(r.num_tdad, FALSE_POSITIVE_RATE).sf(r.num_exceptions)  #sf=(1-cdf)
+                  } for r in revisions]
 
-    new_alerts=Q.unique_index(new_alerts, ["details.test_name", "details.revision"])
+    new_alerts = Q.unique_index(new_alerts, ["details.test_name", "details.revision"])
 
 
     #NEW ALERTS, JUST INSERT
     for r in new_alerts - existing:
-        r.id=SQL("util_newid()")
-        r.last_updated=datetime.utcnow()
+        r.id = SQL("util_newid()")
+        r.last_updated = datetime.utcnow()
         db.insert("alerts", r)
 
     #CURRENT ALERTS, UPDATE IF DIFFERENT
     for r in new_alerts & existing:
-        if len(nvl(r.solution, "").strip())!=0: continue  # DO NOT TOUCH SOLVED ALERTS
+        if len(nvl(r.solution, "").strip()) != 0: continue  # DO NOT TOUCH SOLVED ALERTS
 
-        e=existing[r.id]
+        e = existing[r.id]
         if significant_difference(r.severity, e.severity) or \
-            significant_difference (r.confidence, e.confidence) \
-        :
-            r.last_updated=datetime.utcnow()
-            db.update("alerts", {"id":r.id}, r)
+                significant_difference(r.confidence, e.confidence) \
+            :
+            r.last_updated = datetime.utcnow()
+            db.update("alerts", {"id": r.id}, r)
 
     #OLD ALERTS, OBSOLETE
-    for e in existing-new_alerts:
-        e.status='obsolete'
-        e.last_updated=datetime.utcnow()
-        db.update("alerts", {"id":e.id}, e)
+    for e in existing - new_alerts:
+        e.status = 'obsolete'
+        e.last_updated = datetime.utcnow()
+        db.update("alerts", {"id": e.id}, e)

@@ -306,7 +306,7 @@ def alert_exception(settings, db):
     for a in new_alerts:
         a.id = SQL("util_newid()")
         a.last_updated = datetime.utcnow()
-        db.insert("alerts", a)
+    db.insert_list("alerts", new_alerts)
 
     for curr in changed_alerts:
         if len(nvl(curr.solution, "").strip()) != 0:
@@ -316,17 +316,15 @@ def alert_exception(settings, db):
 
         if significant_difference(curr.severity, a.severity) or \
                 significant_difference(curr.confidence, a.confidence) or \
-                        curr.reason != a.reason \
+                curr.reason != a.reason \
             :
             curr.last_updated = datetime.utcnow()
             db.update("alerts", {"id": a.id}, a)
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
-    for a in obsolete_alerts:
-        if a.status != "obsolete":
-            a.status = "obsolete"
-            a.last_updated = datetime.utcnow()
-            db.update("alerts", {"id": a.id}, a)
+    db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
+        "where": db.esfilter2sqlwhere({"terms": {"id": Q.select(obsolete_alerts, "id")}})
+    })
 
     db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
         "now": datetime.utcnow(),
@@ -336,7 +334,7 @@ def alert_exception(settings, db):
     if debug:
         Log.note("Reviewing h0")
 
-    update_h0_rejected(db, all_min_date)
+    update_h0_rejected(db, all_min_date, set(Q.select(current_alerts, "tdad_id")) | set(Q.select(found_alerts, "tdad_id")))
 
     if debug:
         Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched | records_to_process)})

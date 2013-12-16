@@ -9,6 +9,7 @@
 
 from datetime import timedelta, datetime
 from dzAlerts.daemons.alert import update_h0_rejected
+from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL
@@ -55,10 +56,10 @@ def page_threshold_limit(db, debug):
             WHERE
                 h.threshold<t.mean AND
                 t.push_date>{{min_date}} AND
-                (m.id IS NULL OR m.status='obsolete')
-            """,
-                         {"type": REASON, "min_date": min_date}
-        )
+                (m.id IS NULL OR m.status='obsol11ete')
+        """, {
+            "type": REASON, "min_date": min_date
+        })
 
         #FOR EACH PAGE THAT BREAKS LIMITS
         for page in pages:
@@ -88,7 +89,8 @@ def page_threshold_limit(db, debug):
         #OBSOLETE THE ALERTS THAT SHOULD NO LONGER GET SENT
         obsolete = db.query("""
             SELECT
-                m.id
+                m.id,
+                m.tdad_id
             FROM
                 alerts m
             JOIN
@@ -99,23 +101,20 @@ def page_threshold_limit(db, debug):
                 m.reason={{reason}} AND
                 h.threshold>=t.mean AND
                 t.push_date>{{time}}
-            """,
-                            {
-                                "reason": REASON,
-                                "time": min_date
-                            }
-        )
-        obsolete = [o["id"] for o in obsolete]
+        """, {
+            "reason": REASON,
+            "time": min_date
+        })
 
-        if len(obsolete) > 0:
-            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": db.esfilter2sqlwhere({"terms": {"id": obsolete}})})
+        if obsolete:
+            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": db.esfilter2sqlwhere({"terms": {"id": Q.select(obsolete, "id")}})})
 
         db.execute(
             "UPDATE alert_reasons SET last_run={{now}} WHERE code={{reason}}",
             {"now": datetime.utcnow(), "reason": REASON}
         )
 
-        update_h0_rejected(db, min_date)
+        update_h0_rejected(db, min_date, set(Q.select(pages, "tdad_id")) | set(Q.select(obsolete, "tdad_id")))
 
     except Exception, e:
 

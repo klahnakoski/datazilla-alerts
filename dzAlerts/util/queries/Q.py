@@ -8,11 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 import collections
-import functools
 
 import sys
 import __builtin__
-from dzAlerts.util.cnv import CNV
+from ..maths import Math
+from ..cnv import CNV
 from ..logs import Log
 from ..struct import nvl, listwrap
 from .. import struct
@@ -692,7 +692,7 @@ def range(_min, _max=None, size=1):
         _max = _min
         _min = 0
 
-    output = ((x, min(x + size, _max)) for x in __builtin__.range(_min, _max, size))
+    output = ((x, min(x + size, Math.ceiling(_max))) for x in __builtin__.range(_min, _max, size))
     return output
 
 

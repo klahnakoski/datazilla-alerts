@@ -73,8 +73,8 @@ def objectstore_to_cube(r):
 
                 "build_type": r.build_type,
                 "machine_name": json.test_machine.name,
-                "pushlog_id": r.pushlog_id,
-                "push_date": r.push_date,
+                "pushlog_id": nvl(r.pushlog_id, 0),
+                "push_date": nvl(r.push_date, json.testrun.date),
                 "test_name": json.testrun.suite,
                 "page_url": p[:255],
                 "mean": median(m),

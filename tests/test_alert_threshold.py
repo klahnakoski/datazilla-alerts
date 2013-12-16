@@ -214,7 +214,7 @@ class test_alert_threshold:
                 "page_url": self.url,
                 "mean": float(t.mean),
                 "std": float(t["mean+std"]) - float(t.mean),
-                "h0_rejected": None,
+                "h0_rejected": 0,
                 "p": None,
                 "n_replicates": t.count,
                 "fdr": 0,
