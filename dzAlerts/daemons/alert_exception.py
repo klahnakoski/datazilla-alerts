@@ -98,11 +98,10 @@ def alert_exception(settings, db):
             LIMIT
                 {{sample_limit}}
         """, {
-            "objectstore": db.quote_column(settings.objectstore.schema),
-            "sample_limit": SQL(settings.param.max_test_results_per_run),
-            "where": db.esfilter2sqlwhere({"terms": {"o.processed_flag": ['complete', 'summary_ready', 'summary_loading']}})
-        }), "test_run_id"))
-
+        "objectstore": db.quote_column(settings.objectstore.schema),
+        "sample_limit": SQL(settings.param.max_test_results_per_run),
+        "where": db.esfilter2sqlwhere({"terms": {"o.processed_flag": ['complete', 'summary_ready', 'summary_loading']}})
+    }), "test_run_id"))
 
     new_test_points = db.query("""
         SELECT
@@ -129,7 +128,7 @@ def alert_exception(settings, db):
 
     all_min_date = Null
     all_touched = set()
-    re_alert = []
+    re_alert = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, points in Q.groupby(new_test_points, query.edges):
         try:
@@ -228,7 +227,7 @@ def alert_exception(settings, db):
             all_touched.update(Q.select(test_results, "test_run_id"))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.extend(Q.run({
+            re_alert.update(Q.run({
                 "from": stats,
                 "select": "tdad_id",
                 "where": {"term": {"past_stats.count": settings.param.window_size}}
@@ -280,13 +279,11 @@ def alert_exception(settings, db):
                 alerts a
             WHERE
                 {{where}}
-            """, {
-            "where": db.esfilter2sqlwhere(
-                {"term": {
-                    "a.tdad_id": re_alert,
-                    "reason": REASON
-                }}
-            )
+        """, {
+            "where": db.esfilter2sqlwhere({"and": [
+                {"terms": {"a.tdad_id": re_alert}},
+                {"term": {"reason": REASON}}
+            ]})
         })
 
     found_alerts = Q.unique_index(alerts, "tdad_id")
@@ -315,11 +312,10 @@ def alert_exception(settings, db):
         a = found_alerts[curr.tdad_id]
 
         if significant_difference(curr.severity, a.severity) or \
-                significant_difference(curr.confidence, a.confidence) or \
-                curr.reason != a.reason \
-            :
+            significant_difference(curr.confidence, a.confidence) or \
+            curr.reason != a.reason:
             curr.last_updated = datetime.utcnow()
-            db.update("alerts", {"id": a.id}, a)
+            db.update("alerts", {"id": curr.id}, a)
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
@@ -364,7 +360,6 @@ def single_ttest(point, stats, min_variance=0):
         return {"confidence": confidence, "diff": tt}
     except Exception, e:
         Log.error("error with t-test", e)
-
 
 
 def main():
