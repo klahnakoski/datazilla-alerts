@@ -14,7 +14,7 @@ create table changesets (
   file_adds       VARCHAR(300),
   file_dels       VARCHAR(300),
   parents         VARCHAR(300),
-  children        VARCHAR(300),
+  children        VARCHAR(1000),
   tags            VARCHAR(600),
   description     VARCHAR(16000)
 );

@@ -197,6 +197,8 @@ m11: BEGIN
 		FOREIGN KEY alert_reason (reason) REFERENCES alert_reasons(code)
 	);
 
+  create unique index alerts_reason_tdad_id on alerts(tdad_id, reason);
+
 	UPDATE `database` SET version='1.1';
 
 END;;

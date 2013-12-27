@@ -11,7 +11,7 @@
 
 from datetime import datetime
 import subprocess
-from pymysql import connect
+from pymysql import connect, InterfaceError
 from . import struct
 from .maths import Math
 from .strings import expand_template
@@ -49,8 +49,8 @@ class DB(object):
         if isinstance(settings, DB):
             settings = settings.settings
 
-        self.settings=settings.copy()
-        self.settings.schema=nvl(schema, self.settings.schema, self.settings.database)
+        self.settings = settings.copy()
+        self.settings.schema = nvl(schema, self.settings.schema, self.settings.database)
 
         preamble = nvl(preamble, self.settings.preamble)
         if preamble == None:
@@ -112,7 +112,8 @@ class DB(object):
         return Transaction(self)
 
     def begin(self):
-        if self.transaction_level == 0: self.cursor = self.db.cursor()
+        if self.transaction_level == 0:
+            self.cursor = self.db.cursor()
         self.transaction_level += 1
         self.execute("SET TIME_ZONE='+00:00'")
 
@@ -202,14 +203,17 @@ class DB(object):
             old_cursor = self.cursor
             if not old_cursor: #ALLOW NON-TRANSACTIONAL READS
                 self.cursor = self.db.cursor()
+                self.cursor.execute("SET TIME_ZONE='+00:00'")
+                self.cursor.close()
+                self.cursor = self.db.cursor()
 
-            if param: sql = expand_template(sql, self.quote_param(param))
+            if param:
+                sql = expand_template(sql, self.quote_param(param))
             sql = self.preamble + outdent(sql)
             if self.debug:
                 Log.note(u"Execute SQL:\n{{sql}}", {u"sql": indent(sql)})
 
             self.cursor.execute(sql)
-
             columns = [utf8_to_unicode(d[0]) for d in nvl(self.cursor.description, [])]
             fixed = [[utf8_to_unicode(c) for c in row] for row in self.cursor]
             result = CNV.table2list(columns, fixed)
@@ -220,7 +224,7 @@ class DB(object):
 
             return result
         except Exception, e:
-            if e.message.find("InterfaceError") >= 0:
+            if isinstance(e, InterfaceError) or e.message.find("InterfaceError") >= 0:
                 Log.error(u"Did you close the db connection?", e)
             Log.error(u"Problem executing SQL:\n" + indent(sql.strip()), e, offset=1)
 
@@ -236,7 +240,8 @@ class DB(object):
             if not old_cursor: #ALLOW NON-TRANSACTIONAL READS
                 self.cursor = self.db.cursor()
 
-            if param: sql = expand_template(sql, self.quote_param(param))
+            if param:
+                sql = expand_template(sql, self.quote_param(param))
             sql = self.preamble + outdent(sql)
             if self.debug:
                 Log.note(u"Execute SQL:\n{{sql}}", {u"sql": indent(sql)})
@@ -298,6 +303,8 @@ class DB(object):
             stderr=subprocess.STDOUT,
             bufsize=-1
         )
+        if isinstance(sql, unicode):
+            sql = sql.encode("utf-8")
         (output, _) = proc.communicate(sql)
 
         if proc.returncode:
@@ -493,7 +500,7 @@ class DB(object):
             return SQL(column_name.value + u" AS " + self.quote_column(column_name.name))
 
     def sort2sqlorderby(self, sort):
-        sort = Q.normalize_sort(sort)
+        sort = Q.normalize_sort_parameters(sort)
         return u",\n".join([self.quote_column(s.field) + (" DESC" if s.sort == -1 else " ASC") for s in sort])
 
     def esfilter2sqlwhere(self, esfilter):

@@ -32,7 +32,16 @@ from dzAlerts.util import startup
 SEVERITY = 0.6              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
 # MIN_CONFIDENCE = 0.9999
 REASON = "alert_exception"     # name of the reason in alert_reason
-# WINDOW_SIZE = 10
+
+TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
+On page {{page_url}}<br>
+<a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
+<a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
+<a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
+<a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date_max}}&product={{product}}&repository={{branch}}&os={{operating_system_name}}&os_version={{operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
+<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
+Raw data:  {{details}}
+</div>"""
 
 DEBUG = True
 
@@ -215,7 +224,7 @@ def alert_exception(settings, db):
                         "range": {"min": -settings.param.window_size, "max": 0}
                     }, {
                         "name": "result",
-                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0)
+                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
                     }, {
                         "name": "pass",
                         "value": lambda (r): True if settings.param.min_confidence < r.result.confidence else False
@@ -227,11 +236,7 @@ def alert_exception(settings, db):
             all_touched.update(Q.select(test_results, "test_run_id"))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.run({
-                "from": stats,
-                "select": "tdad_id",
-                "where": {"term": {"past_stats.count": settings.param.window_size}}
-            }))
+            re_alert.update(Q.select(test_results, "tdad_id"))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
@@ -303,7 +308,11 @@ def alert_exception(settings, db):
     for a in new_alerts:
         a.id = SQL("util_newid()")
         a.last_updated = datetime.utcnow()
-    db.insert_list("alerts", new_alerts)
+    try:
+        db.insert_list("alerts", new_alerts)
+    except Exception, e:
+        test = found_alerts - current_alerts
+        Log.error("problem with insert", e)
 
     for curr in changed_alerts:
         if len(nvl(curr.solution, "").strip()) != 0:
@@ -354,7 +363,7 @@ def single_ttest(point, stats, min_variance=0):
         return {"confidence": 0, "diff": 0}
 
     try:
-        tt = (point - m1) / max(min_variance, sqrt(v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
+        tt = (point - m1) / sqrt(max(min_variance, v1))    #WE WILL IGNORE UNUSUALLY GOOD TIMINGS
         t_distribution = scipy.stats.distributions.t(n1 - 1)
         confidence = t_distribution.cdf(tt)
         return {"confidence": confidence, "diff": tt}
@@ -367,15 +376,18 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
-        while True:
-            with DB(settings.perftest) as db:
-                #TEMP FIX UNTIL IMPORT DOES IT FOR US
-                db.execute("""update test_data_all_dimensions set push_date=date_received where push_date is null""")
-                db.flush()
-                alert_exception(
-                    settings,
-                    db
-                )
+        with DB(settings.perftest) as db:
+            #TEMP FIX UNTIL IMPORT DOES IT FOR US
+            db.execute("update test_data_all_dimensions set push_date=date_received where push_date is null")
+            db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
+                "template": TEMPLATE,
+                "reason": REASON
+            })
+            db.flush()
+            alert_exception(
+                settings,
+                db
+            )
     except Exception, e:
         Log.warning("Failure to find exceptions", cause=e)
     finally:

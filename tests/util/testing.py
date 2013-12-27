@@ -6,7 +6,6 @@
 
 from dzAlerts.util.db import DB
 from dzAlerts.util.logs import Log
-from dzAlerts.util.struct import StructList
 
 
 class Emailer:
@@ -14,11 +13,9 @@ class Emailer:
     dummy emailer
     """
 
-
     def __init__(self, settings):
         self.settings = settings
-        self.sent = StructList()
-
+        self.sent = []
 
     def send_email(self, **args):
         self.sent.append(args)      #SIMPLY RECORD THE CALL FOR LATER VERIFICATION

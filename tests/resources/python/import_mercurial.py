@@ -11,7 +11,7 @@ from dzAlerts.util.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util import startup
 from dzAlerts.util.strings import between
-from dzAlerts.util.struct import Null, nvl
+from dzAlerts.util.struct import nvl
 from dzAlerts.util.timer import Timer
 
 DEBUG = True
@@ -137,6 +137,12 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                     continue
                 Log.note(line)
 
+
+                # changeset = "{date|hgdate|urlescape}\t{node}\t{rev}\t{author|urlescape}\t{branches}\t\t\t\t{p1rev}\t{p1node}\t{parents}\t{children}\t{tags}\t{desc|urlescape}\n"
+                # branch = "{branch}%0A"
+                # parent = "{parent}%0A"
+                # tag = "{tag}%0A"
+                # child = "{child}%0A"
                 (
                     date,
                     node,
@@ -191,7 +197,7 @@ def main():
     Log.start(settings.debug)
     try:
         for repo in settings.param.repos:
-            with DB(settings.perftest) as db:
+            with DB(settings.database) as db:
                 try:
                     pull_repo(repo)
 

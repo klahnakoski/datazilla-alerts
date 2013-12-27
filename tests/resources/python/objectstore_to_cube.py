@@ -45,7 +45,7 @@ def objectstore_to_cube(r):
                 "machine_name": json.test_machine.name,
                 "pushlog_id": r.pushlog_id,
                 "push_date": nvl(r.push_date, json.testrun.date),
-                "test_name": json.testrun.suite,
+                "test_name": json.testrun.suite[6:] if json.testrun.suite.startswith("Talos ") else json.testrun.suite,
                 "page_url": None,
                 "mean": None,
                 "std": None,

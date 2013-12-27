@@ -7,7 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-SPECIAL = ["keys", "values", "items", "iteritems", "dict", "copy"]
+SPECIAL = ["keys", "values", "items", "iteritems", "dict", "copy", "__class__"]
 
 
 class Struct(dict):
@@ -63,7 +63,7 @@ class Struct(dict):
                 d = getdefault(d, n)
             return wrap(d)
 
-        return wrap(getdefault(d, key))
+        return getdefaultwrapped(d, key)
 
     def __setattr__(self, key, value):
         Struct.__setitem__(self, key, value)
@@ -100,7 +100,7 @@ class Struct(dict):
 
         d = object.__getattribute__(self, "__dict__")
         if key not in SPECIAL:
-            return wrap(getdefault(d, key))
+            return getdefaultwrapped(d, key)
 
         #SOME dict FUNCTIONS
         if key == "items":
@@ -127,13 +127,14 @@ class Struct(dict):
         if key == "dict":
             return d
         if key == "copy":
-            o = wrap({k: v for k, v in d.items()})
+            o = wrap(dict(d))
 
             def output():
                 return o
 
             return output
 
+        return dict.__getattribute__(d, key)
 
     def __delitem__(self, key):
         if not isinstance(key, str):
@@ -173,8 +174,14 @@ def setdefault(obj, key, value):
 def getdefault(obj, key):
     o = obj.get(key, None)
     if o == None:
-        return NullStruct(obj, key)
+        return _Null(obj, key)
     return unwrap(o)
+
+def getdefaultwrapped(obj, key):
+    o = obj.get(key, None)
+    if o == None:
+        return _Null(obj, key)
+    return wrap(o)
 
 
 def _assign(null, key, value, force=True):
@@ -183,7 +190,7 @@ def _assign(null, key, value, force=True):
     """
     d = object.__getattribute__(null, "__dict__")
     o = d["obj"]
-    if isinstance(o, NullStruct):
+    if isinstance(o, _Null):
         o = _assign(o, d["path"], {}, False)
     else:
         o = setdefault(o, d["path"], {})
@@ -194,7 +201,8 @@ def _assign(null, key, value, force=True):
         value = setdefault(o, key, value)
     return value
 
-class NullStruct(object):
+
+class _Null(object):
     """
     Structural Null provides closure under the dot (.) operator
         Null[x] == Null
@@ -225,13 +233,13 @@ class NullStruct(object):
         return False
 
     def __eq__(self, other):
-        return other is None or isinstance(other, NullStruct)
+        return other is None or isinstance(other, _Null)
 
     def __ne__(self, other):
-        return other is not None and not isinstance(other, NullStruct)
+        return other is not None and not isinstance(other, _Null)
 
     def __getitem__(self, key):
-        return NullStruct(self, key)
+        return _Null(self, key)
 
     def __len__(self):
         return 0
@@ -239,40 +247,24 @@ class NullStruct(object):
     def __iter__(self):
         return ZeroList.__iter__()
 
+    def last(self):
+        """
+        IN CASE self IS INTERPRETED AS A list
+        """
+        return Null
+
+    def right(self, num=None):
+        return EmptyList
+
     def __getattribute__(self, key):
-        if key not in SPECIAL:
-            return NullStruct(self, key)
-
-        #SOME dict FUNCTIONS
-        if key == "items":
-            def temp():
-                return ZeroList
-
-            return temp
-        if key == "iteritems":
-            #LOW LEVEL ITERATION
-            return self.__iter__()
-        if key == "keys":
-            def temp():
-                return ZeroList
-
-            return temp
-        if key == "values":
-            def temp():
-                return ZeroList
-
-            return temp
-        if key == "dict":
-            return Null
-        if key == "copy":
-            #THE INTENT IS USUALLY PREPARE FOR UPDATES
-            def output():
-                return Struct()
-
+        try:
+            output = object.__getattribute__(self, key)
             return output
+        except Exception, e:
+            return _Null(self, key)
 
     def __setattr__(self, key, value):
-        NullStruct.__setitem__(self, key, value)
+        _Null.__setitem__(self, key, value)
 
     def __setitem__(self, key, value):
         try:
@@ -303,7 +295,8 @@ class NullStruct(object):
         return "None"
 
 
-Null = NullStruct()
+Null = _Null()
+EmptyList = Null
 
 ZeroList = []
 
@@ -329,6 +322,9 @@ class StructList(list):
 
     def __iter__(self):
         return (wrap(v) for v in self.list)
+
+    def __contains__(self, item):
+        return list.__contains__(self.list, item)
 
     def append(self, val):
         self.list.append(unwrap(val))
@@ -368,22 +364,23 @@ class StructList(list):
     def right(self, num=None):
         if num == None:
             return StructList(vals=[self.list[-1]])
-        if num == 0:
-            return StructList()
+        if num <= 0:
+            return EmptyList
         return StructList(vals=self.list[-num])
-
 
     def last(self):
         """
         RETURN LAST ELEMENT IN StructList
         """
-        return self.list[-1]
+        if self.list:
+            return wrap(self.list[-1])
+        return Null
 
 
 def wrap(v):
     if v is None:
         return Null
-    if isinstance(v, (Struct, NullStruct, StructList)):
+    if isinstance(v, (Struct, _Null, StructList)):
         return v
     if isinstance(v, dict):
         m = Struct()
@@ -452,3 +449,14 @@ def listwrap(value):
         return wrap(value)
     else:
         return wrap([value])
+
+
+def chain(field):
+    """
+    RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
+    """
+    if field.find(".") >= 0:
+        field = field.replace("\.", "\a")
+        return [k.replace("\a", "\.") for k in field.split(".")]
+    else:
+        return [field]

@@ -1,4 +1,3 @@
-
 ################################################################################
 ## This Source Code Form is subject to the terms of the Mozilla Public
 ## License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -28,20 +27,11 @@ HEADER = "<h3>This is for testing only.  It may be misleading.</h3><br><br>"
 #                            "branch":v.branch,
 #                            "branch_version":v.branch_version,
 #                            "revision":v.revision
-TEMPLATE =  """<div><h3>{{score}} - {{reason}}</h3><br>
-            On page {{page_url}}<br>
-            <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
-            <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
-            <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
-            <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date_max}}&product={{product}}&repository={{branch}}&os={{operating_system_name}}&os_version={{operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
-            <a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
-            Raw data:  {{details}}
-            </div>"""
+
 SEPARATOR = "<hr>\n"
-RESEND_AFTER = timedelta(days = 1)
+RESEND_AFTER = timedelta(days=1)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
-
 
 
 def send_alerts(settings, db):
@@ -61,8 +51,9 @@ def send_alerts(settings, db):
                 a.details,
                 a.severity,
                 a.confidence,
-                t.revision,
-                t.branch
+                a.revision,
+                t.branch,
+                r.email_template
             FROM
                 alerts a
             JOIN
@@ -81,12 +72,14 @@ def send_alerts(settings, db):
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
+            LIMIT
+                1000
             """, {
-                "last_sent":datetime.utcnow()-RESEND_AFTER,
-                "alert_limit":ALERT_LIMIT-EPSILON
-            })
+            "last_sent": datetime.utcnow() - RESEND_AFTER,
+            "alert_limit": ALERT_LIMIT - EPSILON
+        })
 
-        if len(new_alerts)==0:
+        if len(new_alerts) == 0:
             if debug:
                 Log.note("Nothing important to email")
             return
@@ -100,13 +93,13 @@ def send_alerts(settings, db):
             for k, v in alert.items():
                 if k not in details:
                     details[k] = v
-            details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence)*100, 0))+"%"  #AS A PERCENT
-            details.ulr=details.page_url
+            details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence) * 100, 0)) + "%"  #AS A PERCENT
+            details.ulr = details.page_url
             if details.push_date != None and details.push_date_min != None:
                 details.push_date_max = (2 * details.push_date) - details.push_date_min
             details.reason = expand_template(alert.description, details)
 
-            body.append(expand_template(TEMPLATE, details))
+            body.append(expand_template(alert.email_template, details))
         body = SEPARATOR.join(body)
 
         #poor souls that signed up for emails
@@ -117,10 +110,10 @@ def send_alerts(settings, db):
         if debug:
             Log.note("EMAIL: {{email}}", {"email": body})
 
-        if len(body)>MAX_EMAIL_LENGTH:
+        if len(body) > MAX_EMAIL_LENGTH:
             Log.note("Truncated the email body")
-            suffix="... (has been truncated)"
-            body = body[0:MAX_EMAIL_LENGTH-len(suffix)]+suffix   #keep it reasonable
+            suffix = "... (has been truncated)"
+            body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
 
         db.call("email_send", (
             listeners, #to
@@ -139,7 +132,6 @@ def send_alerts(settings, db):
 
     except Exception, e:
         Log.error("Could not send alerts", e)
-
 
 
 def update_h0_rejected(db, start_date, possible_alerts):
@@ -172,10 +164,17 @@ def update_h0_rejected(db, start_date, possible_alerts):
 #ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
 #UPDATE?
 SIGNIFICANT = 0.2
+
+
 def significant_difference(a, b):
-    return (1-SIGNIFICANT)<a/b or a/b<(1+SIGNIFICANT)
-
-
+    if a / b < (1 - SIGNIFICANT) or (1 + SIGNIFICANT) < a/b:
+        return True
+    if a in (0.0, 1.0) or b in (0.0, 1.0):
+        return True
+    b_diff = Math.bayesian_subtract(a, b)
+    if 0.3 < b_diff < 0.7:
+        return False
+    return True
 
 
 if __name__ == '__main__':
@@ -183,15 +182,15 @@ if __name__ == '__main__':
     Log.start(settings.debug)
 
     try:
-        Log.note("Running alerts off of schema {{schema}}", {"schema":settings.perftest.schema})
+        Log.note("Running alerts off of schema {{schema}}", {"schema": settings.perftest.schema})
 
         with DB(settings.perftest) as db:
             send_alerts(
                 settings=settings,
-                db = db
+                db=db
             )
     except Exception, e:
-        Log.warning("Failure to run alerts", cause = e)
+        Log.warning("Failure to run alerts", cause=e)
     finally:
         Log.stop()
 
