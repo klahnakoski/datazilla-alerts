@@ -172,10 +172,10 @@ def setdefault(obj, key, value):
 
 
 def getdefault(obj, key):
-    o = obj.get(key, None)
-    if o == None:
+    try:
+        return obj[key]
+    except Exception, e:
         return _Null(obj, key)
-    return unwrap(o)
 
 def getdefaultwrapped(obj, key):
     o = obj.get(key, None)

@@ -30,6 +30,7 @@ HEADER = "<h3>This is for testing only.  It may be misleading.</h3><br><br>"
 
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = timedelta(days=1)
+LOOK_BACK = timedelta(days=60)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
 
@@ -68,7 +69,9 @@ def send_alerts(settings, db):
                 ) AND
                 a.status <> 'obsolete' AND
                 bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
-                a.solution IS NULL
+                a.solution IS NULL AND
+                a.reason <> 'alert_exception' AND
+                t.push_date > {{min_time}}
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
@@ -76,10 +79,11 @@ def send_alerts(settings, db):
                 1000
             """, {
             "last_sent": datetime.utcnow() - RESEND_AFTER,
-            "alert_limit": ALERT_LIMIT - EPSILON
+            "alert_limit": ALERT_LIMIT - EPSILON,
+            "min_time": datetime.utcnow()-LOOK_BACK
         })
 
-        if len(new_alerts) == 0:
+        if not new_alerts:
             if debug:
                 Log.note("Nothing important to email")
             return
@@ -89,17 +93,13 @@ def send_alerts(settings, db):
             if alert.confidence >= 1:
                 alert.confidence = 0.999999
 
-            details = CNV.JSON2object(alert.details)
-            for k, v in alert.items():
-                if k not in details:
-                    details[k] = v
-            details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence) * 100, 0)) + "%"  #AS A PERCENT
-            details.ulr = details.page_url
-            if details.push_date != None and details.push_date_min != None:
-                details.push_date_max = (2 * details.push_date) - details.push_date_min
-            details.reason = expand_template(alert.description, details)
+            alert.details = CNV.JSON2object(alert.details)
+            alert.score = str(round(Math.bayesian_add(alert.severity, alert.confidence) * 100, 0)) + "%"  #AS A PERCENT
+            alert.details.url = alert.details.page_url
+            if alert.details.push_date != None and alert.details.push_date_min != None:
+                alert.details.push_date_max = (2 * alert.details.push_date) - alert.details.push_date_min
 
-            body.append(expand_template(alert.email_template, details))
+            body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
         body = SEPARATOR.join(body)
 
         #poor souls that signed up for emails
@@ -167,7 +167,7 @@ SIGNIFICANT = 0.2
 
 
 def significant_difference(a, b):
-    if a / b < (1 - SIGNIFICANT) or (1 + SIGNIFICANT) < a/b:
+    if a / b < (1 - SIGNIFICANT) or (1 + SIGNIFICANT) < a / b:
         return True
     if a in (0.0, 1.0) or b in (0.0, 1.0):
         return True

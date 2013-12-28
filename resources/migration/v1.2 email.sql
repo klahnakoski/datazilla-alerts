@@ -8,7 +8,7 @@ CREATE PROCEDURE email_send(
 	subject_	VARCHAR(200),
 	body_		VARCHAR(16000),
 	attachment_	VARCHAR(200)
-) 
+)
 es: BEGIN
 	DECLARE contentID INTEGER;
 	DECLARE deliveryID INTEGER;
@@ -21,7 +21,7 @@ es: BEGIN
 	IF (length(remainingTo)=0) THEN LEAVE es; END IF;
 
 	SET contentID=util_newid();
-	
+
 	START TRANSACTION;
 
 	INSERT INTO email_content (id, subject, date_sent, body) VALUES (
@@ -50,7 +50,7 @@ es: BEGIN
 	##SEMICOLON SEPARATED EMAIL ADDRESSES
 	tos: LOOP
 		IF (length(remainingTo)=0) THEN LEAVE tos; END IF;
-		SET nextTo=locate(";", remainingTo);
+		SET nextTo=locate(';', remainingTo);
 		IF nextTo=0 THEN SET nextTo=length(remainingTo)+1; END IF;
 		SET deliveryTo =trim(substring(remainingTo, 1, nextTo-1));
 		SET remainingTo=trim(substring(remainingTo, nextTo+1));
@@ -62,7 +62,7 @@ es: BEGIN
 			contentID
 		);
 	END LOOP;
-	
+
 	UPDATE email_notify SET new_mail=1;
 
 	COMMIT;
@@ -112,8 +112,8 @@ m11: BEGIN
 		new_mail	DECIMAL(1)
 	);
 	INSERT INTO email_notify VALUES (0);
-	
-	
+
+
 
 	CREATE TABLE email_attachment (
 		id 			INTEGER primary key not null,
@@ -150,6 +150,6 @@ COMMIT;;
 
 
 
-	
+
 
 

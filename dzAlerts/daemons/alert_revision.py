@@ -13,17 +13,17 @@ from datetime import datetime, timedelta
 from scipy.stats import binom
 
 from dzAlerts.daemons import alert_exception
-from dzAlerts.util import startup, struct
+from dzAlerts.util import startup
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import DB, SQL
 from dzAlerts.util.logs import Log
-from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl
 from dzAlerts.daemons.alert import significant_difference
 
 
 FALSE_POSITIVE_RATE = .01   # WHAT % OF TIME DO WE EXPECTY ANOMALOUS RESULTS?
+MIN_BADNESS = 0.9           #DO NOT ALERT TO REVISIONS WITH SCORE UNDER THIS VALUE
 
 def get_false_positive_rate(test_name):
     if test_name == "tp5n":
@@ -36,21 +36,16 @@ SEVERITY = 0.9
 TEMPLATE = [
     """
     <div><h2>{{score}} - {{revision}}</h2>
-    {{num_exceptions}} exceptional events<br>
-    <a href="https://datazilla.mozilla.org/talos/summary/{{branch}}/{{revision}}">Datazilla</a><br>
-    <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}">Bugzilla - {{bug_description}}</a><br>
+    {{details.total_exceptions}} exceptional events<br>
+    <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}">Bugzilla - {{details.bug_description}}</a><br>
+    <a href="https://datazilla.mozilla.org/?start={{example.push_date_min}}&stop={{example.push_date_max}}&product={{example.product}}&repository={{example.branch}}&os={{example.operating_system_name}}&os_version={{example.operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
     """, {
         "from": "details.tests",
         "template": """
-            <hr>
-            On page {{.page_url}}<br>
-            <a href="https://tbpl.mozilla.org/?tree={{.branch}}&rev={{.revision}}">TBPL</a><br>
-            <a href="https://hg.mozilla.org/rev/{{.revision}}">Mercurial</a><br>
-            <a href="https://datazilla.mozilla.org/talos/summary/{{.branch}}/{{.revision}}">Datazilla</a><br>
-            <a href="http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{.page_url}}&sampleMax={{.push_date}}000&sampleMin={{.push_date_min}}000&branch={{.branch}}">Kyle's ES</a><br>
-            Raw data: {{.raw_data}}
-            """,
-        "separator": "<hr>"
+            {{test_name}}: {{num_exceptions}} exceptions, out of {{num_pages}} pages,
+            (<a href="https://datazilla.mozilla.org/?start={{example.push_date_min}}&stop={{example.push_date_max}}&product={{example.product}}&repository={{example.branch}}&os={{example.operating_system_name}}&os_version={{example.operating_system_version}}&test={{test_name}}&graph_search={{..revision}}&error_bars=false&project=talos\">
+            {{example.page_url}} {{example.push_date|datetime}}</a>)<br>
+        """
     }
 ]
 
@@ -63,7 +58,7 @@ def alert_revision(settings):
     settings.db.debug = settings.param.debug
     with DB(settings.perftest) as db:
         db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
-            "template": TEMPLATE,
+            "template": CNV.object2JSON(TEMPLATE),
             "reason": REASON
         })
 
@@ -77,14 +72,18 @@ def alert_revision(settings):
                 alerts a
             LEFT JOIN
                 test_data_all_dimensions t on t.id=a.tdad_id
+            LEFT JOIN
+                alert_hierarchy h on h.child=a.id
             WHERE
-                (a.solution is null OR trim(a.solution)='') AND
+                h.child IS NULL AND
                 a.reason={{reason}} AND
-                a.status<>'obsolete'
+                a.status<>'obsolete' AND
+                a.create_time>={{start_time}}
             LIMIT
-                10
+                1000
         """, {
-            "reason": alert_exception.REASON
+            "reason": alert_exception.REASON,
+            "start_time": datetime.utcnow() - LOOK_BACK
         })
         interesting_revisions = set(Q.select(some_exceptions, "revision"))
 
@@ -171,11 +170,15 @@ def alert_revision(settings):
                 }
                 parts.append(part)
 
-            worst_in_revision = Q.sort(parts, ["confidence"]).last().example
+            parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
+            worst_in_revision = parts[0].example
+
+            if worst_in_revision.confidence <= MIN_BADNESS:
+                continue
 
             known_alerts.append({
                 "status": "new",
-                "create_time": datetime.utcnow(),
+                "create_time": CNV.unix2datetime(worst_in_revision.push_date),
                 "reason": REASON,
                 "revision": revision,
                 "tdad_id": worst_in_revision.tdad_id,
@@ -187,7 +190,7 @@ def alert_revision(settings):
                     "example": worst_in_revision
                 },
                 "severity": SEVERITY,
-                "confidence": Math.max([c.confidence for c in struct.wrap(parts)])  # Take worst
+                "confidence": worst_in_revision.confidence  # Take worst
             })
 
         known_alerts = Q.unique_index(known_alerts, "details.revision")
@@ -198,6 +201,29 @@ def alert_revision(settings):
             revision.id = SQL("util_newid()")
             revision.last_updated = datetime.utcnow()
         db.insert_list("alerts", new_alerts)
+
+        #SHOW POINT-WISE ALERTS ARE COVERED
+        db.execute("""
+        INSERT INTO alert_hierarchy (parent, child)
+        SELECT
+            r.id parent,
+            p.id child
+        FROM
+            alerts p
+        LEFT JOIN
+            alert_hierarchy h on h.child=p.id
+        LEFT JOIN
+            alerts r on r.revision=p.revision AND r.reason={{parent_reason}}
+        WHERE
+            {{where}}
+        """, {
+            "where": db.esfilter2sqlwhere({"and": [
+                {"term": {"p.reason": alert_exception.REASON}},
+                {"terms": {"p.revision": Q.select(existing_points, "revision")}},
+                {"missing": "h.parent"}
+            ]}),
+            "parent_reason": REASON
+        })
 
         #CURRENT ALERTS, UPDATE IF DIFFERENT
         for existing in known_alerts & old_alerts:

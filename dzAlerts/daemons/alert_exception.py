@@ -248,7 +248,7 @@ def alert_exception(settings, db):
 
                 alert = Struct(
                     status="new",
-                    create_time=datetime.utcnow(),
+                    create_time=v.push_date,
                     tdad_id=v.tdad_id,
                     reason=REASON,
                     details=v,
