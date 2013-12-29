@@ -1,6 +1,5 @@
 # encoding: utf-8
 #
-#
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -87,7 +86,12 @@ class CNV:
 
     @staticmethod
     def unix2datetime(u):
-        return datetime.datetime.utcfromtimestamp(u)
+        try:
+            if u == None:
+                return None
+            return datetime.datetime.utcfromtimestamp(u)
+        except Exception, e:
+            Log.error("Can not convert {{value}} to datetime", {"value": u}, e)
 
     @staticmethod
     def milli2datetime(u):

@@ -1,11 +1,11 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
-
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 from datetime import datetime
 from math import sqrt
@@ -94,7 +94,7 @@ def alert_exception(settings, db):
     # 	ON
     # 	    t.test_run_id = o.test_run_id
     # 	WHERE
-    # 	    NOT (`o`.`processed_flag`='summary_complete')
+    # 	    NOT (`o`.`processed_exception`='summary_complete')
     # 	LIMIT
     # 	    1000
     records_to_process = set(Q.select(db.query("""
@@ -108,8 +108,8 @@ def alert_exception(settings, db):
                 {{sample_limit}}
         """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
-        "sample_limit": SQL(settings.param.max_test_results_per_run),
-        "where": db.esfilter2sqlwhere({"terms": {"o.processed_flag": ['complete', 'summary_ready', 'summary_loading']}})
+        "sample_limit": SQL(settings.param.exception.max_test_results_per_run),
+        "where": db.esfilter2sqlwhere({"term": {"o.processed_exception": 'ready'}})
     }), "test_run_id"))
 
     new_test_points = db.query("""
@@ -168,7 +168,7 @@ def alert_exception(settings, db):
                     {"exists": "n_replicates"},
                     {"range": {"push_date": {"lt": min_date}}}
                 ]}),
-                "window_size": settings.param.window_size + 1
+                "window_size": settings.param.exception.window_size + 1
             })[0]
 
             all_min_date = Math.min([all_min_date, first_in_window.min_date])
@@ -214,20 +214,20 @@ def alert_exception(settings, db):
                         "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Min,
-                        "range": {"min": -settings.param.window_size, "max": 0}
+                        "range": {"min": -settings.param.exception.window_size, "max": 0}
                     }, {
                         "name": "past_stats",
                         "value": lambda (r): Stats(count=1, mean=r.mean),
                         "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Stats,
-                        "range": {"min": -settings.param.window_size, "max": 0}
+                        "range": {"min": -settings.param.exception.window_size, "max": 0}
                     }, {
                         "name": "result",
                         "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
                     }, {
                         "name": "pass",
-                        "value": lambda (r): True if settings.param.min_confidence < r.result.confidence else False
+                        "value": lambda (r): True if settings.param.exception.min_confidence < r.result.confidence else False
                     },
 
                 ]
@@ -251,6 +251,7 @@ def alert_exception(settings, db):
                     create_time=v.push_date,
                     tdad_id=v.tdad_id,
                     reason=REASON,
+                    revision=v.revision,
                     details=v,
                     severity=SEVERITY,
                     confidence=v.confidence
@@ -345,7 +346,7 @@ def alert_exception(settings, db):
         Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched | records_to_process)})
     db.execute("""
         UPDATE {{objectstore}}.objectstore
-        SET processed_flag='summary_complete'
+        SET processed_exception='done'
         WHERE {{where}}
     """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
@@ -379,6 +380,7 @@ def main():
         with DB(settings.perftest) as db:
             #TEMP FIX UNTIL IMPORT DOES IT FOR US
             db.execute("update test_data_all_dimensions set push_date=date_received where push_date is null")
+            #TODO: REMOVE, LEAVE IN DB
             db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
                 "template": TEMPLATE,
                 "reason": REASON

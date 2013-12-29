@@ -60,7 +60,7 @@ class test_alert_exception():
         assert len(alert) == 1
         assert alert[0].status == 'new'
         assert closeEnough(alert[0].severity, EXPECTED_SEVERITY)
-        assert alert[0].confidence > settings.param.min_confidence
+        assert alert[0].confidence > settings.param.exception.min_confidence
 
         #VERIFY last_run HAS BEEN UPDATED
         last_run = self.db.query(
@@ -165,7 +165,7 @@ class test_alert_exception():
 
         self.db.flush()
         self.db.execute("""
-            INSERT INTO objectstore (id, test_run_id, date_loaded, processed_flag, branch, json_blob)
+            INSERT INTO objectstore (id, test_run_id, date_loaded, processed_exception, branch, json_blob)
             SELECT
                 {{id}},
                 test_run_id,

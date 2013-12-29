@@ -96,7 +96,7 @@ def get_missing_ids(db, settings):
             ekyle_perftest_1.test_data_all_dimensions t on t.test_run_id =o.test_run_id
         WHERE
             t.test_run_id is NULL OR
-            o.processed_flag in ('ready', 'loading')
+            o.processed_exception = 'ready'
         LIMIT
             {{limit}}
         """, {
@@ -145,7 +145,7 @@ def main(settings):
                     #MARK WE ARE DONE HERE
                     db.execute("""
                         UPDATE {{objectstore}}.objectstore o
-                        SET o.processed_flag = 'complete'
+                        SET o.processed_exception = 'done'
                         WHERE {{where}}
                     """, {
                         "objectstore": SQL(settings.destination.objectstore.schema),

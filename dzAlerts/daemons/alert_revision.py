@@ -1,12 +1,11 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
-
-
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 from datetime import datetime, timedelta
 
@@ -32,7 +31,7 @@ def get_false_positive_rate(test_name):
 
 REASON = "alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = timedelta(days=10)
-SEVERITY = 0.9
+SEVERITY = 0.7
 TEMPLATE = [
     """
     <div><h2>{{score}} - {{revision}}</h2>
@@ -57,6 +56,7 @@ def alert_revision(settings):
     assert settings.perftest != None
     settings.db.debug = settings.param.debug
     with DB(settings.perftest) as db:
+        #TODO: REMOVE, LEAVE IN DB
         db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
             "template": CNV.object2JSON(TEMPLATE),
             "reason": REASON
