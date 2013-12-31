@@ -1,10 +1,10 @@
 
 
 # SIMPLE TUPLE-OF-STRINGS LOOKUP TO OBJECT
-from dzAlerts.util import struct
-from dzAlerts.util.logs import Log
-from dzAlerts.util.strings import indent, expand_template
-from dzAlerts.util.struct import Null
+from .. import struct
+from ..logs import Log
+from ..strings import indent, expand_template
+from ..struct import Null
 
 
 class UniqueIndex(object):

@@ -39,7 +39,7 @@ def _argparse(defs):
         args = d.copy()
         name = args.name
         args.name = None
-        parser.add_argument(*listwrap(name).list, **args.dict)
+        parser.add_argument(*listwrap(name).list, **struct.unwrap(args))
     namespace = parser.parse_args()
     output = {k: getattr(namespace, k) for k in vars(namespace)}
     return struct.wrap(output)

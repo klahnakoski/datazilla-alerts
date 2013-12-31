@@ -253,8 +253,8 @@ def make_log_from_settings(settings):
         if not f.parent.exists:
             f.parent.create()
 
-    params = settings.dict
-    del params['class']
+    settings['class'] = None
+    params = struct.unwrap(settings)
     return constructor(**params)
 
 

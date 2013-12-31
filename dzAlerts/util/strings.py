@@ -9,6 +9,7 @@
 #
 
 import re
+from pymysql.times import TimeDelta
 from .jsons import json_encoder
 import struct
 
@@ -166,6 +167,9 @@ def toString(val):
         return u""
     elif isinstance(val, (dict, list, set)):
         return json_encoder.encode(val, pretty=True)
+    elif isinstance(val, TimeDelta):
+        duration = val.total_seconds()
+        return unicode(round(duration, 3))+" seconds"
     return unicode(val)
 
 

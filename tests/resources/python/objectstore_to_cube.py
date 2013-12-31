@@ -16,7 +16,7 @@ from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN = 100000
+TEST_RESULTS_PER_RUN = 10
 
 
 def objectstore_to_cube(r):
@@ -26,31 +26,31 @@ def objectstore_to_cube(r):
         if len(json.results.keys()) == 0:
             #DUMMY RECORD SO FUTURE QUERIES KNOW THIS objectstore HAS BEEN PROCESSED
             return [{
-                "test_run_id": r.test_run_id,
-                "product_id": 0,
-                "operating_system_id": 0,
-                "test_id": 0,
-                "page_id": 0,
-                "date_received": json.testrun.date,
-                "revision": json.test_build.revision,
+                        "test_run_id": r.test_run_id,
+                        "product_id": 0,
+                        "operating_system_id": 0,
+                        "test_id": 0,
+                        "page_id": 0,
+                        "date_received": json.testrun.date,
+                        "revision": json.test_build.revision,
 
-                "product": json.test_build.name,
-                "branch": json.test_build.branch,
-                "branch_version": json.test_build.version,
-                "operating_system_name": json.test_machine.os,
-                "operating_system_version": json.test_machine.osversion,
-                "processor": json.test_machine.platform,
+                        "product": json.test_build.name,
+                        "branch": json.test_build.branch,
+                        "branch_version": json.test_build.version,
+                        "operating_system_name": json.test_machine.os,
+                        "operating_system_version": json.test_machine.osversion,
+                        "processor": json.test_machine.platform,
 
-                "build_type": r.build_type,
-                "machine_name": json.test_machine.name,
-                "pushlog_id": r.pushlog_id,
-                "push_date": nvl(r.push_date, json.testrun.date),
-                "test_name": json.testrun.suite[6:] if json.testrun.suite.startswith("Talos ") else json.testrun.suite,
-                "page_url": None,
-                "mean": None,
-                "std": None,
-                "n_replicates": None
-            }]
+                        "build_type": r.build_type,
+                        "machine_name": json.test_machine.name,
+                        "pushlog_id": r.pushlog_id,
+                        "push_date": nvl(r.push_date, json.testrun.date),
+                        "test_name": json.testrun.suite[6:] if json.testrun.suite.startswith("Talos ") else json.testrun.suite,
+                        "page_url": None,
+                        "mean": None,
+                        "std": None,
+                        "n_replicates": None
+                    }]
 
         output = []
         for p, m in json.results.items():
@@ -75,7 +75,7 @@ def objectstore_to_cube(r):
                 "machine_name": json.test_machine.name,
                 "pushlog_id": nvl(r.pushlog_id, 0),
                 "push_date": nvl(r.push_date, json.testrun.date),
-                "test_name": json.testrun.suite,
+                "test_name": json.testrun.suite[6:] if json.testrun.suite.startswith("Talos ") else json.testrun.suite,
                 "page_url": p[:255],
                 "mean": median(m),
                 "std": S.std,
@@ -92,11 +92,9 @@ def get_missing_ids(db, settings):
             o.test_run_id
         FROM
             ekyle_objectstore_1.objectstore o
-        LEFT JOIN
-            ekyle_perftest_1.test_data_all_dimensions t on t.test_run_id =o.test_run_id
         WHERE
-            t.test_run_id is NULL OR
-            o.processed_exception = 'ready'
+            o.processed_cube = 'ready' AND
+            o.test_run_id IS NOT NULL
         LIMIT
             {{limit}}
         """, {
@@ -114,6 +112,11 @@ def main(settings):
         missing_ids = get_missing_ids(db, settings)
 
         with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
+            write_db.execute(
+                "DELETE FROM test_data_all_dimensions WHERE {{where}}", {
+                    "where": db.esfilter2sqlwhere({"terms": {"test_run_id": missing_ids}})
+                })
+
             for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
                 values = set(values)
 
@@ -140,12 +143,11 @@ def main(settings):
                     for b in blobs:
                         tdads.extend(objectstore_to_cube(b))
                     write_db.insert_list("test_data_all_dimensions", tdads)
-                    write_db.flush()
 
                     #MARK WE ARE DONE HERE
                     db.execute("""
                         UPDATE {{objectstore}}.objectstore o
-                        SET o.processed_exception = 'done'
+                        SET o.processed_cube = 'done'
                         WHERE {{where}}
                     """, {
                         "objectstore": SQL(settings.destination.objectstore.schema),

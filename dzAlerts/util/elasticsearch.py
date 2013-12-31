@@ -311,7 +311,7 @@ def _scrub(r):
             return CNV.value2number(r)
         elif isinstance(r, dict):
             if isinstance(r, Struct):
-                r = r.dict
+                r = object.__getattribute__(r, "__dict__")
             output = {}
             for k, v in r.items():
                 v = _scrub(v)

@@ -10,6 +10,7 @@
 SPECIAL = ["keys", "values", "items", "iteritems", "dict", "copy", "__class__"]
 
 
+
 class Struct(dict):
     """
     Struct is an anonymous class with some properties good for manipulating JSON
@@ -45,7 +46,8 @@ class Struct(dict):
         return True
 
     def __nonzero__(self):
-        return True
+        d = object.__getattribute__(self, "__dict__")
+        return True if d else False
 
     def __str__(self):
         return dict.__str__(object.__getattribute__(self, "__dict__"))
@@ -64,9 +66,6 @@ class Struct(dict):
             return wrap(d)
 
         return getdefaultwrapped(d, key)
-
-    def __setattr__(self, key, value):
-        Struct.__setitem__(self, key, value)
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
@@ -98,63 +97,82 @@ class Struct(dict):
         if not isinstance(key, str):
             key = key.encode("utf-8")
 
+        try:
+            output = object.__getattribute__(self, key)
+            if key=="__dict__":
+                return output
+            return wrap(output)
+        except Exception:
+            d = object.__getattribute__(self, "__dict__")
+            return _Null(d, key)
+
+    def __setattr__(self, key, value):
+        if not isinstance(key, str):
+            key = key.encode("utf-8")
+
+        value = unwrap(value)
+        if value is None:
+            d = object.__getattribute__(self, "__dict__")
+            d.pop(key, None)
+        else:
+            object.__setattr__(self, key, value)
+        return self
+
+    def items(self):
         d = object.__getattribute__(self, "__dict__")
-        if key not in SPECIAL:
-            return getdefaultwrapped(d, key)
+        return ((k, wrap(v)) for k, v in d.items())
 
-        #SOME dict FUNCTIONS
-        if key == "items":
-            def temp():
-                _is = dict.__getattribute__(d, "items")
-                return [(k, wrap(v)) for k, v in _is()]
+    def iteritems(self):
+        #LOW LEVEL ITERATION, NO WRAPPING
+        d = object.__getattribute__(self, "__dict__")
+        return d.iteritems()
 
-            return temp
-        if key == "iteritems":
-            #LOW LEVEL ITERATION
-            return d.iteritems
-        if key == "keys":
-            def temp():
-                k = dict.__getattribute__(d, "keys")
-                return set(k())
+    def keys(self):
+        d = object.__getattribute__(self, "__dict__")
+        return set(d.keys())
 
-            return temp
-        if key == "values":
-            def temp():
-                vs = dict.__getattribute__(d, "values")
-                return [wrap(v) for v in vs()]
+    def values(self):
+        d = object.__getattribute__(self, "__dict__")
+        return (wrap(v) for v in d.values())
 
-            return temp
-        if key == "dict":
-            return d
-        if key == "copy":
-            o = wrap(dict(d))
+    @property
+    def dict(self):
+        return object.__getattribute__(self, "__dict__")
 
-            def output():
-                return o
+    @property
+    def __class__(self):
+        return dict
 
-            return output
-
-        return dict.__getattribute__(d, key)
+    def copy(self):
+        d = object.__getattribute__(self, "__dict__")
+        return Struct(**d)
 
     def __delitem__(self, key):
         if not isinstance(key, str):
             key = key.encode("utf-8")
 
-        d = object.__getattribute__(self, "__dict__")
-
         if key.find(".") == -1:
+            d = object.__getattribute__(self, "__dict__")
             d.pop(key, None)
+            return
 
+        d = object.__getattribute__(self, "__dict__")
         key = key.replace("\.", "\a")
         seq = [k.replace("\a", ".") for k in key.split(".")]
         for k in seq[:-1]:
             d = d[k]
         d.pop(seq[-1], None)
 
+    def __delattr__(self, key):
+        if not isinstance(key, str):
+            key = key.encode("utf-8")
+
+        d = object.__getattribute__(self, "__dict__")
+        d.pop(key, None)
+
     def keys(self):
         d = object.__getattribute__(self, "__dict__")
         return d.keys()
-
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL
 requested = set()
@@ -384,7 +402,7 @@ def wrap(v):
         return v
     if isinstance(v, dict):
         m = Struct()
-        object.__setattr__(m, "__dict__", v) #INJECT m.__dict__=v SO THERE IS NO COPY
+        object.__setattr__(m, "__dict__", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
     if isinstance(v, list):
         return StructList(v)
@@ -460,3 +478,5 @@ def chain(field):
         return [k.replace("\a", "\.") for k in field.split(".")]
     else:
         return [field]
+
+

@@ -12,6 +12,7 @@ from math import sqrt
 
 import scipy
 from scipy import stats
+from dzAlerts.daemons.alert_exception import single_ttest
 from dzAlerts.util import struct
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
@@ -81,22 +82,8 @@ def alert_sustained(settings, db):
 
     #FIND NEW POINTS IN CUBE TO TEST
     if debug:
-        Log.note("Find tests that need summary statistics")
+        Log.note("Find tests that need sustained regression detection")
 
-    #SPLIT INTO TWO BECAUSE MYSQL GOES PATHOLOGICALLY SLOW ON SIMPLE QUERY
-    #   SELECT
-    # 	    `t`.`test_name`, `t`.`product`, `t`.`branch`, `t`.`branch_version`, `t`.`operating_system_name`, `t`.`operating_system_version`, `t`.`processor`, `t`.`page_url`,
-    # 	    min(push_date) min_push_date
-    # 	FROM
-    # 	    `ekyle_objectstore_1`.objectstore o
-    # 	JOIN
-    # 	    `ekyle_perftest_1`.test_data_all_dimensions t
-    # 	ON
-    # 	    t.test_run_id = o.test_run_id
-    # 	WHERE
-    # 	    NOT (`o`.`processed_exception`='summary_complete')
-    # 	LIMIT
-    # 	    1000
     records_to_process = set(Q.select(db.query("""
             SELECT
                 o.test_run_id
@@ -109,7 +96,10 @@ def alert_sustained(settings, db):
         """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
         "sample_limit": SQL(settings.param.sustained.max_test_results_per_run),
-        "where": db.esfilter2sqlwhere({"term": {"o.processed_sustained": 'ready'}})
+        "where": db.esfilter2sqlwhere({"and": [
+            {"term": {"o.processed_sustained": 'ready'}},
+            {"term": {"o.processed_cube": "done"}}
+        ]})
     }), "test_run_id"))
 
     new_test_points = db.query("""
@@ -230,11 +220,14 @@ def alert_sustained(settings, db):
                         "aggregate": windows.Stats,
                         "range": {"min": 1, "max": settings.param.sustained.window_size}
                     }, {
-                        "name": "result",
+                        "name": "point_result.",
+                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
+                    }, {
+                        "name": "sustained_result",
                         "value": lambda (r): welchs_ttest(r.past_stats, r.future_stats)
                     }, {
                         "name": "pass",
-                        "value": lambda (r): True if settings.param.sustained.trigger < r.result.confidence else False
+                        "value": lambda (r): True if settings.param.sustained.trigger < r.sustained_result.confidence and settings.param.exception.min_confidence < r.point_result.confidence else False
                     },
 
                 ]
@@ -365,7 +358,7 @@ def alert_sustained(settings, db):
 def welchs_ttest(stats1, stats2):
     """
     SNAGGED FROM https://github.com/mozilla/datazilla-metrics/blob/master/dzmetrics/ttest.py#L56
-    Execute one-sided Welch's t-test given pre-calculated means and stddevs.
+    Execute TWO-sided Welch's t-test given pre-calculated means and stddevs.
 
     Accepts summary data (N, stddev, and mean) for two datasets and performs
     one-sided Welch's t-test, returning p-value.
@@ -386,7 +379,9 @@ def welchs_ttest(stats1, stats2):
     df_denominator = ((v1 / n1) ** 2) / (n1 - 1) + ((v2 / n2) ** 2) / (n2 - 1)
     df = df_numerator / df_denominator
 
-    return {"confidence": stats.t(df).cdf(tt), "diff": tt}
+    t = stats.t(df)
+
+    return {"confidence": t.cdf(tt)-t.cdf(1-tt), "diff": tt}
 
 
 def main():

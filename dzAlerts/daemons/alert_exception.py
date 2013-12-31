@@ -109,7 +109,10 @@ def alert_exception(settings, db):
         """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
         "sample_limit": SQL(settings.param.exception.max_test_results_per_run),
-        "where": db.esfilter2sqlwhere({"term": {"o.processed_exception": 'ready'}})
+        "where": db.esfilter2sqlwhere({"and": [
+            {"term": {"o.processed_exception": 'ready'}},
+            {"term": {"o.processed_cube": "done"}}
+        ]})
     }), "test_run_id"))
 
     new_test_points = db.query("""
