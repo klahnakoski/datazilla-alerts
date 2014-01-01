@@ -26,24 +26,33 @@ def stats2z_moment(stats):
     mz0 = mc0
     mz1 = mc1 * mc0
     mz2 = (mc2 + mc1 * mc1) * mc0
-    mc3 = skew * (mc2 ** 1.5) # 3rd central moment
-    mz3 = (mc3 + 3 * mc1 * mc2 - mc1 ** 3) * mc0  # 3rd non-central moment
-    mc4 = (kurt + 3.0) * (mc2 ** 2.0) # 4th central moment
+    mc3 = nvl(skew, 0) * (mc2 ** 1.5) # 3rd central moment
+    mz3 = (mc3 + 3 * mc1 * mc2 + mc1 ** 3) * mc0  # 3rd non-central moment
+    mc4 = (nvl(kurt, 0) + 3.0) * (mc2 ** 2.0) # 4th central moment
     mz4 = (mc4 + 4 * mc1 * mc3 + 6 * mc1 * mc1 * mc2 + mc1 ** 4) * mc0
 
-    m = Z_moment(stats.count, mz1, mz2, mz3, mz4)
+    m = Z_moment(mz0, mz1, mz2, mz3, mz4)
     if DEBUG:
+        globals()["DEBUG"] = False
         v = z_moment2stats(m, unbiased=False)
-        assert closeEnough(v.count, stats.count)
-        assert closeEnough(v.mean, stats.mean)
-        assert closeEnough(v.variance, stats.variance)
-        assert closeEnough(v.skew, stats.skew)
-        assert closeEnough(v.kurtosis, stats.vkurtosis)
-
+        try:
+            assert closeEnough(v.count, stats.count)
+            assert closeEnough(v.mean, stats.mean)
+            assert closeEnough(v.variance, stats.variance)
+            assert closeEnough(v.skew, stats.skew)
+            assert closeEnough(v.kurtosis, stats.vkurtosis)
+        except Exception, e:
+            Log.error("programmer error")
+        globals()["DEBUG"] = True
     return m
 
 
 def closeEnough(a, b):
+    if a == None and b == None:
+        return True
+    if a == None or b == None:
+        return False
+
     if abs(a - b) <= EPSILON * (abs(a) + abs(b) + 1): return True
     return False
 
@@ -62,10 +71,15 @@ def z_moment2stats(z_moment, unbiased=True):
     variance = (Z2 - mean * mean)
     mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
     mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
-    skew = mc3 / (variance ** 1.5)
-    kurtosis = (mc4 / (variance ** 2.0)) - 3.0
 
-    return Stats(
+    if variance==0.0:
+        skew = None
+        kurtosis = None
+    else:
+        skew = mc3 / (variance ** 1.5)
+        kurtosis = (mc4 / (variance ** 2.0)) - 3.0
+
+    stats = Stats(
         count=N,
         mean=mean,
         variance=variance,
@@ -74,6 +88,21 @@ def z_moment2stats(z_moment, unbiased=True):
         unbiased=unbiased
     )
 
+    if DEBUG:
+        globals()["DEBUG"] = False
+        v = stats2z_moment(stats)
+        try:
+            for i in range(5):
+                assert closeEnough(v.S[i], Z[i])
+        except Exception, e:
+            Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected parem={{expected|indent}}", {
+                "from": Z,
+                "stats": stats,
+                "expected": v.S
+            })
+        globals()["DEBUG"] = True
+
+    return stats
 
 class Stats(Struct):
     def __init__(self, **args):
@@ -82,32 +111,32 @@ class Stats(Struct):
             self.count = 0
             self.mean = 0
             self.variance = 0
-            self.skew = 0
-            self.kurtosis = 0
+            self.skew = None
+            self.kurtosis = None
         elif "mean" not in args:
             self.count = args["count"]
             self.mean = 0
             self.variance = 0
-            self.skew = 0
-            self.kurtosis = 0
+            self.skew = None
+            self.kurtosis = None
         elif "variance" not in args and "std" not in args:
             self.count = args["count"]
             self.mean = args["mean"]
             self.variance = 0
-            self.skew = 0
-            self.kurtosis = 0
+            self.skew = None
+            self.kurtosis = None
         elif "skew" not in args:
             self.count = args["count"]
             self.mean = args["mean"]
             self.variance = args["variance"] if "variance" in args else args["std"] ** 2
-            self.skew = 0
-            self.kurtosis = 0
+            self.skew = None
+            self.kurtosis = None
         elif "kurtosis" not in args:
             self.count = args["count"]
             self.mean = args["mean"]
             self.variance = args["variance"] if "variance" in args else args["std"] ** 2
             self.skew = args["skew"]
-            self.kurtosis = 0
+            self.kurtosis = None
         else:
             self.count = args["count"]
             self.mean = args["mean"]

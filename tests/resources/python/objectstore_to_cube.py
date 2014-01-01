@@ -112,10 +112,11 @@ def main(settings):
         missing_ids = get_missing_ids(db, settings)
 
         with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
-            write_db.execute(
-                "DELETE FROM test_data_all_dimensions WHERE {{where}}", {
-                    "where": db.esfilter2sqlwhere({"terms": {"test_run_id": missing_ids}})
-                })
+            if missing_ids:
+                write_db.execute(
+                    "DELETE FROM test_data_all_dimensions WHERE {{where}}", {
+                        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": missing_ids}})
+                    })
 
             for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
                 values = set(values)
