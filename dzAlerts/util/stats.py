@@ -53,7 +53,8 @@ def closeEnough(a, b):
     if a == None or b == None:
         return False
 
-    if abs(a - b) <= EPSILON * (abs(a) + abs(b) + 1): return True
+    if abs(a - b) <= EPSILON * (abs(a) + abs(b) + 1):
+        return True
     return False
 
 
@@ -69,15 +70,15 @@ def z_moment2stats(z_moment, unbiased=True):
     Z4 = Z[4] / N
 
     variance = (Z2 - mean * mean)
-    mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
-    mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
 
-    if variance == 0.0:
+    if -EPSILON * Z2 < variance <= 0: # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
         skew = None
         kurtosis = None
-    elif variance < 0.0:
+    elif variance < -EPSILON * Z2:
         Log.error("variance can not be negative ({{var}})", {"var":variance})
     else:
+        mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
+        mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
         skew = mc3 / (variance ** 1.5)
         kurtosis = (mc4 / (variance ** 2.0)) - 3.0
 
