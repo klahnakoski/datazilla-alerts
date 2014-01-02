@@ -630,6 +630,10 @@ def drill_filter(esfilter, data):
     for o in output:
         recurse(o, len(o) - 1)
 
+    if not max:
+        #SIMPLE LIST AS RESULT
+        return [u[0] for u in uniform_output]
+
     return FlatList(primary_column[0:max], uniform_output)
 
 
@@ -645,7 +649,8 @@ def wrap_function(func):
         return temp
     elif numarg == 1:
         def temp(row, rownum, rows):
-            return func(row)
+            output = func(row)
+            return output
 
         return temp
     elif numarg == 2:
@@ -689,8 +694,8 @@ def window(data, param):
 
         #PRELOAD total
         total = aggregate()
-        for i in range(head):
-            total += sequence[i].__temp__
+        for i in range(tail, head):
+            total.add(sequence[i].__temp__)
 
         #WINDOW FUNCTION APPLICATION
         for i, r in enumerate(sequence):
@@ -820,10 +825,10 @@ class Domain():
 
 
 
-def range(_min, _max=None, size=1):
+def intervals(_min, _max=None, size=1):
     """
     RETURN (min, max) PAIRS OF GIVEN SIZE, WHICH COVER THE _min, _max RANGE
-    THE LAST PAIR BE SMALLER
+    THE LAST PAIR MAY BE SMALLER
     """
     if _max == None:
         _max = _min

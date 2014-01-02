@@ -72,9 +72,11 @@ def z_moment2stats(z_moment, unbiased=True):
     mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
     mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
 
-    if variance==0.0:
+    if variance == 0.0:
         skew = None
         kurtosis = None
+    elif variance < 0.0:
+        Log.error("variance can not be negative ({{var}})", {"var":variance})
     else:
         skew = mc3 / (variance ** 1.5)
         kurtosis = (mc4 / (variance ** 2.0)) - 3.0

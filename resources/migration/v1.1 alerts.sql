@@ -158,6 +158,13 @@ CREATE PROCEDURE `migrate v1.1`()
       '{"minOffset":0.999}',
       NULL
     );
+    INSERT INTO alert_reasons VALUES (
+      'alert_sustained',
+      concat('{{page_url}} has continued to perform worse since {{revision}}'),
+      date_add(now(), INTERVAL -30 DAY),
+      '{"minOffset":0.999}',
+      NULL
+    );
 
 
     CREATE TABLE alert_page_thresholds (

@@ -346,7 +346,7 @@ def alert_exception(settings, db):
     update_h0_rejected(db, all_min_date, set(Q.select(current_alerts, "tdad_id")) | set(Q.select(found_alerts, "tdad_id")))
 
     if debug:
-        Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched | records_to_process)})
+        Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched | records_to_process)})
     db.execute("""
         UPDATE {{objectstore}}.objectstore
         SET processed_exception='done'

@@ -14,6 +14,7 @@ import scipy
 from scipy import stats
 from dzAlerts.daemons.alert_exception import single_ttest
 from dzAlerts.util import struct
+from dzAlerts.util.cnv import CNV
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
 
@@ -91,6 +92,8 @@ def alert_sustained(settings, db):
                 {{objectstore}}.objectstore o
             WHERE
                 {{where}}
+            ORDER BY
+                o.test_run_id
             LIMIT
                 {{sample_limit}}
         """, {
@@ -101,6 +104,21 @@ def alert_sustained(settings, db):
             {"term": {"o.processed_cube": "done"}}
         ]})
     }), "test_run_id"))
+
+    # TODO: Turn into test
+    # records_to_process = set(Q.select(db.query("""
+    #     SELECT
+    #         test_run_id
+    #     FROM
+    #         ekyle_perftest_1.test_data_all_dimensions t
+    #     Where
+    #         branch='Mozilla-Inbound' AND
+    #         operating_system_version='OS X 10.8' AND
+    #         processor='x86_64' and
+    #         test_name='tp5o' and
+    #         page_url='bbc.co.uk'
+    #
+    # """), "test_run_id"))
 
     new_test_points = db.query("""
         SELECT
@@ -115,7 +133,12 @@ def alert_sustained(settings, db):
     """, {
         "perftest": db.quote_column(settings.perftest.schema),
         "edges": db.quote_column(query.edges, table="t"),
-        "where": db.esfilter2sqlwhere({"terms": {"t.test_run_id": records_to_process}})
+        "where": db.esfilter2sqlwhere({"and": [
+            {"terms": {"t.test_run_id": records_to_process}},
+            # PART OF TEST
+            # {"term": {"page_url": "store.apple.com"}},
+            # {"term": {"branch_version": "28.0a1"}}
+        ]})
     })
 
     #BRING IN ALL NEEDED DATA
@@ -218,9 +241,9 @@ def alert_sustained(settings, db):
                         "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Stats,
-                        "range": {"min": 1, "max": settings.param.sustained.window_size}
+                        "range": {"min": 1, "max": settings.param.sustained.window_size+1}
                     }, {
-                        "name": "point_result.",
+                        "name": "point_result",
                         "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
                     }, {
                         "name": "sustained_result",
@@ -239,22 +262,18 @@ def alert_sustained(settings, db):
             re_alert.update(Q.select(test_results, "tdad_id"))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-            new_exceptions = Q.filter(stats, {"term": {"pass": True}})
+            new_exceptions = Q.filter(stats[146:], {"term": {"pass": True}})
 
             for v in new_exceptions:
-                v.diff = v.result.diff
-                v.confidence = v.result.confidence
-                v.result = None
-
                 alert = Struct(
                     status="new",
-                    create_time=v.push_date,
+                    create_time=CNV.unix2datetime(v.push_date),
                     tdad_id=v.tdad_id,
                     reason=REASON,
                     revision=v.revision,
                     details=v,
                     severity=SEVERITY,
-                    confidence=v.confidence
+                    confidence=v.sustained_result.confidence
                 )
                 alerts.append(alert)
 
@@ -343,7 +362,7 @@ def alert_sustained(settings, db):
     update_h0_rejected(db, all_min_date, set(Q.select(current_alerts, "tdad_id")) | set(Q.select(found_alerts, "tdad_id")))
 
     if debug:
-        Log.note("Marking {{num}} test_run_id as 'summary_complete'", {"num": len(all_touched | records_to_process)})
+        Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched | records_to_process)})
     db.execute("""
         UPDATE {{objectstore}}.objectstore
         SET processed_sustained='done'
@@ -363,7 +382,6 @@ def welchs_ttest(stats1, stats2):
     Accepts summary data (N, stddev, and mean) for two datasets and performs
     one-sided Welch's t-test, returning p-value.
     """
-
     n1 = stats1.count
     m1 = stats1.mean
     v1 = stats1.variance
@@ -371,6 +389,9 @@ def welchs_ttest(stats1, stats2):
     n2 = stats2.count
     m2 = stats2.mean
     v2 = stats2.variance
+
+    if n1 < 2 or n2 < 2:
+        return {"confidence": 0, "diff": 0}
 
     vpooled = v1 / n1 + v2 / n2
     tt = abs(m1 - m2) / sqrt(vpooled)

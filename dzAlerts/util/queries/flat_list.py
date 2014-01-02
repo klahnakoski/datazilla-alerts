@@ -15,4 +15,22 @@ class FlatList(list):
         self.data = data
         self.path = path
 
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        """
+        WE ARE NOW DOOMED TO COPY THE RECORDS (BECAUSE LISTS DOWN THE PATH ARE SPECIFIC ELEMENTS)
+        """
+        for d in self.data:
+            r = d[-1]
+            for i in range(len(self.path)):
+                temp = dict(d[-i - 2])
+                temp[self.path[-i - 1]] = r
+                r = temp
+            yield r
+
+
+
+
 

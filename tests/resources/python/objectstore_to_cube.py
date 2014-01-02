@@ -124,7 +124,7 @@ def main(settings):
                 with Timer("Process {{num}} objectstore", {"num": len(values)}) as t:
                     ## GET EVERYTHING MISSING FROM tdad (AND JOIN IN PUSHLOG)
                     blobs = db.query("""
-                        SELECT STRAIGHT_JOIN
+                        SELECT
                             o.test_run_id `test_run_id`,
                             'non' build_type,
                             json_blob

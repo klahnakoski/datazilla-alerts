@@ -7,10 +7,6 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-SPECIAL = ["keys", "values", "items", "iteritems", "dict", "copy", "__class__"]
-
-
-
 class Struct(dict):
     """
     Struct is an anonymous class with some properties good for manipulating JSON
@@ -32,7 +28,6 @@ class Struct(dict):
     argparse.Environment() - code performs setattr(e, name, value) on instances of Environment
 
     """
-
 
     def __init__(self, **map):
         """
@@ -68,6 +63,10 @@ class Struct(dict):
         return getdefaultwrapped(d, key)
 
     def __setitem__(self, key, value):
+        if key == "":
+            from dzAlerts.util.logs import Log
+
+            Log.error("key is empty string.  Probably a bad idea")
         if not isinstance(key, str):
             key = key.encode("utf-8")
 
