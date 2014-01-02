@@ -410,9 +410,9 @@ def welchs_ttest(stats1, stats2):
     df_denominator = ((v1 / n1) ** 2) / (n1 - 1) + ((v2 / n2) ** 2) / (n2 - 1)
     df = df_numerator / df_denominator
 
-    t = stats.t(df)
 
-    return {"confidence": t.cdf(tt)-t.cdf(1-tt), "diff": tt}
+    # abs(x - 0.5)*2 IS AN ATTEMPT TO GIVE HIGH NUMBERS TO EITHER TAIL OF THE cdf
+    return {"confidence": abs(stats.t(df).cdf(tt)-0.5)*2, "diff": tt}
 
 
 def main():
