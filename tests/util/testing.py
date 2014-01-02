@@ -39,7 +39,7 @@ def make_test_database(settings):
         DB.execute_file(settings.perftest, "tests/resources/sql/Add test_data_all_dimensions.sql")
 
         Log.note("MIGRATE {{database}} TO NEW SCHEMA", {"database": settings.perftest.schema})
-        DB.execute_file(settings.perftest, "resources/migration/v1.1 alerts.sql")
+        DB.execute_file(settings.perftest, "resources/migration/alerts.sql")
         DB.execute_file(settings.perftest, "resources/migration/v1.2 email.sql")
 
         with DB(settings.perftest) as db:
