@@ -268,7 +268,7 @@ def alert_sustained(settings, db):
             re_alert.update(Q.select(test_results, "tdad_id"))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-            new_exceptions = Q.filter(stats[146:], {"term": {"pass": True}})
+            new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
             for v in new_exceptions:
                 alert = Struct(
