@@ -13,6 +13,7 @@ from math import sqrt
 import scipy
 from scipy import stats
 from dzAlerts.util import struct
+from dzAlerts.util.cnv import CNV
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
 
@@ -104,6 +105,8 @@ def alert_exception(settings, db):
                 {{objectstore}}.objectstore o
             WHERE
                 {{where}}
+            ORDER BY
+                o.test_run_id
             LIMIT
                 {{sample_limit}}
         """, {
@@ -251,7 +254,7 @@ def alert_exception(settings, db):
 
                 alert = Struct(
                     status="new",
-                    create_time=v.push_date,
+                    create_time=CNV.unix2datetime(v.push_date),
                     tdad_id=v.tdad_id,
                     reason=REASON,
                     revision=v.revision,

@@ -64,7 +64,7 @@ class Struct(dict):
 
     def __setitem__(self, key, value):
         if key == "":
-            from dzAlerts.util.logs import Log
+            from .logs import Log
 
             Log.error("key is empty string.  Probably a bad idea")
         if not isinstance(key, str):

@@ -1,3 +1,13 @@
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
 class FlatList(list):
     """
     FlatList IS A RESULT OF FILTERING SETS OF TREES
@@ -29,8 +39,3 @@ class FlatList(list):
                 temp[self.path[-i - 1]] = r
                 r = temp
             yield r
-
-
-
-
-

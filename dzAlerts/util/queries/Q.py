@@ -8,16 +8,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-import sys
 import __builtin__
+import sys
 from .index import UniqueIndex, Index
 from .flat_list import FlatList
 from ..maths import Math
 from ..logs import Log
 from ..struct import nvl, listwrap, EmptyList
 from .. import struct
-from ..strings import indent, expand_template
-from ..struct import StructList, Struct, Null
+from ..struct import Struct, Null
 from ..multiset import Multiset
 
 
@@ -57,7 +56,8 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None):
 #group by the set of set of keys
 #values IS LIST OF ALL data that has those keys
     if size != None or min_size != None or max_size != None:
-        if size != None: max_size = size
+        if size != None:
+            max_size = size
         return groupby_min_max_size(data, min_size=min_size, max_size=max_size)
 
     try:
@@ -148,6 +148,7 @@ def map2set(data, relation):
             Log.error("Expecting a dict with lists in codomain", e)
     return Null
 
+
 def map(relation, data):
     """
     return map(relation, data), TRYING TO RETURN SAME TYPE AS data
@@ -172,26 +173,47 @@ def map(relation, data):
     return map2set(data, relation)
 
 
+def map(relation, data):
+    """
+    return map(relation, data), TRYING TO RETURN SAME TYPE AS data
+    """
+    if data == None:
+        return Null
+    if isinstance(data, list):
+        # RETURN A LIST
+        if isinstance(relation, dict):
+            r = struct.wrap(relation)
+            return [r[d] for d in data]
+        else:
+            # relation IS A FUNCTION
+            output = []
+            for d in data:
+                try:
+                    output.append(relation(d))
+                except Exception, e:
+                    output.append(Null)
+            return output
 
-
+    return map2set(data, relation)
 
 
 def select(data, field_name):
 #return list with values from field_name
-    if isinstance(data, Cube): Log.error("Do not know how to deal with cubes yet")
+    if isinstance(data, Cube):
+        Log.error("Do not know how to deal with cubes yet")
 
     if isinstance(data, FlatList):
         if isinstance(field_name, basestring):
             # RETURN LIST OF VALUES
             if field_name.find(".") < 0:
-                if data.path[0]==field_name:
+                if data.path[0] == field_name:
                     return [d[1] for d in data.data]
                 else:
                     return [d[0][field_name] for d in data.data]
             else:
                 keys = struct.chain(field_name)
-                depth = nvl(Math.min([i for i, (k, p) in enumerate(zip(keys, data.path)) if k!=p]), len(data.path)) #LENGTH OF COMMON PREFIX
-                short_keys=keys[depth:]
+                depth = nvl(Math.min([i for i, (k, p) in enumerate(zip(keys, data.path)) if k != p]), len(data.path)) #LENGTH OF COMMON PREFIX
+                short_keys = keys[depth:]
 
                 output = []
                 _select1((d[depth] for d in data.data), short_keys, 0, output)
@@ -286,7 +308,8 @@ def stack(data, name=None, value_column=None, columns=None):
     """
 
     assert value_column != None
-    if isinstance(data, Cube): Log.error("Do not know how to deal with cubes yet")
+    if isinstance(data, Cube):
+        Log.error("Do not know how to deal with cubes yet")
 
     if columns == None:
         columns = data.get_columns()
@@ -374,7 +397,8 @@ def sort(data, fieldnames=None):
             for f in formal:
                 try:
                     result = f["sort"] * cmp(left[f["field"]], right[f["field"]])
-                    if result != 0: return result
+                    if result != 0:
+                        return result
                 except Exception, e:
                     Log.error("problem with compare", e)
             return 0
@@ -407,15 +431,6 @@ def filter(data, where):
     where  - a function that accepts (record, rownum, rows) and returns boolean
     """
     return drill_filter(where, data)
-
-    #
-    # if isinstance(where, collections.Callable):
-    #     where = wrap_function(where)
-    # else:
-    #     # THIS COMPILES PYTHON TO MAKE A FUNCTION
-    #     where = CNV.esfilter2where(where)
-    #
-    # return [d for i, d in enumerate(data) if where(d, i, data)]
 
 
 def drill_filter(esfilter, data):
@@ -649,8 +664,7 @@ def wrap_function(func):
         return temp
     elif numarg == 1:
         def temp(row, rownum, rows):
-            output = func(row)
-            return output
+            return func(row)
 
         return temp
     elif numarg == 2:
@@ -732,13 +746,15 @@ def groupby_size(data, size):
     while True:
         output = more()
         yield (i, output)
-        if len(done) > 0: break
+        if len(done) > 0:
+            break
         i += 1
 
 
 def groupby_Multiset(data, min_size, max_size):
     # GROUP multiset BASED ON POPULATION OF EACH KEY, TRYING TO STAY IN min/max LIMITS
-    if min_size == None: min_size = 0
+    if min_size == None:
+        min_size = 0
 
     total = 0
     i = 0
@@ -788,7 +804,8 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
 
 class Cube():
     def __init__(self, data=None, edges=None, name=None):
-        if isinstance(data, Cube): Log.error("do not know how to handle cubes yet")
+        if isinstance(data, Cube):
+            Log.error("do not know how to handle cubes yet")
 
         columns = get_columns(data)
 
@@ -822,7 +839,6 @@ class Domain():
 
     def part2value(self, part):
         pass
-
 
 
 def intervals(_min, _max=None, size=1):

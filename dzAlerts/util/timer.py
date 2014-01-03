@@ -7,10 +7,10 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+from datetime import timedelta
 import time
-from pymysql.times import TimeDelta
-from dzAlerts.util import struct
-from dzAlerts.util.struct import nvl
+from . import struct
+from .struct import nvl
 from .logs import Log
 
 
@@ -37,7 +37,7 @@ class Timer:
         self.end = time.clock()
         self.interval = self.end - self.start
         param = struct.wrap(self.param)
-        param.duration = TimeDelta(seconds=self.interval)
+        param.duration = timedelta(seconds=self.interval)
         Log.note("Timer end  : " + self.template + " (took {{duration}})", self.param)
 
     @property
