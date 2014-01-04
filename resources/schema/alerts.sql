@@ -108,6 +108,7 @@ CREATE TABLE alerts (
 );;
 
 CREATE UNIQUE INDEX alerts_reason_tdad_id ON alerts (tdad_id, reason);;
+CREATE INDEX alerts_create_time on alerts(create_time);;
 
 CREATE TABLE hierarchy (
 	parent INTEGER,

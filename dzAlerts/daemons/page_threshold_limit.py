@@ -7,6 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 from datetime import timedelta, datetime
 from dzAlerts.daemons.alert import update_h0_rejected
 from dzAlerts.util.queries import Q

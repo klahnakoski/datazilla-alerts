@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 import __builtin__
 import sys
 from .index import UniqueIndex, Index
@@ -148,55 +149,6 @@ def map2set(data, relation):
             Log.error("Expecting a dict with lists in codomain", e)
     return Null
 
-
-def map(relation, data):
-    """
-    return map(relation, data), TRYING TO RETURN SAME TYPE AS data
-    """
-    if data == None:
-        return Null
-    if isinstance(data, list):
-        # RETURN A LIST
-        if isinstance(relation, dict):
-            r = struct.wrap(relation)
-            return [r[d] for d in data]
-        else:
-            # relation IS A FUNCTION
-            output = []
-            for d in data:
-                try:
-                    output.append(relation(d))
-                except Exception, e:
-                    output.append(Null)
-            return output
-
-    return map2set(data, relation)
-
-
-def map(relation, data):
-    """
-    return map(relation, data), TRYING TO RETURN SAME TYPE AS data
-    """
-    if data == None:
-        return Null
-    if isinstance(data, list):
-        # RETURN A LIST
-        if isinstance(relation, dict):
-            r = struct.wrap(relation)
-            return [r[d] for d in data]
-        else:
-            # relation IS A FUNCTION
-            output = []
-            for d in data:
-                try:
-                    output.append(relation(d))
-                except Exception, e:
-                    output.append(Null)
-            return output
-
-    return map2set(data, relation)
-
-
 def select(data, field_name):
 #return list with values from field_name
     if isinstance(data, Cube):
@@ -238,39 +190,67 @@ def select(data, field_name):
 
 def _select(template, data, fields, depth):
     output = []
+    deep_path = None
+    deep_fields = []
     for d in data:
         record = dict(template)
-        deep = {}
         for f in fields:
-            f0 = f[depth]
-            v = d[f0]
-            if isinstance(v, list):
-                deep[f0] = v
-            elif v != None:
-                r = record
-                for x in f[0:depth]:
-                    if x not in r:
-                        r[x] = {}
-                    r = r[x]
-                r[f[depth]] = v
-        if not deep:
+            index, children = go_deep(d, f, depth, record)
+            if index:
+                path = f[0:index]
+                deep_fields.append(f)
+                if deep_path and path != deep_path:
+                    Log.error("Dangerous to select into more than one branch at time")
+        if not children:
             output.append(record)
-        elif len(deep) > 1:
-            Log.error("Dangerous to select into more than one branch at time")
         else:
-            for f0, v in deep.items():
-                output.extend(_select(record, v, fields, depth + 1))
+            output.extend(_select(record, children, deep_fields, depth + 1))
 
     return output
 
 
-def _select1(data, field, depth, output):
-    for d in data:
-        v = d[field[depth]]
-        if isinstance(v, list):
-            _select1(v, field, depth + 1, output)
+def go_deep(v, field, depth, record):
+    r = record
+    for f in field[0:depth]:
+        if f not in r:
+            r[f] = {}
+        r = r[f]
+
+    for i, f in enumerate(field[depth:-1]):
+        v = v.get(f, None)
+        if v is None:
+            return 0, None
+        elif isinstance(v, list):
+            return depth + i + 1, v
         else:
-            output.append(v)
+            if f not in r:
+                r[f] = {}
+            r = r[f]
+
+    f = field[-1]
+    v = v.get(f, None)
+    r[f] = v
+    return 0, None
+
+
+def _select1(data, field, depth, output):
+    """
+    SELECT A SINGLE FIELD
+    """
+    for d in data:
+        go_deep1(d, field, depth, output)
+
+
+def go_deep1(d, field, depth, output):
+    for i, f in enumerate(field[depth:]):
+        d = d.get(f, None)
+        if d is None:
+            output.append(None)
+            return
+        elif isinstance(d, list):
+            _select1(d, field, i + 1, output)
+            return
+    output.append(d)
 
 
 def get_columns(data):

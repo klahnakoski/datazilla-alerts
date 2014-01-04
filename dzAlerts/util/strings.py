@@ -7,6 +7,8 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+
+from __future__ import unicode_literals
 from datetime import timedelta
 import re
 from .jsons import json_encoder

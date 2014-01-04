@@ -10,6 +10,7 @@
 # THIS DATA SHOWS AN UPWARD STEP BETWEEN THE LEFT AND RIGHT REGRESSION LINES
 
 
+from __future__ import unicode_literals
 test_data={
     "header":("date", "count", "mean-std", "mean", "mean+std"),
     "data":[

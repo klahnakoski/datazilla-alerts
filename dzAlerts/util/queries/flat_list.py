@@ -8,6 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
+
 class FlatList(list):
     """
     FlatList IS A RESULT OF FILTERING SETS OF TREES

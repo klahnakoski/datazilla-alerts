@@ -7,7 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-
+from __future__ import unicode_literals
 import StringIO
 import datetime
 import re

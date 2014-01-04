@@ -8,6 +8,8 @@
 #
 
 ## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
+
+from __future__ import unicode_literals
 import scipy
 from scipy import stats
 scipy.stats = stats

@@ -1,20 +1,17 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
-## http://people.mozilla.org/~klahnakoski/chance_is_failure.html FOR EXAMPLES
-################################################################################
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
 
-
-
+from __future__ import unicode_literals
 from dzAlerts.daemons.util.failrate import failure_rate, confident_fail_rate
 from dzAlerts.util.logs import Log
 from dzAlerts.util import startup
-
 
 EPSILON = 0.000001
 

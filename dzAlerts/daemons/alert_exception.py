@@ -7,6 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 from datetime import datetime
 from math import sqrt
 
@@ -71,7 +72,6 @@ def alert_exception(settings, db):
             "test_name",
             "product",
             "branch",
-            "branch_version",
             "operating_system_name",
             "operating_system_version",
             "processor",

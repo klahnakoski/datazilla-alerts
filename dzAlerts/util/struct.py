@@ -7,6 +7,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
+
 class Struct(dict):
     """
     Struct is an anonymous class with some properties good for manipulating JSON
@@ -48,8 +50,8 @@ class Struct(dict):
         return dict.__str__(object.__getattribute__(self, "__dict__"))
 
     def __getitem__(self, key):
-        if not isinstance(key, str):
-            key = key.encode("utf-8")
+        if isinstance(key, str):
+            key = key.decode("utf-8")
 
         d = object.__getattribute__(self, "__dict__")
 
@@ -67,8 +69,8 @@ class Struct(dict):
             from .logs import Log
 
             Log.error("key is empty string.  Probably a bad idea")
-        if not isinstance(key, str):
-            key = key.encode("utf-8")
+        if isinstance(key, str):
+            key = key.decode("utf-8")
 
         try:
             d = object.__getattribute__(self, "__dict__")
@@ -93,8 +95,8 @@ class Struct(dict):
             raise e
 
     def __getattribute__(self, key):
-        if not isinstance(key, str):
-            key = key.encode("utf-8")
+        if isinstance(key, str):
+            key = key.decode("utf-8")
 
         try:
             output = object.__getattribute__(self, key)
@@ -106,8 +108,8 @@ class Struct(dict):
             return _Null(d, key)
 
     def __setattr__(self, key, value):
-        if not isinstance(key, str):
-            key = key.encode("utf-8")
+        if isinstance(key, str):
+            key = key.decode("utf-8")
 
         value = unwrap(value)
         if value is None:
@@ -147,8 +149,8 @@ class Struct(dict):
         return Struct(**d)
 
     def __delitem__(self, key):
-        if not isinstance(key, str):
-            key = key.encode("utf-8")
+        if isinstance(key, str):
+            key = key.decode("utf-8")
 
         if key.find(".") == -1:
             d = object.__getattribute__(self, "__dict__")
@@ -163,8 +165,8 @@ class Struct(dict):
         d.pop(seq[-1], None)
 
     def __delattr__(self, key):
-        if not isinstance(key, str):
-            key = key.encode("utf-8")
+        if isinstance(key, str):
+            key = key.decode("utf-8")
 
         d = object.__getattribute__(self, "__dict__")
         d.pop(key, None)
@@ -477,5 +479,7 @@ def chain(field):
         return [k.replace("\a", "\.") for k in field.split(".")]
     else:
         return [field]
+
+
 
 

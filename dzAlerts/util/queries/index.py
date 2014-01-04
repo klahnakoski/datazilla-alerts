@@ -8,8 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-
-# SIMPLE TUPLE-OF-STRINGS LOOKUP TO OBJECT
+from __future__ import unicode_literals
 from .. import struct
 from ..logs import Log
 from ..strings import indent, expand_template

@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 from math import sqrt
 from .cnv import CNV
 from .struct import nvl, Struct, Null

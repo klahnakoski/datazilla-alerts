@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 
 def Multiset(list=None, key_field=None, count_field=None, allow_negative=False):
     if allow_negative:
@@ -27,7 +28,7 @@ class _Multiset(object):
             return
         else:
             self.dic={i[key_field]:i[count_field] for i in list}
-        
+
 
     def __iter__(self):
         for k, m in self.dic.items():

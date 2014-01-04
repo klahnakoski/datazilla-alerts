@@ -7,6 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 from datetime import datetime
 from dzAlerts.util.logs import Log
 

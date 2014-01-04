@@ -18,6 +18,7 @@
 #    ITS JOB.  ALONG WITH THE UnicodeBuilder WE GET NEAR C SPEEDS
 
 
+from __future__ import unicode_literals
 import json
 import re
 import time
@@ -118,7 +119,7 @@ def _value2json(value, _buffer):
     elif type in (int, long, Decimal):
         append(_buffer, unicode(value))
     elif type is float:
-        append(_buffer, unicode(repr(value)))
+        append(_buffer, unicode(value))
     elif type in (set, list, tuple):
         _list2json(value, _buffer)
     elif type is date:

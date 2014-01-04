@@ -7,9 +7,9 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
+from __future__ import unicode_literals
 from datetime import datetime
 from math import sqrt
-
 import scipy
 from scipy import stats
 from dzAlerts.daemons.alert_exception import single_ttest
@@ -73,7 +73,6 @@ def alert_sustained(settings, db):
             "test_name",
             "product",
             "branch",
-            "branch_version",
             "operating_system_name",
             "operating_system_version",
             "processor",
@@ -115,11 +114,11 @@ def alert_sustained(settings, db):
             test_run_id
         FROM
             ekyle_perftest_1.test_data_all_dimensions t
-        Where
+        WHERE
             # TEST C
             branch='Try-Non-PGO' AND
+            branch_version='29.0a1' AND
             operating_system_version='6.1.7601' AND
-            processor='x86_64' and
             test_name='tsvgx' and
             page_url='hixie-003.xml'
             # TEST B
@@ -134,7 +133,6 @@ def alert_sustained(settings, db):
             # processor='x86_64' and
             # test_name='tp5o' and
             # page_url='bbc.co.uk'
-
     """), "test_run_id"))
 
     new_test_points = db.query("""
@@ -279,6 +277,7 @@ def alert_sustained(settings, db):
             re_alert.update(Q.select(test_results, "tdad_id"))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
+            Q.select(stats, ["sustained_result.confidence", "point_result.confidence"])
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
             for v in new_exceptions:
