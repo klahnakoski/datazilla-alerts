@@ -416,7 +416,7 @@ def welchs_ttest(stats1, stats2):
     if n1 < 2 or n2 < 2:
         return {"confidence": 0, "diff": 0}
 
-    vpooled = max(v1 / n1 + v2 / n2, 1 / 12)
+    vpooled = max(v1 / n1 + v2 / n2, 1.0 / 12.0)
     # 1/12 == STD OF STANDARD UNIFORM DISTRIBUTION
     # We assume test replicates (xi) are actually rounded results from
     # actual measurements somewhere in the range of (xi - 0.5, xi + 0.5),
