@@ -50,8 +50,8 @@ def confident_fail_rate(total_fail, total_pass, confidence):
     error = 1 - confi
 
     # ppf() IS THE PERCENT POINT FUNCTION (INVERSE OF cdf()
-    max1 = Math.min([beta.ppf(confi, total_fail + 1, total_pass), 1])
-    min1 = Math.max([beta.ppf(error, total_fail, total_pass + 1), 0])
+    max1 = Math.min(beta.ppf(confi, total_fail + 1, total_pass), 1)
+    min1 = Math.max(beta.ppf(error, total_fail, total_pass + 1), 0)
 
     # PICK THE probability CLOSEST TO 0.5
     if min1 < 0.5 and 0.5 < max1:

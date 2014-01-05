@@ -216,24 +216,24 @@ def alert_exception(settings, db):
                 "window": [
                     {
                         "name": "push_date_min",
-                        "value": lambda (r): r.push_date,
+                        "value": lambda r: r.push_date,
                         "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.exception.window_size, "max": 0}
                     }, {
                         "name": "past_stats",
-                        "value": lambda (r): Stats(count=1, mean=r.mean),
+                        "value": lambda r: Stats(count=1, mean=r.mean),
                         "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Stats,
                         "range": {"min": -settings.param.exception.window_size, "max": 0}
                     }, {
                         "name": "result",
-                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
+                        "value": lambda r: single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
                     }, {
                         "name": "pass",
-                        "value": lambda (r): True if settings.param.exception.min_confidence < r.result.confidence else False
+                        "value": lambda r: True if settings.param.exception.min_confidence < r.result.confidence else False
                     },
 
                 ]

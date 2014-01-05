@@ -10,8 +10,10 @@
 from __future__ import unicode_literals
 from datetime import datetime
 from math import sqrt
+import numpy
 import scipy
 from scipy import stats
+from dzAlerts import util
 from dzAlerts.daemons.alert_exception import single_ttest
 from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
@@ -212,6 +214,8 @@ def alert_sustained(settings, db):
                     {{from}} t
                 WHERE
                     {{where}}
+                ORDER BY
+                    push_date
                 """, {
                 "from": db.quote_column(query["from"]),
                 "sort": db.quote_column(query.sort),
@@ -238,38 +242,41 @@ def alert_sustained(settings, db):
                 "window": [
                     {
                         "name": "push_date_min",
-                        "value": lambda (r): r.push_date,
+                        "value": lambda r: r.push_date,
                         "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.sustained.window_size, "max": 0}
                     }, {
                         "name": "past_stats",
-                        "value": lambda (r): Stats(count=1, mean=r.mean),
+                        "value": lambda r: r.mean,
                         "edges": query.edges,
                         "sort": "push_date",
-                        "aggregate": windows.Stats,
+                        "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": -settings.param.sustained.window_size, "max": 0}
                     }, {
                         "name": "future_stats",
-                        "value": lambda (r): Stats(count=1, mean=r.mean),
+                        "value": lambda r: r.mean,
                         "edges": query.edges,
                         "sort": "push_date",
-                        "aggregate": windows.Stats,
-                        "range": {"min": 1, "max": settings.param.sustained.window_size+1}
-                    }, {
-                        "name": "point_result",
-                        "value": lambda (r): single_ttest(r.mean, r.past_stats, min_variance=1.0 / 12.0) #VARIANCE OF STANDARD UNIFORM DISTRIBUTION
+                        "aggregate": windows.Stats(middle=0.60),
+                        "range": {"min": 0, "max": settings.param.sustained.window_size}
                     }, {
                         "name": "sustained_result",
-                        "value": lambda (r): welchs_ttest(r.past_stats, r.future_stats)
+                        "value": lambda r: welchs_ttest(r.past_stats, r.future_stats)
                     }, {
-                        "name": "pass",
-                        "value": lambda (r): True if settings.param.sustained.trigger < r.sustained_result.confidence and settings.param.exception.min_confidence < r.point_result.confidence else False
-                    },
+                        "name": "is_diff",
+                        "value": lambda r: True if settings.param.sustained.trigger < r.sustained_result.confidence else False
+                    }
 
                 ]
             })
+
+            #PICK THE BEST SCORE FOR EACH is_diff==True REGION
+            for g, data in Q.groupby(stats, "is_diff", contiguous=True):
+                if g.is_diff:
+                    best = Q.sort(data, ["sustained_result.confidence", "sustained_result.diff"]).last()
+                    best["pass"] = True
 
             all_touched.update(Q.select(test_results, "test_run_id"))
 
@@ -277,7 +284,7 @@ def alert_sustained(settings, db):
             re_alert.update(Q.select(test_results, "tdad_id"))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-            Q.select(stats, ["sustained_result.confidence", "point_result.confidence"])
+            Q.select(stats, ["revision", "is_diff", "sustained_result.confidence", "past_stats", "future_stats"])
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
             for v in new_exceptions:
@@ -357,8 +364,8 @@ def alert_sustained(settings, db):
         a = found_alerts[curr.tdad_id]
 
         if significant_difference(curr.severity, a.severity) or \
-            significant_difference(curr.confidence, a.confidence) or \
-            curr.reason != a.reason:
+                significant_difference(curr.confidence, a.confidence) or \
+                        curr.reason != a.reason:
             curr.last_updated = datetime.utcnow()
             db.update("alerts", {"id": curr.id}, a)
 
@@ -409,7 +416,7 @@ def welchs_ttest(stats1, stats2):
     if n1 < 2 or n2 < 2:
         return {"confidence": 0, "diff": 0}
 
-    vpooled = max(v1 / n1 + v2 / n2, 1/12)
+    vpooled = max(v1 / n1 + v2 / n2, 1 / 12)
     # 1/12 == STD OF STANDARD UNIFORM DISTRIBUTION
     # We assume test replicates (xi) are actually rounded results from
     # actual measurements somewhere in the range of (xi - 0.5, xi + 0.5),
@@ -422,7 +429,62 @@ def welchs_ttest(stats1, stats2):
 
 
     # abs(x - 0.5)*2 IS AN ATTEMPT TO GIVE HIGH NUMBERS TO EITHER TAIL OF THE cdf
-    return {"confidence": abs(stats.t(df).cdf(tt)-0.5)*2, "diff": tt}
+    return {"confidence": abs(stats.t(df).cdf(tt) - 0.5) * 2, "diff": tt}
+
+
+def median_test(samples1, samples2):
+    if len(samples1) < 3 or len(samples2) < 3:
+        return {"diff": 0, "confidence": 0}
+    median = util.stats.median(samples1 + samples2)
+
+    above1, below1 = count_partition(samples1, median)
+    above2, below2 = count_partition(samples2, median)
+
+    result = stats.chisquare(
+        numpy.array([above1, below1, above2, below2]),
+        f_exp=numpy.array([float(len(samples1)) / 2, float(len(samples1)) / 2, float(len(samples2)) / 2, float(len(samples2)) / 2])
+    )
+    return {"diff": result[0], "confidence": result[1]}
+
+
+def count_partition(samples, cut_value, resolution=1.0):
+    """
+    COMPARE SAMPLES TO cut_value AND COUNT IF GREATER OR LESSER
+    """
+    a = 0
+    b = 0
+    min_cut = cut_value - resolution/2
+    max_cut = cut_value + resolution/2
+    for v in samples:
+        if v > max_cut:
+            b += 1
+        elif v < min_cut:
+            a += 1
+        else:
+            a += (max_cut - v) / resolution
+            b += (v - min_cut) / resolution
+    return a, b
+
+
+def pick_besk(past, present, future):
+    """
+    LOOKING AT THESE THREE, WHICH ONE SHOULD BE MARKED AS THE REGRESSION?
+    """
+    if not present.is_diff:
+        return False
+
+    if past.is_diff:
+        if future.sustained_result.confidence > present.sustained_result.confidence:
+            return False
+        else:
+            return True
+    else:
+        if future.sustained_result.confidence > present.sustained_result.confidence:
+            return False
+        else:
+            return True
+
+
 
 
 def main():

@@ -116,8 +116,10 @@ class Log(object):
     @staticmethod
     def start(settings=None):
         ##http://victorlin.me/2012/08/good-logging-practice-in-python/
-        if not settings: return
-        if not settings.log: return
+        if not settings:
+            return
+        if not settings.log:
+            return
 
         globals()["logging_multi"] = Log_usingMulti()
         globals()["main_log"] = Log_usingThread(logging_multi)

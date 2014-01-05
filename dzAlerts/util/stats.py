@@ -109,48 +109,58 @@ def z_moment2stats(z_moment, unbiased=True):
     return stats
 
 class Stats(Struct):
-    def __init__(self, **args):
+    def __init__(self, **kwargs):
         Struct.__init__(self)
-        if "count" not in args:
+
+        if "samples" in kwargs:
+            s = z_moment2stats(Z_moment.new_instance(kwargs["samples"]))
+            self.count = s.count
+            self.mean = s.mean
+            self.variance = s.variance
+            self.skew = s.skew
+            self.kurtosis = s.kurtosis
+            return
+
+        if "count" not in kwargs:
             self.count = 0
             self.mean = 0
             self.variance = 0
             self.skew = None
             self.kurtosis = None
-        elif "mean" not in args:
-            self.count = args["count"]
+        elif "mean" not in kwargs:
+            self.count = kwargs["count"]
             self.mean = 0
             self.variance = 0
             self.skew = None
             self.kurtosis = None
-        elif "variance" not in args and "std" not in args:
-            self.count = args["count"]
-            self.mean = args["mean"]
+        elif "variance" not in kwargs and "std" not in kwargs:
+            self.count = kwargs["count"]
+            self.mean = kwargs["mean"]
             self.variance = 0
             self.skew = None
             self.kurtosis = None
-        elif "skew" not in args:
-            self.count = args["count"]
-            self.mean = args["mean"]
-            self.variance = args["variance"] if "variance" in args else args["std"] ** 2
+        elif "skew" not in kwargs:
+            self.count = kwargs["count"]
+            self.mean = kwargs["mean"]
+            self.variance = kwargs["variance"] if "variance" in kwargs else kwargs["std"] ** 2
             self.skew = None
             self.kurtosis = None
-        elif "kurtosis" not in args:
-            self.count = args["count"]
-            self.mean = args["mean"]
-            self.variance = args["variance"] if "variance" in args else args["std"] ** 2
-            self.skew = args["skew"]
+        elif "kurtosis" not in kwargs:
+            self.count = kwargs["count"]
+            self.mean = kwargs["mean"]
+            self.variance = kwargs["variance"] if "variance" in kwargs else kwargs["std"] ** 2
+            self.skew = kwargs["skew"]
             self.kurtosis = None
         else:
-            self.count = args["count"]
-            self.mean = args["mean"]
-            self.variance = args["variance"] if "variance" in args else args["std"] ** 2
-            self.skew = args["skew"]
-            self.kurtosis = args["kurtosis"]
+            self.count = kwargs["count"]
+            self.mean = kwargs["mean"]
+            self.variance = kwargs["variance"] if "variance" in kwargs else kwargs["std"] ** 2
+            self.skew = kwargs["skew"]
+            self.kurtosis = kwargs["kurtosis"]
 
         self.unbiased = \
-            args["unbiased"] if "unbiased" in args else \
-                not args["biased"] if "biased" in args else \
+            kwargs["unbiased"] if "unbiased" in kwargs else \
+                not kwargs["biased"] if "biased" in kwargs else \
                     False
 
 
@@ -215,15 +225,38 @@ setattr(CNV, "z_moment2dict", staticmethod(z_moment2dict))
 
 
 def median(values):
+    """
+    RETURN MEDIAN VALUE
+    IN THE EVENT MULTIPLE INSTANCES OF THE MEDIAN VALUE, THE MEDIAN IS
+    INTERPOLATED BASED ON IT'S POSITION IN THE MEDIAN RANGE.
+    ROUND THE RESULT IF YOU WANT AN INTEGER
+    """
     try:
         if not values:
             return Null
 
         l = len(values)
         _sorted = sorted(values)
+
+        middle = l / 2
+        _median = _sorted[middle]
+
+        #FIND RANGE OF THE median
+        start_index = middle - 1
+        while _sorted[start_index] == _median:
+            start_index -= 1
+        start_index += 1
+        stop_index = middle + 1
+        while _sorted[stop_index] == _median:
+            stop_index += 1
+
         if l % 2 == 0:
-            return (_sorted[l / 2 - 1] + _sorted[l / 2]) / 2
+            if start_index == stop_index:
+                return (_sorted[middle - 1] + median) / 2
+            else:
+                return (_median - 0.5) + (middle - start_index) / (stop_index - start_index)
         else:
-            return _sorted[l / 2]
+            middle += 0.5
+            return (_median - 0.5) + (middle - start_index) / (stop_index - start_index)
     except Exception, e:
         Log.error("problem with median", e)

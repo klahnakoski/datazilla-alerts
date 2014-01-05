@@ -81,7 +81,7 @@ def replicate_table(table_name, id_name, source, destination):
 
         if not missing:
             return
-        max_id = Math.max(Q.select(missing, id_name))
+        max_id = Math.max(*Q.select(missing, id_name))
         destination.insert_list(table_name, missing)
         destination.flush()
 

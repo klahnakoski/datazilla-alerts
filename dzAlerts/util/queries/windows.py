@@ -9,6 +9,8 @@
 #
 
 from __future__ import unicode_literals
+import functools
+from dzAlerts.util import stats
 from ..logs import Log
 from ..maths import Math
 from ..multiset import Multiset
@@ -74,11 +76,55 @@ class WindowFunction(AggregationFunction):
         Log.error("not implemented yet")
 
 
-class Stats(WindowFunction):
+def Stats(**kwargs):
+    if not kwargs:
+        return _SimpleStats
+    else:
+        return functools.partial(_Stats, *[], **kwargs)
+
+
+class _Stats(WindowFunction):
+    """
+    TRACK STATS, BUT IGNORE OUTLIERS
+    """
+
+    def __init__(self, middle=None):
+        object.__init__(self)
+        self.middle = middle
+        self.samples = []
+
+    def add(self, value):
+        if value == None:
+            return
+        for i, v in enumerate(self.samples):
+            #KEEP SAMPLES SORTED
+            if v >= value:
+                self.samples.insert(i, value)
+                return
+        self.samples.append(value)
+
+    def sub(self, value):
+        if value == None:
+            return
+        self.samples.remove(value)
+
+    def merge(self, agg):
+        Log.error("Do not know how to hanlde")
+
+    def end(self):
+        ignore = Math.ceiling(len(self.samples)*(1-self.middle)/2)
+        if ignore * 2 >= len(self.samples):
+            return stats.Stats()
+        return stats.Stats(samples=self.samples[ignore:len(self.samples)-ignore:])
+
+
+class _SimpleStats(WindowFunction):
+    """
+    AGGREGATE Stats OBJECTS, NOT JUST VALUES
+    """
     def __init__(self):
         object.__init__(self)
         self.total = Z_moment(0, 0, 0)
-
 
     def add(self, value):
         if value == None:
@@ -134,7 +180,7 @@ class Max(WindowFunction):
         self.total.remove(value)
 
     def end(self):
-        return Math.max(self.total)
+        return Math.max(*self.total)
 
 
 class Count(WindowFunction):

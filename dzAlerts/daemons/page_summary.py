@@ -168,12 +168,12 @@ def page_summary(settings, db, new_test_points):
                 "range": {"min": -WINDOW_SIZE, "max": 0}
             }, {
                 "name": "sample_pass",
-                "value": lambda (r): r.sample_count - r.sample_fail
+                "value": lambda r: r.sample_count - r.sample_fail
             }, {
                 # TODO: INCREASE sample_fail TO 70% CONFIDENCE
                 # "+2" DOES THE JOB OF AVOIDING ZEROS FOR NOW
                 "name": "failure_probability",
-                "value": lambda (r): (r.sample_fail + 2) / r.sample_count
+                "value": lambda r: (r.sample_fail + 2) / r.sample_count
             }]
         })
 
