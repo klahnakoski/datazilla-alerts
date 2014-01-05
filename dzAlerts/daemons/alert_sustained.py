@@ -87,55 +87,55 @@ def alert_sustained(settings, db):
     if debug:
         Log.note("Find tests that need sustained regression detection")
 
-    # records_to_process = set(Q.select(db.query("""
-    #         SELECT
-    #             o.test_run_id
-    #         FROM
-    #             {{objectstore}}.objectstore o
-    #         WHERE
-    #             {{where}}
-    #         ORDER BY
-    #             o.test_run_id
-    #         LIMIT
-    #             {{sample_limit}}
-    #     """, {
-    #     "objectstore": db.quote_column(settings.objectstore.schema),
-    #     "sample_limit": SQL(settings.param.sustained.max_test_results_per_run),
-    #     "where": db.esfilter2sqlwhere({"and": [
-    #         {"term": {"o.processed_sustained": 'ready'}},
-    #         {"term": {"o.processed_cube": "done"}}
-    #     ]})
-    # }), "test_run_id"))
+    records_to_process = set(Q.select(db.query("""
+            SELECT
+                o.test_run_id
+            FROM
+                {{objectstore}}.objectstore o
+            WHERE
+                {{where}}
+            ORDER BY
+                o.test_run_id
+            LIMIT
+                {{sample_limit}}
+        """, {
+        "objectstore": db.quote_column(settings.objectstore.schema),
+        "sample_limit": SQL(settings.param.sustained.max_test_results_per_run),
+        "where": db.esfilter2sqlwhere({"and": [
+            {"term": {"o.processed_sustained": 'ready'}},
+            {"term": {"o.processed_cube": "done"}}
+        ]})
+    }), "test_run_id"))
 
     #TODO: BE SURE WE CAUGHT https://datazilla.mozilla.org/?start=1385895839&stop=1388674396&product=Firefox&repository=Try-Non-PGO&test=tsvgx&page=hixie-003.xml&graph_search=331ddc9661bc&tr_id=3877458&graph=win%206.1.7601&x86_64=true&error_bars=false&project=talos
 
 
     # TODO: Turn into tests
-    records_to_process = set(Q.select(db.query("""
-        SELECT
-            test_run_id
-        FROM
-            ekyle_perftest_1.test_data_all_dimensions t
-        WHERE
-            # TEST C
-            branch='Try-Non-PGO' AND
-            branch_version='29.0a1' AND
-            operating_system_version='6.1.7601' AND
-            test_name='tsvgx' and
-            page_url='hixie-003.xml'
-            # TEST B
-            # branch='Mozilla-Esr17' AND
-            # operating_system_version='fedora 12' AND
-            # processor='x86_64' and
-            # test_name='dromaeo_css' and
-            # page_url='jquery.html'
-            # TEST A
-            # branch='Mozilla-Inbound' AND
-            # operating_system_version='OS X 10.8' AND
-            # processor='x86_64' and
-            # test_name='tp5o' and
-            # page_url='bbc.co.uk'
-    """), "test_run_id"))
+    # records_to_process = set(Q.select(db.query("""
+    #     SELECT
+    #         test_run_id
+    #     FROM
+    #         ekyle_perftest_1.test_data_all_dimensions t
+    #     WHERE
+    #         # TEST C
+    #         branch='Try-Non-PGO' AND
+    #         branch_version='29.0a1' AND
+    #         operating_system_version='6.1.7601' AND
+    #         test_name='tsvgx' and
+    #         page_url='hixie-003.xml'
+    #         # TEST B
+    #         # branch='Mozilla-Esr17' AND
+    #         # operating_system_version='fedora 12' AND
+    #         # processor='x86_64' and
+    #         # test_name='dromaeo_css' and
+    #         # page_url='jquery.html'
+    #         # TEST A
+    #         # branch='Mozilla-Inbound' AND
+    #         # operating_system_version='OS X 10.8' AND
+    #         # processor='x86_64' and
+    #         # test_name='tp5o' and
+    #         # page_url='bbc.co.uk'
+    # """), "test_run_id"))
 
     new_test_points = db.query("""
         SELECT
