@@ -226,12 +226,13 @@ def z_moment2dict(z):
 setattr(CNV, "z_moment2dict", staticmethod(z_moment2dict))
 
 
-def median(values):
+def median(values, simple=True):
     """
     RETURN MEDIAN VALUE
-    IN THE EVENT MULTIPLE INSTANCES OF THE MEDIAN VALUE, THE MEDIAN IS
-    INTERPOLATED BASED ON IT'S POSITION IN THE MEDIAN RANGE.
-    ROUND THE RESULT IF YOU WANT AN INTEGER
+
+    IF simple=False THEN IN THE EVENT MULTIPLE INSTANCES OF THE
+    MEDIAN VALUE, THE MEDIAN IS INTERPOLATED BASED ON IT'S POSITION
+    IN THE MEDIAN RANGE
     """
     try:
         if not values:
@@ -241,7 +242,12 @@ def median(values):
         _sorted = sorted(values)
 
         middle = l / 2
-        _median = _sorted[middle]
+        _median = float(_sorted[middle])
+
+        if simple:
+            if l % 2 == 0:
+                return float(_sorted[middle - 1] + _median) / 2
+            return _median
 
         #FIND RANGE OF THE median
         start_index = middle - 1
@@ -254,11 +260,11 @@ def median(values):
 
         if l % 2 == 0:
             if start_index == stop_index:
-                return (_sorted[middle - 1] + median) / 2
+                return float(_sorted[middle - 1] + median) / 2
             else:
-                return (_median - 0.5) + (middle - start_index) / (stop_index - start_index)
+                return (_median - 0.5) + float(middle - start_index) / float(stop_index - start_index)
         else:
             middle += 0.5
-            return (_median - 0.5) + (middle - start_index) / (stop_index - start_index)
+            return (_median - 0.5) + float(middle - start_index) / float(stop_index - start_index)
     except Exception, e:
         Log.error("problem with median", e)

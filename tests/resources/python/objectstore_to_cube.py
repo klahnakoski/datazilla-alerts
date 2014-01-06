@@ -91,7 +91,7 @@ def objectstore_to_cube(r):
 
 def get_missing_ids(db, settings):
     missing = db.query("""
-        SELECT STRAIGHT_JOIN
+        SELECT
             o.test_run_id
         FROM
             ekyle_objectstore_1.objectstore o
