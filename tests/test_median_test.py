@@ -21,7 +21,7 @@ class TestMedianTest(unittest.TestCase):
 
         simple_result = median_test(sample1, sample2, interpolate=False)  # EXAMPLE OF GOING WRONG
         smooth_result = median_test(sample1, sample2)
-        assert smooth_result.confiodence < 0.90, "These are not different!"
+        assert smooth_result["confidence"] < 0.90, "These are not different!"
 
     def test_smaller_series(self):
         sample1 = [20, 20, 20, 20, 20, 21, 21, 21]
@@ -29,4 +29,4 @@ class TestMedianTest(unittest.TestCase):
 
         simple_result = median_test(sample1, sample2, interpolate=False)  # EXAMPLE OF GOING WRONG
         smooth_result = median_test(sample1, sample2)
-        assert smooth_result.confiodence < 0.90, "These are not different!"
+        assert smooth_result["confidence"] < 0.90, "These are not different!"
