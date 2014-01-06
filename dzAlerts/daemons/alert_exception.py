@@ -119,22 +119,22 @@ def alert_exception(settings, db):
     }), "test_run_id"))
 
     # TODO: Turn into tests
-    records_to_process = set(Q.select(db.query("""
-        SELECT
-            test_run_id
-        FROM
-            ekyle_perftest_1.test_data_all_dimensions t
-        WHERE
-            # TEST C
-            branch= 'mobile' AND
-            operating_system_name= 'Android' AND
-            operating_system_version= '2.2' AND
-            page_url= 'tcheckerboard' AND
-            processor= 'ARMv7' AND
-            product= 'Fennec' AND
-            test_name= 'tcheckerboard'
-
-    """), "test_run_id"))
+    # records_to_process = set(Q.select(db.query("""
+    #     SELECT
+    #         test_run_id
+    #     FROM
+    #         ekyle_perftest_1.test_data_all_dimensions t
+    #     WHERE
+    #         # TEST C
+    #         branch= 'mobile' AND
+    #         operating_system_name= 'Android' AND
+    #         operating_system_version= '2.2' AND
+    #         page_url= 'tcheckerboard' AND
+    #         processor= 'ARMv7' AND
+    #         product= 'Fennec' AND
+    #         test_name= 'tcheckerboard'
+    #
+    # """), "test_run_id"))
 
     new_test_points = db.query("""
         SELECT

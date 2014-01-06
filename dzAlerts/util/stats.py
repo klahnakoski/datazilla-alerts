@@ -72,7 +72,7 @@ def z_moment2stats(z_moment, unbiased=True):
     Z4 = Z[4] / N
 
     variance = (Z2 - mean * mean)
-    error = min(-EPSILON * Z2, -EPSILON)  # EXPECTED FLOAT ERROR
+    error = -EPSILON * (abs(Z2) + 1)  # EXPECTED FLOAT ERROR
 
     if error < variance <= 0:  # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
         skew = None
