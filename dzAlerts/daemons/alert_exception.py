@@ -106,7 +106,7 @@ def alert_exception(settings, db):
             WHERE
                 {{where}}
             ORDER BY
-                o.test_run_id
+                o.test_run_id DESC
             LIMIT
                 {{sample_limit}}
         """, {

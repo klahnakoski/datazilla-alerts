@@ -94,7 +94,7 @@ def alert_sustained(settings, db):
             WHERE
                 {{where}}
             ORDER BY
-                o.test_run_id
+                o.test_run_id DESC
             LIMIT
                 {{sample_limit}}
         """, {
@@ -309,7 +309,7 @@ def alert_sustained(settings, db):
         Log.note("Get Current Alerts")
 
     #CHECK THE CURRENT ALERTS
-    if len(re_alert) == 0:
+    if not re_alert:
         current_alerts = []
     else:
         current_alerts = db.query("""
