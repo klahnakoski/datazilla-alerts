@@ -35,14 +35,15 @@ def stats2z_moment(stats):
     m = Z_moment(mz0, mz1, mz2, mz3, mz4)
     if DEBUG:
         globals()["DEBUG"] = False
-        v = z_moment2stats(m, unbiased=False)
         try:
+            v = z_moment2stats(m, unbiased=False)
             assert closeEnough(v.count, stats.count)
             assert closeEnough(v.mean, stats.mean)
             assert closeEnough(v.variance, stats.variance)
             assert closeEnough(v.skew, stats.skew)
             assert closeEnough(v.kurtosis, stats.vkurtosis)
         except Exception, e:
+            v = z_moment2stats(m, unbiased=False)
             Log.error("programmer error")
         globals()["DEBUG"] = True
     return m
@@ -71,11 +72,12 @@ def z_moment2stats(z_moment, unbiased=True):
     Z4 = Z[4] / N
 
     variance = (Z2 - mean * mean)
+    error = min(-EPSILON * Z2, -EPSILON)  # EXPECTED FLOAT ERROR
 
-    if -EPSILON * Z2 < variance <= 0: # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
+    if error < variance <= 0:  # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
         skew = None
         kurtosis = None
-    elif variance < -EPSILON * Z2:
+    elif variance < error:
         Log.error("variance can not be negative ({{var}})", {"var":variance})
     else:
         mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
@@ -94,8 +96,8 @@ def z_moment2stats(z_moment, unbiased=True):
 
     if DEBUG:
         globals()["DEBUG"] = False
-        v = stats2z_moment(stats)
         try:
+            v = stats2z_moment(stats)
             for i in range(5):
                 assert closeEnough(v.S[i], Z[i])
         except Exception, e:
