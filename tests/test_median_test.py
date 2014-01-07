@@ -14,12 +14,18 @@ from dzAlerts.daemons.util.median_test import median_test
 
 
 class TestMedianTest(unittest.TestCase):
-
     def test_tight_series(self):
+        # MORE 20s
         sample1 = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21]
         sample2 = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21]
 
-        simple_result = median_test(sample1, sample2, interpolate=False)  # EXAMPLE OF GOING WRONG
+        smooth_result = median_test(sample1, sample2)
+        assert smooth_result["confidence"] < 0.90, "These are not different!"
+
+        #MORE 21s
+        sample1 = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21]
+        sample2 = [20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21]
+
         smooth_result = median_test(sample1, sample2)
         assert smooth_result["confidence"] < 0.90, "These are not different!"
 
@@ -30,3 +36,4 @@ class TestMedianTest(unittest.TestCase):
         simple_result = median_test(sample1, sample2, interpolate=False)  # EXAMPLE OF GOING WRONG
         smooth_result = median_test(sample1, sample2)
         assert smooth_result["confidence"] < 0.90, "These are not different!"
+

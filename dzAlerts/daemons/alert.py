@@ -39,7 +39,6 @@ EPSILON = 0.0001
 def send_alerts(settings, db):
     """
     BLINDLY SENDS ALERTS FROM THE ALERTS TABLE, ASSUMING ALL HAVE THE SAME STRUCTURE.
-    THIS SHOULD BE CHANGED SO EACH TYPE OF ALERT IS RESPONSBLE FOR IT'S OWN TEMPLATE
     """
     debug = settings.param.debug
     db.debug = debug
@@ -71,13 +70,13 @@ def send_alerts(settings, db):
                 a.status <> 'obsolete' AND
                 bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
                 a.solution IS NULL AND
-                a.reason <> 'alert_exception' AND
+                a.reason = 'alert_regression' AND
                 t.push_date > {{min_time}}
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
             LIMIT
-                1000
+                1
             """, {
             "last_sent": datetime.utcnow() - RESEND_AFTER,
             "alert_limit": ALERT_LIMIT - EPSILON,
@@ -89,8 +88,13 @@ def send_alerts(settings, db):
                 Log.note("Nothing important to email")
             return
 
-        body = [HEADER]
+        #poor souls that signed up for emails
+        listeners = db.query("SELECT email FROM alert_listeners")
+        listeners = [x["email"] for x in listeners]
+        listeners = ";".join(listeners)
+
         for alert in new_alerts:
+            body = [HEADER]
             if alert.confidence >= 1:
                 alert.confidence = 0.999999
 
@@ -101,30 +105,24 @@ def send_alerts(settings, db):
                 alert.details.push_date_max = (2 * alert.details.push_date) - alert.details.push_date_min
 
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
-        body = SEPARATOR.join(body)
+            body = "".join(body)
 
-        #poor souls that signed up for emails
-        listeners = db.query("SELECT email FROM alert_listeners")
-        listeners = [x["email"] for x in listeners]
-        listeners = ";".join(listeners)
+            if debug:
+                Log.note("EMAIL: {{email}}", {"email": body})
 
-        if debug:
-            Log.note("EMAIL: {{email}}", {"email": body})
+            if len(body) > MAX_EMAIL_LENGTH:
+                Log.note("Truncated the email body")
+                suffix = "... (has been truncated)"
+                body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
 
-        if len(body) > MAX_EMAIL_LENGTH:
-            Log.note("Truncated the email body")
-            suffix = "... (has been truncated)"
-            body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
+            db.call("email_send", (
+                listeners, #to
+                settings.param.email.title,
+                body, #body
+                None
+            ))
 
-        db.call("email_send", (
-            listeners, #to
-            settings.param.email.title,
-            body, #body
-            None
-        ))
-
-        #I HOPE I CAN SEND ARRAYS OF NUMBERS
-        if len(new_alerts) > 0:
+            #I HOPE I CAN SEND ARRAYS OF NUMBERS
             db.execute(
                 "UPDATE alerts SET last_sent={{time}} WHERE {{where}}", {
                     "time": datetime.utcnow(),

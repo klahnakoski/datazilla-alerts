@@ -78,7 +78,7 @@ def z_moment2stats(z_moment, unbiased=True):
         skew = None
         kurtosis = None
     elif variance < error:
-        Log.error("variance can not be negative ({{var}})", {"var":variance})
+        Log.error("variance can not be negative ({{var}})", {"var": variance})
     else:
         mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
         mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
@@ -109,6 +109,7 @@ def z_moment2stats(z_moment, unbiased=True):
         globals()["DEBUG"] = True
 
     return stats
+
 
 class Stats(Struct):
     def __init__(self, **kwargs):
@@ -198,7 +199,8 @@ class Z_moment(object):
 
     @staticmethod
     def new_instance(values=None):
-        if values == None: return Z_moment()
+        if values == None:
+            return Z_moment()
         values = [float(v) for v in values if v != None]
 
         return Z_moment(
@@ -251,11 +253,11 @@ def median(values, simple=True):
 
         #FIND RANGE OF THE median
         start_index = middle - 1
-        while _sorted[start_index] == _median:
+        while start_index > 0 and _sorted[start_index] == _median:
             start_index -= 1
         start_index += 1
         stop_index = middle + 1
-        while _sorted[stop_index] == _median:
+        while stop_index < l and _sorted[stop_index] == _median:
             stop_index += 1
 
         if l % 2 == 0:

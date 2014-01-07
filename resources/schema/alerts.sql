@@ -52,6 +52,13 @@ INSERT INTO reasons VALUES (
 	'{"minOffset":0.999}',
 	NULL
 );;
+INSERT INTO reasons VALUES (
+	'alert_regression',
+	concat('{{page_url}} has regressed since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL
+);;
 
 
 CREATE TABLE page_thresholds (

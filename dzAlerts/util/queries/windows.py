@@ -96,11 +96,6 @@ class _Stats(WindowFunction):
     def add(self, value):
         if value == None:
             return
-        for i, v in enumerate(self.samples):
-            #KEEP SAMPLES SORTED
-            if v >= value:
-                self.samples.insert(i, value)
-                return
         self.samples.append(value)
 
     def sub(self, value):
@@ -109,19 +104,22 @@ class _Stats(WindowFunction):
         self.samples.remove(value)
 
     def merge(self, agg):
-        Log.error("Do not know how to hanlde")
+        Log.error("Do not know how to handle")
 
     def end(self):
-        ignore = Math.ceiling(len(self.samples)*(1-self.middle)/2)
+        ignore = Math.ceiling(len(self.samples) * (1 - self.middle) / 2)
         if ignore * 2 >= len(self.samples):
             return stats.Stats()
-        return stats.Stats(samples=self.samples[ignore:len(self.samples)-ignore:])
+        output = stats.Stats(samples=sorted(self.samples)[ignore:len(self.samples) - ignore:])
+        output.samples = list(self.samples)
+        return output
 
 
 class _SimpleStats(WindowFunction):
     """
     AGGREGATE Stats OBJECTS, NOT JUST VALUES
     """
+
     def __init__(self):
         object.__init__(self)
         self.total = Z_moment(0, 0, 0)
@@ -151,6 +149,7 @@ class Min(WindowFunction):
 
     def add(self, value):
         if value == None:
+
             return
         self.total.add(value)
 

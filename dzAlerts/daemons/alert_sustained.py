@@ -117,12 +117,18 @@ def alert_sustained(settings, db):
     #     FROM
     #         ekyle_perftest_1.test_data_all_dimensions t
     #     WHERE
-    #         # TEST C
-    #         branch='Try-Non-PGO' AND
+    #         # TEST D
+    #         branch='B2G-Inbound' AND
     #         branch_version='29.0a1' AND
-    #         operating_system_version='6.1.7601' AND
+    #         operating_system_version='Ubuntu 12.04' AND
     #         test_name='tsvgx' and
-    #         page_url='hixie-003.xml'
+    #         page_url='hixie-005.xml'
+    #         # TEST C
+    #         # branch='Try-Non-PGO' AND
+    #         # branch_version='29.0a1' AND
+    #         # operating_system_version='6.1.7601' AND
+    #         # test_name='tsvgx' and
+    #         # page_url='hixie-003.xml'
     #         # TEST B
     #         # branch='Mozilla-Esr17' AND
     #         # operating_system_version='fedora 12' AND
@@ -262,20 +268,20 @@ def alert_sustained(settings, db):
                         "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": 0, "max": settings.param.sustained.window_size}
                     }, {
-                        "name": "sustained_result",
+                        "name": "result",
                         "value": lambda r: welchs_ttest(r.past_stats, r.future_stats)
                     }, {
                         "name": "is_diff",
-                        "value": lambda r: True if settings.param.sustained.trigger < r.sustained_result.confidence else False
+                        "value": lambda r: True if settings.param.sustained.trigger < r.result.confidence else False
                     }
 
                 ]
             })
 
             #PICK THE BEST SCORE FOR EACH is_diff==True REGION
-            for g, data in Q.groupby(stats, "is_diff", contiguous=True):
-                if g.is_diff:
-                    best = Q.sort(data, ["sustained_result.confidence", "sustained_result.diff"]).last()
+            for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
+                if g2.is_diff:
+                    best = Q.sort(data, ["result.confidence", "result.diff"]).last()
                     best["pass"] = True
 
             all_touched.update(Q.select(test_results, "test_run_id"))
@@ -283,8 +289,12 @@ def alert_sustained(settings, db):
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             re_alert.update(Q.select(test_results, "tdad_id"))
 
+            #FOR DEBUGGING
+            # Q.select(stats, ["revision", "is_diff", "result.confidence", "past_stats", "future_stats"])
+            # if g.page_url=="hixie-005.xml":
+            #     Log.debug()
+
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-            Q.select(stats, ["revision", "is_diff", "sustained_result.confidence", "past_stats", "future_stats"])
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
 
             for v in new_exceptions:
@@ -296,7 +306,7 @@ def alert_sustained(settings, db):
                     revision=v.revision,
                     details=v,
                     severity=SEVERITY,
-                    confidence=v.sustained_result.confidence
+                    confidence=v.result.confidence
                 )
                 alerts.append(alert)
 

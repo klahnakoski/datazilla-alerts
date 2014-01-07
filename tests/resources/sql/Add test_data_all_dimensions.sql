@@ -48,6 +48,7 @@ CREATE TABLE `test_data_all_dimensions` (
 	CONSTRAINT `fk_test_run_id_tdad` FOREIGN KEY (`test_run_id`) REFERENCES `test_run` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=289576 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+create UNIQUE INDEX tdad_trid_page on test_data_all_dimensions(test_run_id, page_url);
 
 create index tdad_prod_br_test_url_osver on test_data_all_dimensions(
 	`product`,
