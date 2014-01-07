@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from datetime import timedelta, datetime
 import functools
 import requests
 from dzAlerts.util.struct import nvl
@@ -34,9 +35,10 @@ def etl(name, db, settings, id):
                 return False
             data = CNV.JSON2object(content)
 
-        if data.test_run_id == None:
+        if data.test_run_id == None and data.date_loaded > CNV.datetime2unix(datetime.utcnow() - timedelta(weeks=1)):
+            # WE WILL IGNORE RECORDS THAT ARE YOUNG AND HAVE NO test_run_id
             Log.note("Id has not test_run_id: {{id}}", {"id": id})
-            return True
+            return True  # LIE, TO ALLOW PROCESSING TO CONTINUE WITH GOOD RECORDS
 
         with Timer(str(name) + " push to local " + str(id)):
             with db_lock:

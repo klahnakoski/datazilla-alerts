@@ -12,7 +12,7 @@ from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.logs import Log
 from dzAlerts.util import startup
-from dzAlerts.util.stats import z_moment2stats, Z_moment, median
+from dzAlerts.util.stats import z_moment2stats, Z_moment, median, Stats
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.timer import Timer
 from dzAlerts.util.queries import Q
@@ -57,7 +57,7 @@ def objectstore_to_cube(r):
 
         output = []
         for p, m in json.results.items():
-            S = z_moment2stats(Z_moment.new_instance(m[5:]))
+            S = Stats(samples=m)
             output.append({
                 "test_run_id": r.test_run_id,
                 "product_id": 0,
