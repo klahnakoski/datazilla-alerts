@@ -14,18 +14,21 @@ from datetime import datetime, timedelta
 import threading
 import thread
 import time
-from .struct import nvl
+import sys
+from .struct import nvl, Struct
 
 
 DEBUG = True
+
 
 class Lock(object):
     """
     SIMPLE LOCK (ACTUALLY, A PYTHON threadind.Condition() WITH notify() BEFORE EVERY RELEASE)
     """
+
     def __init__(self, name=""):
-        self.monitor=threading.Condition()
-        self.name=name
+        self.monitor = threading.Condition()
+        self.name = name
 
     def __enter__(self):
         self.monitor.acquire()
@@ -37,8 +40,8 @@ class Lock(object):
 
     def wait(self, timeout=None, till=None):
         if till:
-            timeout=(datetime.utcnow()-till).total_seconds()
-            if timeout<0:
+            timeout = (datetime.utcnow() - till).total_seconds()
+            if timeout < 0:
                 return
         self.monitor.wait(timeout=timeout)
 
@@ -50,23 +53,26 @@ class Queue(object):
     """
     SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH IS HARD TO USE JUST BETWEEN THREADS
     """
+
     def __init__(self, max=None):
         """
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         """
-        self.max = nvl(max, 2**30)
+        self.max = nvl(max, 2 ** 30)
         self.keep_running = True
         self.lock = Lock("lock for queue")
         self.queue = []
 
+
     def __iter__(self):
         while self.keep_running:
             try:
-                value=self.pop()
-                if value!=Thread.STOP:
+                value = self.pop()
+                if value != Thread.STOP:
                     yield value
             except Exception, e:
                 from .logs import Log
+
                 Log.warning("Tell me about what happened here", e)
 
     def add(self, value):
@@ -92,9 +98,9 @@ class Queue(object):
         with self.lock:
             while self.keep_running:
                 if self.queue:
-                    value=self.queue.pop(0)
-                    if value==Thread.STOP:  #SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
-                        self.keep_running=False
+                    value = self.queue.pop(0)
+                    if value == Thread.STOP:  #SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
+                        self.keep_running = False
                     return value
                 self.lock.wait()
             return Thread.STOP
@@ -119,8 +125,7 @@ class Queue(object):
 
     def close(self):
         with self.lock:
-            self.keep_running=False
-
+            self.keep_running = False
 
 
 class AllThread(object):
@@ -129,7 +134,7 @@ class AllThread(object):
     """
 
     def __init__(self):
-        self.threads=[]
+        self.threads = []
 
     def __enter__(self):
         return self
@@ -139,31 +144,29 @@ class AllThread(object):
         self.join()
 
     def join(self):
-        exceptions=[]
+        exceptions = []
         try:
             for t in self.threads:
-                response=t.join()
+                response = t.join()
                 if "exception" in response:
                     exceptions.append(response["exception"])
         except Exception, e:
             from .logs import Log
+
             Log.warning("Problem joining", e)
 
         if exceptions:
             from .logs import Log
-            Log.error("Problem in child threads", exceptions)
 
+            Log.error("Problem in child threads", exceptions)
 
 
     def add(self, target, *args, **kwargs):
         """
         target IS THE FUNCTION TO EXECUTE IN THE THREAD
         """
-        t=Thread.run(target.__name__, target, *args, **kwargs)
+        t = Thread.run(target.__name__, target, *args, **kwargs)
         self.threads.append(t)
-
-
-
 
 
 class Thread(object):
@@ -172,22 +175,21 @@ class Thread(object):
     run() ENHANCED TO CAPTURE EXCEPTIONS
     """
 
-    num_threads=0
-    STOP="stop"
-    TIMEOUT="TIMEOUT"
-
+    num_threads = 0
+    STOP = "stop"
+    TIMEOUT = "TIMEOUT"
 
 
     def __init__(self, name, target, *args, **kwargs):
         self.name = name
         self.target = target
         self.response = None
-        self.synch_lock=Lock()
+        self.synch_lock = Lock()
         self.args = args
 
         #ENSURE THERE IS A SHARED please_stop SIGNAL
         self.kwargs = kwargs.copy()
-        self.kwargs["please_stop"]=self.kwargs.get("please_stop", Signal())
+        self.kwargs["please_stop"] = self.kwargs.get("please_stop", Signal())
         self.please_stop = self.kwargs["please_stop"]
 
         self.stopped = Signal()
@@ -208,9 +210,10 @@ class Thread(object):
 
     def start(self):
         try:
-            self.thread=thread.start_new_thread(Thread._run, (self, ))
+            self.thread = thread.start_new_thread(Thread._run, (self, ))
         except Exception, e:
             from .logs import Log
+
             Log.error("Can not start thread", e)
 
     def stop(self):
@@ -219,14 +222,19 @@ class Thread(object):
     def _run(self):
         try:
             if self.target is not None:
-                response=self.target(*self.args, **self.kwargs)
+                response = self.target(*self.args, **self.kwargs)
                 with self.synch_lock:
-                    self.response={"response":response}
+                    self.response = Struct(response=response)
         except Exception, e:
             with self.synch_lock:
-                self.response={"exception":e}
-            from .logs import Log
-            Log.error("Problem in thread", e)
+                self.response = Struct(exception=e)
+            try:
+                from .logs import Log
+
+                Log.fatal("Problem in thread {{name}}", {"name": self.name}, e)
+            except Exception, f:
+                sys.stderr.write("ERROR in thread: " + str(self.name) + " " + str(e) + "\n")
+                sys.stderr.write("ERROR in thread: " + str(self.name) + " " + str(f) + "\n")
         finally:
             self.stopped.go()
             del self.target, self.args, self.kwargs
@@ -236,10 +244,10 @@ class Thread(object):
 
     def join(self, timeout=None, till=None):
         """
-        RETURN THE RESULT OF THE THREAD EXECUTION (INCLUDING EXCEPTION)
+        RETURN THE RESULT {"response":r, "exception":e} OF THE THREAD EXECUTION (INCLUDING EXCEPTION, IF EXISTS)
         """
         if not till and timeout:
-            till=datetime.utcnow()+timedelta(seconds=timeout)
+            till = datetime.utcnow() + timedelta(seconds=timeout)
 
         if till is None:
             while True:
@@ -249,15 +257,17 @@ class Thread(object):
                             return self.response
                         self.synch_lock.wait(0.5)
 
-                from .logs import Log
                 if DEBUG:
-                    Log.note("Waiting on thread {{thread}}", {"thread":self.name})
+                    from .logs import Log
+
+                    Log.note("Waiting on thread {{thread}}", {"thread": self.name})
         else:
             self.stopped.wait_for_go(till=till)
             if self.stopped:
                 return self.response
             else:
                 from logs import Except
+
                 raise Except(type=Thread.TIMEOUT)
 
     @staticmethod
@@ -265,6 +275,7 @@ class Thread(object):
         #ENSURE target HAS please_stop ARGUMENT
         if "please_stop" not in target.__code__.co_varnames:
             from logs import Log
+
             Log.error("function must have please_stop argument for signalling emergency shutdown")
 
         Thread.num_threads += 1
@@ -283,7 +294,6 @@ class Thread(object):
                 time.sleep(duration)
 
 
-
 class Signal(object):
     """
     SINGLE-USE THREAD SAFE SIGNAL
@@ -292,7 +302,7 @@ class Signal(object):
     def __init__(self):
         self.lock = Lock()
         self._go = False
-        self.job_queue=[]
+        self.job_queue = []
 
 
     def __bool__(self):
@@ -317,8 +327,8 @@ class Signal(object):
                 return
 
             self._go = True
-            jobs=self.job_queue
-            self.job_queue=[]
+            jobs = self.job_queue
+            self.job_queue = []
             self.lock.notify_all()
 
         for j in jobs:
@@ -339,17 +349,16 @@ class Signal(object):
                 self.job_queue.append(target)
 
 
-
-
 class ThreadedQueue(Queue):
     """
     TODO: Check that this queue is not dropping items at shutdown
     DISPATCH TO ANOTHER (SLOWER) queue IN BATCHES OF GIVEN size
     """
+
     def __init__(self, queue, size, max=None):
         if max == None:
             #REASONABLE DEFAULT
-            max = size*2
+            max = size * 2
 
         Queue.__init__(self, max=max)
 
@@ -358,18 +367,21 @@ class ThreadedQueue(Queue):
 
             #queue IS A MULTI-THREADED QUEUE, SO THIS WILL BLOCK UNTIL THE size ARE READY
             from .queries import Q
+
             for i, g in Q.groupby(self, size=size):
                 try:
                     queue.extend(g)
                     if please_stop:
                         from logs import Log
+
                         Log.warning("ThreadedQueue stopped early, with {{num}} items left in queue", {
-                            "num":len(self)
+                            "num": len(self)
                         })
                         return
                 except Exception, e:
                     from logs import Log
-                    Log.warning("Can not push data to given queue", e)
+
+                    Log.error("Problem with pushing {{num}} items to data sink", {"num": len(g)})
 
         self.thread = Thread.run("threaded queue", size_pusher)
 

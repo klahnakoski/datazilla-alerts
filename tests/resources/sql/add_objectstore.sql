@@ -14,16 +14,18 @@ alter table objectstore2 drop index objectstore_processed_flag_plus;
 
 -- DROP TABLE IF EXISTS objectstore;
 CREATE TABLE objectstore (
-	id INTEGER PRIMARY KEY NOT NULL,
-	test_run_id INTEGER UNIQUE KEY NULL,
-	date_loaded int(11) NOT NULL,
-  processed_cube enum('ready','done') DEFAULT 'ready',
-  processed_exception enum('ready','done') DEFAULT 'ready',
-  processed_sustained enum('ready','done') DEFAULT 'ready',
-	revision VARCHAR(12),
-	branch VARCHAR(40),
-	json_blob mediumblob
-) DEFAULT CHARSET=utf8;
+	id                  INTEGER PRIMARY KEY NOT NULL,
+	test_run_id         INTEGER UNIQUE KEY  NULL,
+	date_loaded         INT(11)             NOT NULL,
+	processed_cube      ENUM('ready', 'done') DEFAULT 'ready',
+	processed_exception ENUM('ready', 'done') DEFAULT 'ready',
+	processed_sustained ENUM('ready', 'done') DEFAULT 'ready',
+	processed_sustained_median ENUM('ready', 'done') DEFAULT 'ready',
+	revision            VARCHAR(12),
+	branch              VARCHAR(40),
+	json_blob           MEDIUMBLOB
+)
+	DEFAULT CHARSET =utf8;
 
 INSERT INTO objectstore (id, test_run_id, date_loaded, revision, branch, json_blob)
 SELECT
@@ -44,6 +46,7 @@ CREATE INDEX objectstore_date_loaded ON objectstore(date_loaded);
 CREATE INDEX objectstore_processed_cube on objectstore(processed_cube);
 CREATE INDEX objectstore_processed_exception on objectstore(processed_exception);
 CREATE INDEX objectstore_processed_sustained on objectstore(processed_sustained);
+CREATE INDEX objectstore_processed_sustained_median on objectstore(processed_sustained_median);
 
 
 UPDATE objectstore o

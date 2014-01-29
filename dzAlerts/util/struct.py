@@ -21,7 +21,7 @@ class Struct(dict):
     2) it deals with missing keys gracefully, so I can put it into set operations (database
        operations) without choking
     2b) missing keys is important when dealing with JSON, which is often almost anything
-    3) also, which I hardly use, is storing JSON paths in a variable, so :   a["b.c"]==a.b.c
+    3) you can access JSON paths as a variable:   a["b.c"]==a.b.c
     4) attribute names (keys) are corrected to unicode - it appears Python object.getattribute()
        is called with str() even when using from __future__ import unicode_literals
 
@@ -29,12 +29,11 @@ class Struct(dict):
     IT ONLY CONSIDERS THE LEGITIMATE-FIELD-WITH-MISSING-VALUE (Statistical Null)
     AND DOES NOT LOOK AT FIELD-DOES-NOT-EXIST-IN-THIS-CONTEXT (Database Null)
 
-
-    This is a common pattern in many frameworks (I am still working on this list)
+    The Struct is a common pattern in many frameworks (I am still working on this list)
 
     jinja2.environment.Environment.getattr()
     argparse.Environment() - code performs setattr(e, name, value) on instances of Environment
-    collections.namedtuple() - gives attribute names to
+    collections.namedtuple() - gives attribute names to tuple indicies
 
     """
 
@@ -58,7 +57,7 @@ class Struct(dict):
 
     def __getitem__(self, key):
         if isinstance(key, str):
-            key = key.decode("utf-8")
+            key = key.decode("utf8")
 
         d = _get(self, "__dict__")
 
@@ -77,7 +76,7 @@ class Struct(dict):
 
             Log.error("key is empty string.  Probably a bad idea")
         if isinstance(key, str):
-            key = key.decode("utf-8")
+            key = key.decode("utf8")
 
         try:
             d = _get(self, "__dict__")
@@ -103,7 +102,7 @@ class Struct(dict):
 
     def __getattribute__(self, key):
         if isinstance(key, str):
-            key = key.decode("utf-8")
+            key = key.decode("utf8")
 
         try:
             output = _get(self, key)
@@ -116,7 +115,7 @@ class Struct(dict):
 
     def __setattr__(self, key, value):
         if isinstance(key, str):
-            key = key.decode("utf-8")
+            key = key.decode("utf8")
 
         value = unwrap(value)
         if value is None:
@@ -157,7 +156,7 @@ class Struct(dict):
 
     def __delitem__(self, key):
         if isinstance(key, str):
-            key = key.decode("utf-8")
+            key = key.decode("utf8")
 
         if key.find(".") == -1:
             d = _get(self, "__dict__")
@@ -173,7 +172,7 @@ class Struct(dict):
 
     def __delattr__(self, key):
         if isinstance(key, str):
-            key = key.decode("utf-8")
+            key = key.decode("utf8")
 
         d = _get(self, "__dict__")
         d.pop(key, None)
@@ -246,6 +245,30 @@ class _Null(object):
     def __nonzero__(self):
         return False
 
+    def __add__(self, other):
+        return Null
+
+    def __radd__(self, other):
+        return Null
+
+    def __sub__(self, other):
+        return Null
+
+    def __rsub__(self, other):
+        return Null
+
+    def __mul__(self, other):
+        return Null
+
+    def __rmul__(self, other):
+        return Null
+
+    def __div__(self, other):
+        return Null
+
+    def __rdiv__(self, other):
+        return Null
+
     def __gt__(self, other):
         return False
 
@@ -315,7 +338,7 @@ class _Null(object):
         return set()
 
     def pop(self, key, default=None):
-        return None
+        return Null
 
     def __str__(self):
         return "None"
@@ -328,6 +351,11 @@ ZeroList = []
 
 
 class StructList(list):
+    """
+    ENCAPSULATES HANDING OF Nulls BY wrapING ALL MEMBERS AS NEEDED
+    ENCAPSULATES FLAT SLICES ([::]) FOR USE IN WINDOW FUNCTIONS
+    """
+
     def __init__(self, vals=None):
         """ USE THE vals, NOT A COPY """
         # list.__init__(self)
@@ -340,18 +368,19 @@ class StructList(list):
 
     def __getitem__(self, index):
         if isinstance(index, slice):
+            # IMPLEMENT FLAT SLICES (for i not in range(0, len(self)): assert self[i]==None)
             if index.step is not None:
                 from .logs import Log
                 Log.error("slice step must be None, do not know how to deal with values")
-            l = len(_get(self, "list"))
-            i = min(max(index.start, 0), l)
+            length = len(_get(self, "list"))
+
+            i = index.start
+            i = min(max(i, 0), length)
             j = index.stop
             if j is None:
-                j = l
-            elif j < 0 and j < i:
-                j += l   # WE ALLOW THIS BECAUSE j>i
+                j = length
             else:
-                j = max(min(j, l), 0)
+                j = max(min(j, length), 0)
             return StructList(_get(self, "list")[i:j])
 
         if index < 0 or len(_get(self, "list")) <= index:
@@ -384,7 +413,7 @@ class StructList(list):
     def __getslice__(self, i, j):
         from .logs import Log
 
-        Log.error("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j].  Use [start:stop:step]")
+        Log.error("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes.  Use [start:stop:step]")
 
     def remove(self, x):
         _get(self, "list").remove(x)
@@ -409,6 +438,9 @@ class StructList(list):
         return StructList(vals=output)
 
     def right(self, num=None):
+        """
+        WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE RIGHT
+        """
         if num == None:
             return StructList([_get(self, "list")[-1]])
         if num <= 0:

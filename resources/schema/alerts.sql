@@ -53,6 +53,13 @@ INSERT INTO reasons VALUES (
 	NULL
 );;
 INSERT INTO reasons VALUES (
+	'alert_sustained_median',
+	concat('{{page_url}} has continued to perform worse since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL
+);;
+INSERT INTO reasons VALUES (
 	'alert_regression',
 	concat('{{page_url}} has regressed since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
@@ -103,7 +110,7 @@ CREATE TABLE alerts (
 	last_updated DATETIME    NOT NULL, ##WHEN THIS ISSUE WAS LAST UPDATED WITH NEW INFO
 	last_sent    DATETIME,             ##WHEN THIS ISSUE WAS LAST SENT TO EMAIL
 	tdad_id      INTEGER     NOT NULL, ##REFERENCE THE SMALLEST TESTING OBJECT (AT THIS TIME)
-	reason       VARCHAR(20) NOT NULL, ##REFERNCE TO STANDARD SET OF REASONS
+	reason       VARCHAR(40) NOT NULL, ##REFERNCE TO STANDARD SET OF REASONS
 	details      LONGTEXT,             ##JSON OF SPECIFIC DETAILS
 	revision     VARCHAR(20),          ##FOR ALERTS THAT APPLY TO A REVISION
 	severity     DOUBLE      NOT NULL, ##ABSTRACT SEVERITY 1.0==HIGH, 0.0==LOW

@@ -26,7 +26,7 @@ BEGIN
 	SET begin_tag=concat("\"", tag, "\":");
 	SET s=locate(begin_tag, value);
 	IF s=0 THEN
-		RETURN begin_tag;
+		RETURN NULL;
 	ELSE
 		SET s=locate("{", value, s+length(begin_tag));
 		SET i=s+1;

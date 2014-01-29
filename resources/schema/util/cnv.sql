@@ -30,10 +30,10 @@ CREATE FUNCTION cnv.ip2integer(
 	DETERMINISTIC
 BEGIN
 	RETURN
-		cast(string_get_word(value, '.', 0) as decimal(10))*16777216+
-		cast(string_get_word(value, '.', 1) as decimal(10))*65536+
-		cast(string_get_word(value, '.', 2) as decimal(10))*256+
-		cast(string_get_word(value, '.', 3) as decimal)
+		cast(string.get_word(value, '.', 0) as decimal(10))*16777216+
+		cast(string.get_word(value, '.', 1) as decimal(10))*65536+
+		cast(string.get_word(value, '.', 2) as decimal(10))*256+
+		cast(string.get_word(value, '.', 3) as decimal)
 	;
 END;;
 

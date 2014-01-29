@@ -19,7 +19,7 @@ from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN = 100000
+TEST_RESULTS_PER_RUN = 10000
 
 
 def objectstore_to_cube(r):
@@ -96,8 +96,7 @@ def get_missing_ids(db, settings):
         FROM
             ekyle_objectstore_1.objectstore o
         WHERE
-            o.processed_cube = 'ready' AND
-            o.test_run_id IS NOT NULL
+            o.processed_cube = 'ready'
         LIMIT
             {{limit}}
         """, {

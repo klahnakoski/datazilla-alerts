@@ -12,11 +12,13 @@ from __future__ import unicode_literals
 from dzAlerts.util import struct
 
 
-def find_holes(db, table_name, column_name, filter, _range):
+def find_holes(db, table_name, column_name, _range, filter=None):
     """
     FIND HOLES IN A DENSE COLUMN OF INTEGERS
     RETURNS A LIST OF {"min"min, "max":max} OBJECTS
     """
+    if not filter:
+        filter = {"match_all": {}}
 
     _range = struct.wrap(_range)
     params = {

@@ -15,21 +15,32 @@ from datetime import datetime
 import io
 import os
 import shutil
+from . import crypto
 from .struct import listwrap, nvl
 from .cnv import CNV
 
 
 class File(object):
+    """
+    ASSUMES ALL FILE CONTENT IS UTF8 ENCODED STRINGS
+    """
+
     def __init__(self, filename, buffering=2 ** 14):
+        """
+        YOU MAY SET filename TO {"path":p, "key":k} FOR CRYPTO FILES
+        """
         if filename == None:
             from .logs import Log
 
             Log.error("File must be given a filename")
-
-        #USE UNIX STANDARD
-        self._filename = "/".join(filename.split(os.sep))
-        self.buffering = buffering
-
+        elif isinstance(filename, basestring):
+            self.key = None
+            self._filename = "/".join(filename.split(os.sep))  # USE UNIX STANDARD
+            self.buffering = buffering
+        else:
+            self.key = CNV.base642bytearray(filename.key)
+            self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
+            self.buffering = buffering
 
     @property
     def filename(self):
@@ -54,26 +65,44 @@ class File(object):
             output = ".".join(parts)
         return output
 
-
-    def read(self, encoding="utf-8"):
+    def read(self, encoding="utf8"):
         with codecs.open(self._filename, "r", encoding=encoding) as f:
-            return f.read()
+            content = f.read()
+            if self.key:
+                return crypto.decrypt(content, self.key)
+            else:
+                return content
 
     def read_ascii(self):
-        if not self.parent.exists: self.parent.create()
+        if not self.parent.exists:
+            self.parent.create()
         with open(self._filename, "r") as f:
             return f.read()
 
     def write_ascii(self, content):
-        if not self.parent.exists: self.parent.create()
+        if not self.parent.exists:
+            self.parent.create()
         with open(self._filename, "w") as f:
             f.write(content)
 
     def write(self, data):
-        if not self.parent.exists: self.parent.create()
+        if not self.parent.exists:
+            self.parent.create()
         with open(self._filename, "wb") as f:
+            if isinstance(data, list) and self.key:
+                from logs import Log
+
+                Log.error("list of data and keys are not supported, encrypt before sending to file")
+
             for d in listwrap(data):
-                f.write(d)
+                if not isinstance(d, unicode):
+                    from .logs import Log
+
+                    Log.error("Expecting unicode data only")
+                if self.key:
+                    f.write(crypto.encrypt(d, self.key).encode("utf8"))
+                else:
+                    f.write(d.encode("utf8"))
 
     def __iter__(self):
         #NOT SURE HOW TO MAXIMIZE FILE READ SPEED
@@ -82,7 +111,7 @@ class File(object):
         def output():
             with io.open(self._filename, "rb") as f:
                 for line in f:
-                    yield line.decode("utf-8")
+                    yield line.decode("utf8")
 
         return output()
 
@@ -138,7 +167,8 @@ class File(object):
 
     @property
     def exists(self):
-        if self._filename in ["", "."]: return True
+        if self._filename in ["", "."]:
+            return True
         try:
             return os.path.exists(self._filename)
         except Exception, e:

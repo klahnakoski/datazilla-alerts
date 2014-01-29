@@ -10,8 +10,8 @@ SELECT
 --    error_msg,
  	substring(json_blob, 1, 8000) json,
 -- 	substring(json_blob, locate("revision\":", json_blob), 100) rev,
--- 	ekyle_perftest_1.string_between( substring(json_blob, 1, 60000), "yelp.com", "]", 1),
-    string_between( substring(json_blob, locate("revision\":", json_blob), 100), "revision\": \"", "\",", 1) revision
+-- 	string.between( substring(json_blob, 1, 60000), "yelp.com", "]", 1),
+    string.between( substring(json_blob, locate("revision\":", json_blob), 100), "revision\": \"", "\",", 1) revision
 --    worker_id
 FROM
     objectstore

@@ -12,6 +12,7 @@ import math
 from .struct import Null, nvl
 from .logs import Log
 from .strings import find_first
+from .multiset import Multiset
 
 
 class Math(object):
@@ -33,13 +34,19 @@ class Math(object):
         return Math.bayesian_add(a, 1 - b)
 
 
+    @staticmethod
+    def abs(v):
+        if v == None:
+            return Null
+        return abs(v)
+
     # FOR GOODNESS SAKE - IF YOU PROVIDE A METHOD abs(), PLEASE PROVIDE IT'S COMPLEMENT
     # x = abs(x)*sign(x)
     # FOUND IN numpy, BUT WE USUALLY DO NOT NEED TO BRING IN A BIG LIB FOR A SIMPLE DECISION
     @staticmethod
     def sign(v):
         if v == None:
-            return None
+            return Null
         if v < 0:
             return -1
         if v > 0:
@@ -97,12 +104,14 @@ class Math(object):
 
 
     @staticmethod
-    def min(values):
+    def min(*values):
+        if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset)):
+            values = values[0]
         output = Null
         for v in values:
             if v == None:
                 continue
-            if math.isnan(v):
+            if isinstance(v, float) and math.isnan(v):
                 continue
             if output == None:
                 output = v
@@ -113,11 +122,13 @@ class Math(object):
 
     @staticmethod
     def max(*values):
+        if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple)):
+            values = values[0]
         output = Null
         for v in values:
             if v == None:
                 continue
-            if math.isnan(v):
+            if isinstance(v, float) and math.isnan(v):
                 continue
             if output == None:
                 output = v

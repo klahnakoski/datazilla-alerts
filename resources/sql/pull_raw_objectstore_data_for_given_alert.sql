@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS ekyle_perftest_1.temp_results;
 
 # FIND TERM
 CREATE TABLE ekyle_perftest_1.temp_results AS
-SELECT 
+SELECT
 	t.test_run_id,
 	t.push_date,
 	t.mean,
@@ -17,10 +17,10 @@ SELECT
 	t.`processor`,
 	t.`page_url`,
 	t.revision
-FROM 
+FROM
 	ekyle_perftest_1.test_data_all_dimensions p
 LEFT JOIN
-	ekyle_perftest_1.test_data_all_dimensions t 
+	ekyle_perftest_1.test_data_all_dimensions t
 ON
 	t.`product`=p.`product` AND
 	t.`operating_system_name`=p.`operating_system_name` AND
@@ -40,35 +40,35 @@ ORDER BY
 
 
 # PULL DATA
-SELECT 
+SELECT
 	from_unixtime(t.push_date) push_date,
 	t.mean median,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 0) `1`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 1) `2`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 2) `3`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 3) `4`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 4) `5`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 5) `6`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 6) `7`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 7) `8`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 8) `9`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 9) `10`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 10) `11`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 11) `12`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 12) `13`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 13) `14`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 14) `15`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 15) `16`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 16) `17`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 17) `18`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 18) `19`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 19) `20`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 20) `21`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 21) `22`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 22) `23`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 23) `24`,
-	string_get_word(string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 24) `25`,
-	string_between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1) raw_data,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 0) `1`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 1) `2`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 2) `3`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 3) `4`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 4) `5`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 5) `6`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 6) `7`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 7) `8`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 8) `9`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 9) `10`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 10) `11`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 11) `12`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 12) `13`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 13) `14`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 14) `15`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 15) `16`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 16) `17`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 17) `18`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 18) `19`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 19) `20`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 20) `21`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 21) `22`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 22) `23`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 23) `24`,
+	string.get_word(string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1), ",", 24) `25`,
+	string.between(ekyle_perftest_1.json_a(json_blob, t.page_url), '[', ']', 1) raw_data,
 	t.*
 FROM
 	ekyle_objectstore_1.objectstore o

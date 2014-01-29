@@ -76,7 +76,7 @@ def send_alerts(settings, db):
                 bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
             LIMIT
-                1
+                10
             """, {
             "last_sent": datetime.utcnow() - RESEND_AFTER,
             "alert_limit": ALERT_LIMIT - EPSILON,

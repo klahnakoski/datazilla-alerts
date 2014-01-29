@@ -19,10 +19,10 @@ CREATE TABLE `test_data_all_dimensions` (
 	`pushlog_id` int(11) DEFAULT NULL,
 	`push_date` int(11) DEFAULT NULL,
 	`test_name` varchar(128) COLLATE utf8_bin NOT NULL,
-	`page_url` varchar(255) COLLATE utf8_bin NOT NULL,
+	`page_url` varchar(255) DEFAULT NULL COLLATE utf8_bin,
 	`mean` double NOT NULL,
-	`std` double NOT NULL,
-	`h0_rejected` tinyint(4) NOT NULL DEFAULT 0,
+	`std` double,
+	`h0_rejected` tinyint(4) DEFAULT 0,
 	`p` double DEFAULT NULL,
 	`n_replicates` int(11) DEFAULT NULL,
 	`fdr` tinyint(4) DEFAULT NULL,
@@ -44,11 +44,11 @@ CREATE TABLE `test_data_all_dimensions` (
 	KEY `machine_name_key` (`machine_name`),
 	KEY `test_name_key` (`test_name`),
 	KEY `page_url_key` (`page_url`),
-	KEY `status_key` (`status`),
-	CONSTRAINT `fk_test_run_id_tdad` FOREIGN KEY (`test_run_id`) REFERENCES `test_run` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=289576 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+	KEY `status_key` (`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 create UNIQUE INDEX tdad_trid_page on test_data_all_dimensions(test_run_id, page_url);
+create INDEX tdad_rev_test on test_data_all_dimensions(revision, test_name);
 
 create index tdad_prod_br_test_url_osver on test_data_all_dimensions(
 	`product`,
@@ -56,4 +56,7 @@ create index tdad_prod_br_test_url_osver on test_data_all_dimensions(
 	`test_name`,
 	`page_url`,
 	`operating_system_version`
-)
+);
+
+
+
