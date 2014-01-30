@@ -529,6 +529,9 @@ class DB(object):
             return self.isolate("AND", [self.quote_column(col) + "=" + self.quote_value(val) for col, val in esfilter.term.items()])
         elif esfilter.terms:
             for col, v in esfilter.terms.items():
+                if len(v) == 0:
+                    return "FALSE"
+
                 try:
                     int_list = CNV.value2intlist(v)
                     has_null = False

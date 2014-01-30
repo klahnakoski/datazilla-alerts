@@ -12,7 +12,7 @@ from dzAlerts.util.cnv import CNV
 from dzAlerts.util.db import SQL, DB
 from dzAlerts.util.logs import Log
 from dzAlerts.util import startup
-from dzAlerts.util.stats import z_moment2stats, Z_moment, median, Stats
+from dzAlerts.util.stats import median, Stats
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.timer import Timer
 from dzAlerts.util.queries import Q
@@ -96,7 +96,8 @@ def get_missing_ids(db, settings):
         FROM
             ekyle_objectstore_1.objectstore o
         WHERE
-            o.processed_cube = 'ready'
+            o.processed_cube = 'ready' AND
+            o.test_run_id IS NOT NULL   # HAPPENS WHEN TEST RESULT IS NOT PROCESSED
         LIMIT
             {{limit}}
         """, {
@@ -106,6 +107,7 @@ def get_missing_ids(db, settings):
 
     missing_ids = Q.select(missing, field_name="test_run_id")
     Log.note("{{num}} objectstore records to be processed into cube", {"num": len(missing_ids)})
+
     return missing_ids
 
 
