@@ -9,15 +9,13 @@
 #
 
 
-
-import codecs
 from datetime import datetime
 import io
 import os
 import shutil
-from . import crypto
-from .struct import listwrap, nvl
-from .cnv import CNV
+from ..maths import crypto
+from ..struct import listwrap, nvl
+from ..cnv import CNV
 
 
 class File(object):
@@ -30,7 +28,7 @@ class File(object):
         YOU MAY SET filename TO {"path":p, "key":k} FOR CRYPTO FILES
         """
         if filename == None:
-            from .logs import Log
+            from ..env.logs import Log
 
             Log.error("File must be given a filename")
         elif isinstance(filename, basestring):
@@ -66,8 +64,8 @@ class File(object):
         return output
 
     def read(self, encoding="utf8"):
-        with codecs.open(self._filename, "r", encoding=encoding) as f:
-            content = f.read()
+        with open(self._filename, "rb") as f:
+            content = f.read().decode(encoding)
             if self.key:
                 return crypto.decrypt(content, self.key)
             else:
@@ -90,13 +88,13 @@ class File(object):
             self.parent.create()
         with open(self._filename, "wb") as f:
             if isinstance(data, list) and self.key:
-                from logs import Log
+                from ..env.logs import Log
 
                 Log.error("list of data and keys are not supported, encrypt before sending to file")
 
             for d in listwrap(data):
                 if not isinstance(d, unicode):
-                    from .logs import Log
+                    from ..env.logs import Log
 
                     Log.error("Expecting unicode data only")
                 if self.key:
@@ -142,7 +140,7 @@ class File(object):
         except Exception, e:
             if e.strerror == "The system cannot find the path specified":
                 return
-            from .logs import Log
+            from ..env.logs import Log
 
             Log.error("Could not remove file", e)
 
@@ -156,7 +154,7 @@ class File(object):
         try:
             os.makedirs(self._filename)
         except Exception, e:
-            from .logs import Log
+            from ..env.logs import Log
 
             Log.error("Could not make directory {{dir_name}}", {"dir_name": self._filename}, e)
 

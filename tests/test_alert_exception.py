@@ -8,7 +8,7 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from math import sqrt
 import pytest
 import dzAlerts
@@ -16,11 +16,11 @@ from dzAlerts.daemons.alert_exception import alert_exception, REASON
 from dzAlerts.util import struct
 
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import SQL, DB
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.stats import closeEnough
+from dzAlerts.util.maths.stats import closeEnough
 from util.testing import make_test_database
 
 

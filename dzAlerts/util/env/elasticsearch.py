@@ -12,17 +12,17 @@ from datetime import datetime
 import re
 import sha
 import time
+from .. import struct
 
 import requests
-from .threads import ThreadedQueue
 
-import struct
-from .maths import Math
-from .queries import Q
-from .cnv import CNV
-from .logs import Log
-from .struct import nvl, Null
-from .struct import Struct, StructList
+from ..thread.threads import ThreadedQueue
+from ..maths import Math
+from ..cnv import CNV
+from ..env.logs import Log
+from ..struct import nvl, Null, wrap
+from ..struct import Struct, StructList
+
 
 DEBUG = False
 
@@ -56,12 +56,29 @@ class ElasticSearch(object):
         globals()["DEBUG"] = True if DEBUG or self.debug else False
 
         self.settings = settings
+        index = self.get_index(settings.index)
+        if index:
+            settings.alias = settings.index
+            settings.index = index
+
         self.path = settings.host + ":" + unicode(settings.port) + "/" + settings.index + "/" + settings.type
 
+
+
     @staticmethod
-    def create_index(settings, schema):
+    def create_index(settings, schema, limit_replicas=False):
         if isinstance(schema, basestring):
             schema = CNV.JSON2object(schema)
+
+        if limit_replicas:
+            # DO NOT ASK FOR TOO MANY REPLICAS
+            health = ElasticSearch.get(settings.host + ":" + unicode(settings.port) + "/_cluster/health")
+            if schema.settings.index.number_of_replicas >= health.number_of_nodes:
+                Log.warning("Reduced number of replicas: {{from}} requested, {{to}} realized", {
+                    "from": schema.settings.index.number_of_replicas,
+                    "to": health.number_of_nodes-1
+                })
+                schema.settings.index.number_of_replicas = health.number_of_nodes-1
 
         ElasticSearch.post(
             settings.host + ":" + unicode(settings.port) + "/" + settings.index,
@@ -102,7 +119,11 @@ class ElasticSearch(object):
         return self.metadata
 
     def get_schema(self):
-        return self.get_metadata().indicies[self.settings.index]
+        indices = self.get_metadata().indices
+        index = indices[self.settings.index]
+        if not index.mappings[self.settings.type]:
+            Log.error("{{index}} does not have type {{type}}", self.settings)
+        return index.mappings[self.settings.type]
 
     #DELETE ALL INDEXES WITH GIVEN PREFIX, EXCEPT name
     def delete_all_but(self, prefix, name):
@@ -135,7 +156,7 @@ class ElasticSearch(object):
         RETURN ALL INDEXES THAT ARE INTENDED TO BE GIVEN alias, BUT HAVE NO
         ALIAS YET BECAUSE INCOMPLETE
         """
-        output = Q.sort([
+        output = sort([
             a.index
             for a in self.get_aliases()
             if re.match(re.escape(alias) + "\\d{8}_\\d{6}", a.index) and not a.alias
@@ -146,7 +167,7 @@ class ElasticSearch(object):
         """
         RETURN THE INDEX USED BY THIS alias
         """
-        output = Q.sort([
+        output = sort([
             a.index
             for a in self.get_aliases()
             if a.alias == alias
@@ -161,7 +182,7 @@ class ElasticSearch(object):
 
     def is_proto(self, index):
         """
-        RETURN True IF THIS INDEX HAS NOT BEEN ASSIGNED IT'S ALIAS
+        RETURN True IF THIS INDEX HAS NOT BEEN ASSIGNED ITS ALIAS
         """
         for a in self.get_aliases():
             if a.index == index and a.alias:
@@ -236,15 +257,22 @@ class ElasticSearch(object):
             data="{\"index.refresh_interval\":\"" + interval + "\"}"
         )
 
-        if response.content != '{"ok":true}':
+        result = CNV.JSON2object(response.content)
+        if not result.ok:
             Log.error("Can not set refresh interval ({{error}})", {
                 "error": response.content
             })
 
     def search(self, query):
+        query = wrap(query)
         try:
             if DEBUG:
-                Log.note("Query:\n{{query|indent}}", {"query": query})
+                if len(query.facets.keys()) > 20:
+                    show_query = query.copy()
+                    show_query.facets = {k: "..." for k in query.facets.keys()}
+                else:
+                    show_query = query
+                Log.note("Query:\n{{query|indent}}", {"query": show_query})
             return ElasticSearch.post(self.path + "/_search", data=CNV.object2JSON(query).encode("utf8"))
         except Exception, e:
             Log.error("Problem with search (path={{path}}):\n{{query|indent}}", {
@@ -257,8 +285,8 @@ class ElasticSearch(object):
 
     @staticmethod
     def post(*args, **kwargs):
-        if "data" in kwargs and isinstance(kwargs["data"], unicode):
-            Log.error("data can not be unicode")
+        if "data" in kwargs and not isinstance(kwargs["data"], str):
+            Log.error("data must be utf8 encoded string")
 
         try:
             response = requests.post(*args, **kwargs)
@@ -266,7 +294,9 @@ class ElasticSearch(object):
                 Log.note(response.content[:130])
             details = CNV.JSON2object(response.content)
             if details.error:
-                Log.error(details.error)
+                Log.error(CNV.quote2string(details.error))
+            if details._shards.failed > 0:
+                Log.error("Shard failure")
             return details
         except Exception, e:
             if args[0][0:4] != "http":
@@ -351,7 +381,7 @@ def _scrub(r):
             if not output:
                 return None
             try:
-                return Q.sort(output)
+                return sort(output)
             except Exception:
                 return output
         else:
@@ -361,4 +391,5 @@ def _scrub(r):
 
 
 
-
+def sort(values):
+    return struct.wrap(sorted(values))

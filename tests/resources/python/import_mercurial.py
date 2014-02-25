@@ -15,15 +15,15 @@ import subprocess
 import urllib
 from dzAlerts.util import struct, sql
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import DB
-from dzAlerts.util.elasticsearch import ElasticSearch
-from dzAlerts.util.files import File
-from dzAlerts.util.logs import Log
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.elasticsearch import ElasticSearch
+from dzAlerts.util.env.files import File
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util import startup
 from dzAlerts.util.strings import between
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.timer import Timer
+from dzAlerts.util.times.timer import Timer
 
 DEBUG = True
 

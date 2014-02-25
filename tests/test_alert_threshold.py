@@ -13,9 +13,9 @@ import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
 from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import SQL, DB
+from dzAlerts.util.env.logs import Log
 from util import testing
 
 

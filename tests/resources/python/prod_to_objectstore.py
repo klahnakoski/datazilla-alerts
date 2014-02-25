@@ -11,16 +11,17 @@ from __future__ import unicode_literals
 from datetime import timedelta, datetime
 import functools
 import requests
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.sql import find_holes
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.logs import Log
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import Q
-from dzAlerts.util import startup, sql
-from dzAlerts.util.timer import Timer
-from dzAlerts.util.db import DB
+from dzAlerts.util.times.timer import Timer
+from dzAlerts.util.sql.db import DB
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.multithread import Multithread
-from dzAlerts.util.threads import Lock
+from dzAlerts.util.thread.multithread import Multithread
+from dzAlerts.util.thread.threads import Lock
 
 
 db_lock = Lock("db lock")
@@ -83,7 +84,7 @@ def replicate_table(table_name, id_name, source, destination):
 
         if not missing:
             return
-        max_id = Math.max(*Q.select(missing, id_name))
+        max_id = MAX(*Q.select(missing, id_name))
         destination.insert_list(table_name, missing)
         destination.flush()
 
@@ -109,7 +110,7 @@ def copy_objectstore(settings):
                 #FOR SMALL NUMBERS, JUST LOAD THEM ALL AGAIN
                 missing_ids = set(range(settings.source.service.min, settings.source.service.max))
             else:
-                holes = sql.find_holes(
+                holes = find_holes(
                     db,
                     table_name="objectstore",
                     column_name="id",

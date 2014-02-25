@@ -9,28 +9,21 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from math import sqrt
-import numpy
-import scipy
-from scipy import stats
-from dzAlerts import util
+
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.maths import Math
+from dzAlerts.util.collections import MIN
+from dzAlerts.util.env import startup
 from dzAlerts.util.queries import windows
-
-scipy.stats = stats  # I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
-
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.db import SQL
-from dzAlerts.util.logs import Log
+from dzAlerts.util.sql.db import SQL
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, Null
 from dzAlerts.util.queries import Q
-from dzAlerts.util.stats import Stats
-from dzAlerts.util.db import DB
-from dzAlerts.util import startup
+from dzAlerts.util.sql.db import DB
 
 
 SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
@@ -101,7 +94,7 @@ def alert_sustained(settings, db):
         """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
         "sample_limit": SQL(settings.param.sustained.max_test_results_per_run),
-        "where": db.esfilter2sqlwhere({"and": [
+        "where": esfilter2sqlwhere(db, {"and": [
             {"term": {"o.processed_sustained": 'ready'}},
             {"term": {"o.processed_cube": "done"}}
         ]})
@@ -156,7 +149,7 @@ def alert_sustained(settings, db):
     """, {
         "perftest": db.quote_column(settings.perftest.schema),
         "edges": db.quote_column(query.edges, table="t"),
-        "where": db.esfilter2sqlwhere({"and": [
+        "where": esfilter2sqlwhere(db, {"and": [
             {"terms": {"t.test_run_id": records_to_process}},
             # PART OF TEST A
             # {"term": {"page_url": "store.apple.com"}},
@@ -177,8 +170,8 @@ def alert_sustained(settings, db):
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, points in Q.groupby(new_test_points, query.edges):
         try:
-            min_date = Math.min(Q.select(points, "min_push_date"))
-            all_min_date = Math.min([all_min_date, min_date])
+            min_date = MIN(Q.select(points, "min_push_date"))
+            all_min_date = MIN([all_min_date, min_date])
 
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = db.query("""
@@ -199,7 +192,7 @@ def alert_sustained(settings, db):
             """, {
                 "from": db.quote_column(query["from"]),
                 "edges": db.quote_column(query.edges),
-                "where": db.esfilter2sqlwhere({"and": [
+                "where": esfilter2sqlwhere(db, {"and": [
                     {"term": g},
                     {"exists": "n_replicates"},
                     {"range": {"push_date": {"lt": min_date}}}
@@ -207,7 +200,7 @@ def alert_sustained(settings, db):
                 "window_size": settings.param.sustained.window_size + 1
             })[0]
 
-            all_min_date = Math.min([all_min_date, first_in_window.min_date])
+            all_min_date = MIN([all_min_date, first_in_window.min_date])
 
             #LOAD TEST RESULTS FROM DATABASE
             test_results = db.query("""
@@ -227,10 +220,10 @@ def alert_sustained(settings, db):
                 "sort": db.quote_column(query.sort),
                 "select": db.quote_column(query.select),
                 "edges": db.quote_column(query.edges),
-                "where": db.esfilter2sqlwhere({"and": [
+                "where": esfilter2sqlwhere(db, {"and": [
                     {"term": g},
                     {"exists": "n_replicates"},
-                    {"range": {"push_date": {"gte": Math.min([min_date, first_in_window.min_date])}}}
+                    {"range": {"push_date": {"gte": MIN([min_date, first_in_window.min_date])}}}
                 ]})
             })
 
@@ -338,7 +331,7 @@ def alert_sustained(settings, db):
             WHERE
                 {{where}}
         """, {
-            "where": db.esfilter2sqlwhere({"and": [
+            "where": esfilter2sqlwhere(db, {"and": [
                 {"terms": {"a.tdad_id": re_alert}},
                 {"term": {"reason": REASON}}
             ]})
@@ -381,12 +374,12 @@ def alert_sustained(settings, db):
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
-        "where": db.esfilter2sqlwhere({"terms": {"id": Q.select(obsolete_alerts, "id")}})
+        "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
     })
 
     db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
         "now": datetime.utcnow(),
-        "where": db.esfilter2sqlwhere({"term": {"code": REASON}})
+        "where": esfilter2sqlwhere(db, {"term": {"code": REASON}})
     })
 
     if debug:
@@ -402,7 +395,7 @@ def alert_sustained(settings, db):
         WHERE {{where}}
     """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
-        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": all_touched | records_to_process}})
+        "where": esfilter2sqlwhere(db, {"terms": {"test_run_id": all_touched | records_to_process}})
     })
     db.flush()
 

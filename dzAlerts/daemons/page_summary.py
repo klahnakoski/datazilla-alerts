@@ -10,16 +10,13 @@
 ## I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
 
 from __future__ import unicode_literals
-import scipy
-from scipy import stats
-scipy.stats = stats
+from dzAlerts.util.collections import MIN
 
-
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util import struct
-from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.db import SQL
+from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.queries import Q
 
 
@@ -72,7 +69,7 @@ def page_summary(settings, db, new_test_points):
     })
 
     for g, points in Q.groupby(new_test_points, test | product):
-        min_date = Math.min(Q.select(points, "min_push_date"))
+        min_date = MIN(Q.select(points, "min_push_date"))
 
         # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
         first_in_window = db.query("""
@@ -97,7 +94,7 @@ def page_summary(settings, db, new_test_points):
             "perftest": db.quote_column(settings.perftest.schema),
             "pushlog": db.quote_column(settings.pushlog.schema),
             "edges": db.quote_column(query.edges),
-            "where": db.esfilter2sqlwhere({"and": [
+            "where": esfilter2sqlwhere(db, {"and": [
                 {"term": g},
                 {"exists": "n_replicates"},
                 {"range": {"push_date": {"lt": min_date}}}
@@ -129,7 +126,7 @@ def page_summary(settings, db, new_test_points):
             "select": query.select,
             "edges": db.quote_column(page | product),
             "reason": BASE_REASON,
-            "where": db.esfilter2sqlwhere({"and": [
+            "where": esfilter2sqlwhere(db, {"and": [
                 {"term": g},
                 {"exists": "t.n_replicates"},
                 {"range": {"push_date": {"gte": first_in_window.min_date}}}
@@ -196,7 +193,7 @@ def page_summary(settings, db, new_test_points):
 
         for g, d in Q.groupby(clean_list, page | product | {"revision"}):
             db.execute("DELETE FROM alert_page_summary WHERE {{where}}", {
-                "where": db.esfilter2sqlwhere({"term": g})
+                "where": esfilter2sqlwhere(db, {"term": g})
             })
 
         db.insert("alert_page_summary", page | product | {"revision"}, clean_list)

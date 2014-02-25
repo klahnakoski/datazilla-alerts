@@ -9,7 +9,8 @@
 #
 
 from __future__ import unicode_literals
-from dzAlerts.util import struct
+from .. import struct
+from ..queries.db_query import esfilter2sqlwhere
 
 
 def find_holes(db, table_name, column_name, _range, filter=None):
@@ -26,7 +27,7 @@ def find_holes(db, table_name, column_name, _range, filter=None):
         "max": _range.max - 1,
         "column_name": db.quote_column(column_name),
         "table_name": db.quote_column(table_name),
-        "filter": db.esfilter2sqlwhere(filter)
+        "filter": esfilter2sqlwhere(db, filter)
     }
 
     min_max=db.query("""

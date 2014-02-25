@@ -9,24 +9,22 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.util.logs import Log
-
-#if there are emails, then send them
-from dzAlerts.util.db import DB
-from dzAlerts.util.emailer import Emailer
-from dzAlerts.util import startup
+from dzAlerts.util.env import startup
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.emailer import Emailer
 from dzAlerts.util.struct import nvl
 
 
 def email_send(db, emailer, debug):
-    db.debug=debug
+    db.debug = debug
 
     ##VERIFY self SHOULD BE THE ONE PERFORMING OPS (TO PREVENT MULTIPLE INSTANCES NEEDLESSLY RUNNING)
     try:
 
         ## EXIT EARLY IF THERE ARE NO EMAILS TO SEND
         has_mail = db.query("SELECT max(new_mail) new_mail FROM email_notify")
-        if has_mail[0]["new_mail"]==0:
+        if has_mail[0]["new_mail"] == 0:
             Log.note("No emails to send")
             return
 
@@ -50,8 +48,8 @@ def email_send(db, emailer, debug):
             """)
 
         ## SEND MAILS
-        not_done=0   ##SET TO ONE IF THERE ARE MAIL FAILURES, AND THERE ARE MAILS STILL LEFT TO SEND
-        num_done=0
+        not_done = 0   ##SET TO ONE IF THERE ARE MAIL FAILURES, AND THERE ARE MAILS STILL LEFT TO SEND
+        num_done = 0
         for email in emails:
             try:
                 emailer.send_email(
@@ -60,15 +58,15 @@ def email_send(db, emailer, debug):
                     html_data=email.body
                 )
 
-                db.execute("UPDATE email_content SET date_sent={{now}} WHERE id={{id}}",{"id":email.id, "now":datetime.utcnow()})
-                num_done+=len(email.to.split(','))
+                db.execute("UPDATE email_content SET date_sent={{now}} WHERE id={{id}}", {"id": email.id, "now": datetime.utcnow()})
+                num_done += len(email.to.split(','))
             except Exception, e:
                 Log.warning("Problem sending email", e)
-                not_done=1
+                not_done = 1
 
-        db.execute("UPDATE email_notify SET new_mail={{not_done}}", {"not_done":not_done})
+        db.execute("UPDATE email_notify SET new_mail={{not_done}}", {"not_done": not_done})
 
-        Log.note(str(num_done)+" emails have been sent")
+        Log.note(str(num_done) + " emails have been sent")
     except Exception, e:
         Log.error("Could not send emails", e)
 

@@ -9,17 +9,18 @@
 
 from __future__ import unicode_literals
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
-from dzAlerts.util.stats import median, Stats
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import SQL, DB
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
+from dzAlerts.util.maths.stats import median, Stats
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.timer import Timer
+from dzAlerts.util.times.timer import Timer
 from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN = 10000
+TEST_RESULTS_PER_RUN = 1000
 
 
 def objectstore_to_cube(r):
@@ -119,7 +120,7 @@ def main(settings):
             if missing_ids:
                 write_db.execute(
                     "DELETE FROM test_data_all_dimensions WHERE {{where}}", {
-                        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": missing_ids}})
+                        "where": esfilter2sqlwhere(db, {"terms": {"test_run_id": missing_ids}})
                     })
 
             for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
@@ -138,7 +139,7 @@ def main(settings):
                             {{where}}
                         """, {
                         "objectstore": SQL(settings.destination.objectstore.schema),
-                        "where": db.esfilter2sqlwhere({"and": [
+                        "where": esfilter2sqlwhere(db, {"and": [
                             {"exists": "o.test_run_id"},
                             {"terms": {"o.test_run_id": values}}
                         ]})
@@ -157,7 +158,7 @@ def main(settings):
                     """, {
                         "objectstore": SQL(settings.destination.objectstore.schema),
                         "values": values,
-                        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": values}})
+                        "where": esfilter2sqlwhere(db, {"terms": {"test_run_id": values}})
                     })
                     db.flush()
 

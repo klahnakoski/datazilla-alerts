@@ -10,12 +10,13 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from dzAlerts.util.cnv import CNV
+from dzAlerts.util.env import startup
 from dzAlerts.util.queries import Q
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
 from dzAlerts.util.maths import Math
-from dzAlerts.util.logs import Log
-from dzAlerts.util.db import DB
-from dzAlerts.util import startup
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.sql.db import DB
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>This is for testing only.  It may be misleading.</h3><br><br>"
@@ -126,7 +127,7 @@ def send_alerts(settings, db):
             db.execute(
                 "UPDATE alerts SET last_sent={{time}} WHERE {{where}}", {
                     "time": datetime.utcnow(),
-                    "where": db.esfilter2sqlwhere({"terms": {"id": Q.select(new_alerts, "alert_id")}})
+                    "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(new_alerts, "alert_id")}})
                 })
 
     except Exception, e:
@@ -156,7 +157,7 @@ def update_h0_rejected(db, start_date, possible_alerts):
             ) a ON a.tdad_id = t.id
         SET t.h0_rejected = a.h0
     """, {
-        "where": db.esfilter2sqlwhere({"terms": {"a.tdad_id": possible_alerts}})
+        "where": esfilter2sqlwhere(db, {"terms": {"a.tdad_id": possible_alerts}})
     })
 
 

@@ -9,6 +9,7 @@
 
 from scipy.stats import beta
 
+from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.maths import Math
 
 REAL_REGRESSION_RATE = 0.01    # CHOOSE SOMETHING SMALL TO REFLECT RARITY
@@ -30,7 +31,7 @@ def failure_rate(previous_results, current_results, real_rate=REAL_REGRESSION_RA
         for i in range(results["total_fail"]):
             result = Math.bayesian_add(result, 1 - p)
         for i in range(results["total_pass"]):
-            result = Math.bayesian_add(result,  p)
+            result = Math.bayesian_add(result, p)
 
     return result
 
@@ -50,8 +51,8 @@ def confident_fail_rate(total_fail, total_pass, confidence):
     error = 1 - confi
 
     # ppf() IS THE PERCENT POINT FUNCTION (INVERSE OF cdf()
-    max1 = Math.min(beta.ppf(confi, total_fail + 1, total_pass), 1)
-    min1 = Math.max(beta.ppf(error, total_fail, total_pass + 1), 0)
+    max1 = MIN(beta.ppf(confi, total_fail + 1, total_pass), 1)
+    min1 = MAX(beta.ppf(error, total_fail, total_pass + 1), 0)
 
     # PICK THE probability CLOSEST TO 0.5
     if min1 < 0.5 and 0.5 < max1:

@@ -40,7 +40,7 @@
                 "encoding": "utf8"
             },
             {
-                "class": "dzAlerts.util.logs.Log_usingStream",
+                "class": "dzAlerts.util.env.logs.Log_usingStream",
                 "stream": "sys.stdout"
             }
         ]

@@ -13,11 +13,11 @@ import argparse
 import os
 import tempfile
 import sys
-import struct
-from .struct import listwrap
-from .cnv import CNV
-from .logs import Log
-from .files import File
+from .. import struct
+from ..struct import listwrap
+from ..cnv import CNV
+from ..env.logs import Log
+from ..env.files import File
 
 
 #PARAMETERS MATCH argparse.ArgumentParser.add_argument()

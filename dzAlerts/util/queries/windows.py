@@ -10,11 +10,12 @@
 
 from __future__ import unicode_literals
 import functools
-from dzAlerts.util import stats
-from ..logs import Log
+from dzAlerts.util.collections import MIN, MAX
+from ..maths import stats
+from ..env.logs import Log
 from ..maths import Math
-from ..multiset import Multiset
-from ..stats import Z_moment, stats2z_moment, z_moment2stats
+from ..collections.multiset import Multiset
+from ..maths.stats import Z_moment, stats2z_moment, z_moment2stats
 
 
 class AggregationFunction(object):
@@ -159,7 +160,7 @@ class Min(WindowFunction):
         self.total.remove(value)
 
     def end(self):
-        return Math.min(self.total)
+        return MIN(self.total)
 
 
 class Max(WindowFunction):
@@ -179,7 +180,7 @@ class Max(WindowFunction):
         self.total.remove(value)
 
     def end(self):
-        return Math.max(*self.total)
+        return MAX(*self.total)
 
 
 class Count(WindowFunction):

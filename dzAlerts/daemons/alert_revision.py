@@ -9,14 +9,14 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
-
 from scipy.stats import binom
 
 from dzAlerts.daemons import alert_exception
-from dzAlerts.util import startup
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import DB, SQL
-from dzAlerts.util.logs import Log
+from dzAlerts.util.env import startup
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
+from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl
 from dzAlerts.daemons.alert import significant_difference
@@ -97,7 +97,7 @@ def alert_revision(settings):
             WHERE
                 {{where}}
         """, {
-            "where": db.esfilter2sqlwhere({"and": [
+            "where": esfilter2sqlwhere(db, {"and": [
                 {"terms": {"revision": interesting_revisions}},
                 {"term": {"reason": alert_exception.REASON}},
                 {"not": {"term": {"status": "obsolete"}}}
@@ -118,7 +118,7 @@ def alert_revision(settings):
             WHERE
                 {{where}}
         """, {
-            "where": db.esfilter2sqlwhere({"and": [
+            "where": esfilter2sqlwhere(db, {"and": [
                 {"terms": {"revision": interesting_revisions}},
                 {"term": {"reason": REASON}}
             ]})
@@ -142,7 +142,7 @@ def alert_revision(settings):
                 t.revision,
                 t.test_name
         """, {
-            "where": db.esfilter2sqlwhere({"terms": {"revision": interesting_revisions}})
+            "where": esfilter2sqlwhere(db, {"terms": {"revision": interesting_revisions}})
         })
         tests = Q.unique_index(tests, ["revision", "test_name"])
 
@@ -218,7 +218,7 @@ def alert_revision(settings):
         WHERE
             {{where}}
         """, {
-            "where": db.esfilter2sqlwhere({"and": [
+            "where": esfilter2sqlwhere(db, {"and": [
                 {"term": {"p.reason": alert_exception.REASON}},
                 {"terms": {"p.revision": Q.select(existing_points, "revision")}},
                 {"missing": "h.parent"}

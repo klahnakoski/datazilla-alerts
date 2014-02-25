@@ -9,8 +9,8 @@
 
 
 from __future__ import unicode_literals
-from dzAlerts.util.db import DB
-from dzAlerts.util.logs import Log
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.logs import Log
 
 
 class Emailer:

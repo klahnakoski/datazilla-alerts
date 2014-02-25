@@ -10,13 +10,14 @@
 
 from __future__ import unicode_literals
 from math import sqrt
-from .cnv import CNV
-from .struct import nvl, Struct, Null
-from .logs import Log
+from ..cnv import CNV
+from ..struct import nvl, Struct, Null
+from ..env.logs import Log
 
 
 DEBUG = True
 EPSILON = 0.000001
+
 
 
 def stats2z_moment(stats):
@@ -105,7 +106,7 @@ def z_moment2stats(z_moment, unbiased=True):
                 "from": Z,
                 "stats": stats,
                 "expected": v.S
-            })
+            }, e)
         globals()["DEBUG"] = True
 
     return stats
@@ -233,7 +234,7 @@ def median(values, simple=True):
     RETURN MEDIAN VALUE
 
     IF simple=False THEN IN THE EVENT MULTIPLE INSTANCES OF THE
-    MEDIAN VALUE, THE MEDIAN IS INTERPOLATED BASED ON IT'S POSITION
+    MEDIAN VALUE, THE MEDIAN IS INTERPOLATED BASED ON ITS POSITION
     IN THE MEDIAN RANGE
     """
     try:
@@ -270,3 +271,6 @@ def median(values, simple=True):
             return (_median - 0.5) + float(middle - start_index) / float(stop_index - start_index)
     except Exception, e:
         Log.error("problem with median", e)
+
+
+zero = Stats()

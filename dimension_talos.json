@@ -1,0 +1,5 @@
+[
+	{"name":"Talos", "index":"datazilla", "edges":[
+		{"name":"Branch", "field":"test_build.branch", "limit":100, "type":"set"}
+	]}
+]

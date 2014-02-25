@@ -1,0 +1,8 @@
+{"name":"B2G", "index":"b2g_alerts", "edges":[
+    {"name":"Device", "field":"test_machine.type", "type":"set", "limit":100},
+    {"name":"OS", "field":"test_machine.os", "type":"set", "limit":100},
+    {"name":"OS Version", "field":["test_machine.os", "test_machine.osversion"], "type":"set", "limit":100},
+    {"name":"Branch", "field":"test_build.branch", "type":"set", "limit":100},
+    {"name":"Test", "field":["testrun.suite", "result.test_name"], "type":"set", "limit":100},
+    {"name":"Platform", "field":"test_machine.platform", "type":"set", "limit":100}
+]}

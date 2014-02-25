@@ -13,16 +13,16 @@ from __future__ import unicode_literals
 from datetime import datetime
 import subprocess
 from pymysql import connect, InterfaceError
-from . import struct
-from .maths import Math
-from .strings import expand_template
-from .struct import nvl
-from .cnv import CNV
-from .logs import Log, Except
-from .queries import Q
-from .strings import indent
-from .strings import outdent
-from .files import File
+from .. import struct
+from ..maths import Math
+from ..strings import expand_template
+from ..struct import nvl
+from ..cnv import CNV
+from ..env.logs import Log, Except
+from ..queries import Q
+from ..strings import indent
+from ..strings import outdent
+from ..env.files import File
 
 
 DEBUG = False
@@ -75,7 +75,7 @@ class DB(object):
                 use_unicode=True
             )
         except Exception, e:
-            if self.settings.host.find("://")==-1:
+            if self.settings.host.find("://") == -1:
                 Log.error(u"Failure to connect", e)
             else:
                 Log.error(u"Failure to connect.  PROTOCOL PREFIX IS PROBABLY BAD", e)
@@ -202,6 +202,9 @@ class DB(object):
 
 
     def query(self, sql, param=None):
+        """
+        RETURN RESULTS IN [row_num][column] GRID
+        """
         self._execute_backlog()
         try:
             old_cursor = self.cursor
@@ -231,6 +234,42 @@ class DB(object):
             if isinstance(e, InterfaceError) or e.message.find("InterfaceError") >= 0:
                 Log.error("Did you close the db connection?", e)
             Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, offset=1)
+
+    def column_query(self, sql, param=None):
+        """
+        RETURN RESULTS IN [column][row_num] GRID
+        """
+        self._execute_backlog()
+        try:
+            old_cursor = self.cursor
+            if not old_cursor: #ALLOW NON-TRANSACTIONAL READS
+                self.cursor = self.db.cursor()
+                self.cursor.execute("SET TIME_ZONE='+00:00'")
+                self.cursor.close()
+                self.cursor = self.db.cursor()
+
+            if param:
+                sql = expand_template(sql, self.quote_param(param))
+            sql = self.preamble + outdent(sql)
+            if self.debug:
+                Log.note("Execute SQL:\n{{sql}}", {"sql": indent(sql)})
+
+            self.cursor.execute(sql)
+            grid = [[utf8_to_unicode(c) for c in row] for row in self.cursor]
+            # columns = [utf8_to_unicode(d[0]) for d in nvl(self.cursor.description, [])]
+            result = zip(*grid)
+
+            if not old_cursor:   #CLEANUP AFTER NON-TRANSACTIONAL READS
+                self.cursor.close()
+                self.cursor = None
+
+            return result
+        except Exception, e:
+            if isinstance(e, InterfaceError) or e.message.find("InterfaceError") >= 0:
+                Log.error("Did you close the db connection?", e)
+            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, offset=1)
+
+
 
 
     # EXECUTE GIVEN METHOD FOR ALL ROWS RETURNED
@@ -408,7 +447,7 @@ class DB(object):
             command = \
                 "INSERT INTO " + self.quote_column(table_name) + "(" + \
                 ",".join([self.quote_column(k) for k in keys]) + \
-                ") VALUES " + ",".join([
+                ") VALUES " + ",\n".join([
                     "(" + ",".join([self.quote_value(r[k]) for k in keys]) + ")"
                     for r in records
                 ])
@@ -507,90 +546,7 @@ class DB(object):
         sort = Q.normalize_sort_parameters(sort)
         return ",\n".join([self.quote_column(s.field) + (" DESC" if s.sort == -1 else " ASC") for s in sort])
 
-    def esfilter2sqlwhere(self, esfilter):
-        return SQL(self._filter2where(esfilter))
 
-    def isolate(self, separator, list):
-        if len(list) > 1:
-            return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
-        else:
-            return list[0]
-
-    def _filter2where(self, esfilter):
-        esfilter = struct.wrap(esfilter)
-
-        if esfilter["and"]:
-            return self.isolate("AND", [self._filter2where(a) for a in esfilter["and"]])
-        elif esfilter["or"]:
-            return self.isolate("OR", [self._filter2where(a) for a in esfilter["or"]])
-        elif esfilter["not"]:
-            return "NOT (" + self._filter2where(esfilter["not"]) + ")"
-        elif esfilter.term:
-            return self.isolate("AND", [self.quote_column(col) + "=" + self.quote_value(val) for col, val in esfilter.term.items()])
-        elif esfilter.terms:
-            for col, v in esfilter.terms.items():
-                if len(v) == 0:
-                    return "FALSE"
-
-                try:
-                    int_list = CNV.value2intlist(v)
-                    has_null = False
-                    for vv in v:
-                        if vv == None:
-                            has_null = True
-                            break
-                    if int_list:
-                        filter = int_list_packer(col, int_list)
-                        if has_null:
-                            return self._filter2where({"or": [{"missing": col}, filter]})
-                        else:
-                            return self._filter2where(filter)
-                    else:
-                        if has_null:
-                            return self._filter2where({"missing": col})
-                        else:
-                            return "false"
-                except Exception, e:
-                    pass
-                return self.quote_column(col) + " in (" + ", ".join([self.quote_value(val) for val in v]) + ")"
-        elif esfilter.script:
-            return "(" + esfilter.script + ")"
-        elif esfilter.range:
-            name2sign = {
-                "gt": ">",
-                "gte": ">=",
-                "lte": "<=",
-                "lt": "<"
-            }
-
-            def single(col, r):
-                min = nvl(r["gte"], r[">="])
-                max = nvl(r["lte"], r["<="])
-                if min and max:
-                    #SPECIAL CASE (BETWEEN)
-                    return self.quote_column(col) + " BETWEEN " + self.quote_value(min) + " AND " + self.quote_value(max)
-                else:
-                    return " AND ".join(
-                        self.quote_column(col) + name2sign[sign] + self.quote_value(value)
-                        for sign, value in r.items()
-                    )
-
-            output = self.isolate("AND", [single(col, ranges) for col, ranges in esfilter.range.items()])
-            return output
-        elif esfilter.missing:
-            if isinstance(esfilter.missing, basestring):
-                return "(" + self.quote_column(esfilter.missing) + " IS Null)"
-            else:
-                return "(" + self.quote_column(esfilter.missing.field) + " IS Null)"
-        elif esfilter.exists:
-            if isinstance(esfilter.exists, basestring):
-                return "(" + self.quote_column(esfilter.exists) + " IS NOT Null)"
-            else:
-                return "(" + self.quote_column(esfilter.exists.field) + " IS NOT Null)"
-        elif esfilter.match_all:
-            return "1=1"
-        else:
-            Log.error("Can not convert esfilter to SQL: {{esfilter}}", {"esfilter": esfilter})
 
 
 def utf8_to_unicode(v):
@@ -609,6 +565,10 @@ class SQL(unicode):
         unicode.__init__(self)
         self.template = template
         self.param = param
+
+    @property
+    def sql(self):
+        return expand_template(self.template, self.param)
 
     def __str__(self):
         Log.error("do not do this")

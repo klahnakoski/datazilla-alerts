@@ -10,7 +10,7 @@
 
 from __future__ import unicode_literals
 from .. import struct
-from ..logs import Log
+from ..env.logs import Log
 from ..strings import indent, expand_template
 from ..struct import Null
 
@@ -34,7 +34,7 @@ class UniqueIndex(object):
             if isinstance(key, dict):
                 key = struct.wrap(key)
                 key = [key[k] for k in self._keys]
-            elif not isinstance(key, list):
+            elif not isinstance(key, (list, tuple)):
                 key = [key]
 
             d = self._data

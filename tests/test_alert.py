@@ -8,16 +8,17 @@
 #
 
 from __future__ import unicode_literals
-import pytest
-import dzAlerts
-
-from dzAlerts.daemons.alert import send_alerts
 from datetime import datetime, timedelta
+
+import pytest
+
+import dzAlerts
+from dzAlerts.daemons.alert import send_alerts
 from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.maths import Math
 from dzAlerts.util.strings import between, expand_template

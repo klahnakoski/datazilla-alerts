@@ -10,10 +10,10 @@
 from __future__ import unicode_literals
 import pytest
 from dzAlerts.daemons.email_send import email_send
-from dzAlerts.util.db import DB
-from dzAlerts.util.logs import Log
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util import startup
 from util import testing
 
 

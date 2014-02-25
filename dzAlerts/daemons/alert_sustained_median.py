@@ -11,6 +11,9 @@ from __future__ import unicode_literals
 from datetime import datetime
 import scipy
 from scipy import stats
+from dzAlerts.util.env import startup
+from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
+
 scipy.stats = stats  # I WANT TO REFER TO "scipy.stats" TO BE EXPLICIT
 
 from dzAlerts.daemons.util.median_test import median_test
@@ -21,12 +24,11 @@ from dzAlerts.util.queries import windows
 
 from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.db import SQL
-from dzAlerts.util.logs import Log
+from dzAlerts.util.sql.db import SQL
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, Null
 from dzAlerts.util.queries import Q
-from dzAlerts.util.db import DB
-from dzAlerts.util import startup
+from dzAlerts.util.sql.db import DB
 
 
 SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
@@ -60,10 +62,13 @@ ALLOWED_TESTS = [
     "v8_7"
 ]
 
+
 def alert_sustained_median(settings, db):
     """
     find single points that deviate from the trend
     """
+    OBJECTSTORE = settings.objectstore.schema + ".objectstore"
+    TDAD = settings.perftest.schema + ".test_data_all_dimensions"
 
     debug = nvl(settings.param.debug, DEBUG)
     db.debug = debug
@@ -72,7 +77,7 @@ def alert_sustained_median(settings, db):
     # THE EVENTUAL GOAL IS TO PARAMETRIZE THE SQL, WHICH REALLY IS
     # SIMPLE EDGE SETS
     query = struct.wrap({
-        "from": "test_data_all_dimensions",
+        "from": TDAD,
         "select": [
             {"value": "id", "name": "tdad_id"},
             "test_run_id",
@@ -97,74 +102,50 @@ def alert_sustained_median(settings, db):
     if debug:
         Log.note("Find tests that need sustained_median regression detection")
 
-    records_to_process = set(Q.select(db.query("""
-            SELECT
-                o.test_run_id
-            FROM
-                {{objectstore}}.objectstore o FORCE INDEX (objectstore_processed_sustained_median)
-            WHERE
-                {{where}}
-            # ORDER BY
-            #     o.test_run_id
-            LIMIT
-                {{sample_limit}}
-        """, {
-        "objectstore": db.quote_column(settings.objectstore.schema),
-        "sample_limit": SQL(settings.param.sustained_median.max_test_results_per_run),
-        "where": db.esfilter2sqlwhere({"and": [
-            {"term": {"o.processed_sustained_median": 'ready'}},
-            {"term": {"o.processed_cube": "done"}}
-        ]})
-    }), "test_run_id"))
+    qb = DBQuery(db)
+
+    records_to_process = set(qb.query({
+        "from": OBJECTSTORE,
+        "select": "test_run_id",
+        "where": {"and": [
+            {"term": {"processed_sustained_median": 'ready'}},
+            {"term": {"processed_cube": "done"}}
+        ]},
+        "limit": settings.param.sustained_median.max_test_results_per_run
+    }))
 
     #TODO: BE SURE WE CAUGHT https://datazilla.mozilla.org/?start=1385895839&stop=1388674396&product=Firefox&repository=Try-Non-PGO&test=tsvgx&page=hixie-003.xml&graph_search=331ddc9661bc&tr_id=3877458&graph=win%206.1.7601&x86_64=true&error_bars=false&project=talos
 
-
     # TODO: Turn into tests
-    records_to_process = set(Q.select(db.query("""
-        SELECT
-            test_run_id
-        FROM
-            ekyle_perftest_1.test_data_all_dimensions t
-        WHERE
-            {{where}}
- 		LIMIT 1
-    """, {"where":db.esfilter2sqlwhere({"term":{
-        "branch": "Birch",
-        "operating_system_name": "mac",
-        "operating_system_version": "OS X 10.6.8",
-        "page_url": "Asteroids - Vectors",
-        "processor": "x86_64",
-        "product": "Firefox",
-        "test_name": "tcanvasmark"
-    }})}), "test_run_id"))
+    records_to_process = set(qb.query({
+        "from": TDAD,
+        "select": "test_run_id",
+        "where": {"term": {
+            "branch": "Birch",
+            "operating_system_name": "mac",
+            "operating_system_version": "OS X 10.6.8",
+            "page_url": "Asteroids - Vectors",
+            "processor": "x86_64",
+            "product": "Firefox",
+            "test_name": "tcanvasmark"
+        }},
+        "limit": settings.param.sustained_median.max_test_results_per_run
+    }))
 
-    new_test_points = db.query("""
-        SELECT
-            {{edges}},
-            min(push_date) min_push_date
-        FROM
-            {{perftest}}.test_data_all_dimensions t
-        WHERE
-            {{where}}
-        GROUP BY
-            {{edges}}
-    """, {
-        "perftest": db.quote_column(settings.perftest.schema),
-        "edges": db.quote_column(query.edges, table="t"),
-        "where": db.esfilter2sqlwhere({"and": [
-            {"terms": {"t.test_run_id": records_to_process}},
-            # PART OF TEST A
-            # {"term": {"page_url": "store.apple.com"}},
-            # {"term": {"branch_version": "28.0a1"}}
-        ]})
+    new_test_points = qb.query({
+        "from": TDAD,
+        "select": {"name": "min_push_date", "value": "push_date", "aggregate": "min"},
+        "edges": query.edges,
+        "where": {"and": [
+            {"terms": {"test_run_id": records_to_process}},
+        ]}
     })
 
     #BRING IN ALL NEEDED DATA
     if debug:
         Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
             "num": len(new_test_points),
-            "groups": new_test_points
+            "groups": new_test_points.edges
         })
 
     all_min_date = Null
@@ -173,61 +154,39 @@ def alert_sustained_median(settings, db):
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, points in Q.groupby(new_test_points, query.edges):
         try:
-            min_date = Math.min(Q.select(points, "min_push_date"))
-            all_min_date = Math.min([all_min_date, min_date])
+            min_date = Math.min(points)
+            all_min_date = Math.min(all_min_date, min_date)
 
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
-            first_in_window = db.query("""
-                SELECT
-                    min(push_date) min_date
-                FROM (
-                    SELECT
-                        push_date
-                    FROM
-                        {{from}} t
-                    WHERE
-                        {{where}}
-                    ORDER BY
-                        push_date DESC
-                    LIMIT
-                        {{window_size}}
-                ) t
-            """, {
-                "from": db.quote_column(query["from"]),
-                "edges": db.quote_column(query.edges),
-                "where": db.esfilter2sqlwhere({"and": [
-                    {"term": g},
-                    {"exists": "n_replicates"},
-                    {"range": {"push_date": {"lt": min_date}}}
-                ]}),
-                "window_size": settings.param.sustained_median.window_size + 1
-            })[0]
+            first_in_window = qb.query({
+                "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
+                "from": {
+                    "from": TDAD,
+                    "select": "push_date",
+                    "where": {"and": [
+                        {"term": g},
+                        {"exists": "n_replicates"},
+                        {"range": {"push_date": {"lt": min_date}}}
+                    ]},
+                    "sort": {"value": "push_date", "sort": -1},
+                    "limit": settings.param.sustained_median.window_size + 1
+                }})
 
-            all_min_date = Math.min([all_min_date, first_in_window.min_date])
+            all_min_date = Math.min(all_min_date, first_in_window)
 
             #LOAD TEST RESULTS FROM DATABASE
-            test_results = db.query("""
-                SELECT
-                    revision,
-                    {{edges}},
-                    {{sort}},
-                    {{select}}
-                FROM
-                    {{from}} t
-                WHERE
-                    {{where}}
-                ORDER BY
-                    push_date
-                """, {
-                "from": db.quote_column(query["from"]),
-                "sort": db.quote_column(query.sort),
-                "select": db.quote_column(query.select),
-                "edges": db.quote_column(query.edges),
-                "where": db.esfilter2sqlwhere({"and": [
+            test_results = qb.query({
+                "from": TDAD,
+                "select": [
+                    "revision",
+                    "push_date"
+                ] + query.select + query.edges,
+                "where": {"and": [
                     {"term": g},
                     {"exists": "n_replicates"},
                     {"range": {"push_date": {"gte": Math.min([min_date, first_in_window.min_date])}}}
-                ]})
+                ]},
+                "sort": "push_date"
             })
 
             Log.note("{{num}} test results found for\n{{group}}", {
@@ -246,7 +205,7 @@ def alert_sustained_median(settings, db):
 
             #APPLY WINDOW FUNCTIONS
             stats = Q.run({
-                "from": test_results,
+                "from": test_results.data,
                 "window": [
                     {
                         "name": "push_date_min",
@@ -271,7 +230,9 @@ def alert_sustained_median(settings, db):
                         "range": {"min": 0, "max": settings.param.sustained_median.window_size}
                     }, {
                         "name": "result",
-                        "value": lambda r, i, rows: median_test(rows[-settings.param.sustained_median.window_size+i:i:].mean, rows[i:settings.param.sustained_median.window_size+i:].mean, interpolate=False)
+                        "value": lambda r, i, rows: median_test(rows[-settings.param.sustained_median.window_size + i:i:].mean, rows[i:settings.param.sustained_median.window_size + i:].mean,
+                            interpolate=False),
+                        "sort": "push_date"
                     }, {
                         "name": "is_diff",
                         "value": lambda r: True if settings.param.sustained_median.trigger < r.result.confidence else False
@@ -279,7 +240,6 @@ def alert_sustained_median(settings, db):
                         "name": "diff",
                         "value": lambda r: Math.abs(r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }
-
                 ]
             })
 
@@ -297,7 +257,8 @@ def alert_sustained_median(settings, db):
             #FOR DEBUGGING
             # Q.select(stats, ["revision", "is_diff", "result.confidence", "past_stats", "future_stats"])
 
-            if g.page_url=="Asteroids - Vectors":
+            if g.page_url == "Asteroids - Vectors":
+                #https://datazilla.mozilla.org/?start=1375989662&stop=1391541662&product=Firefox&repository=Birch&os=mac&os_version=OS%20X%2010.6.8&test=tcanvasmark&project=talos
                 Log.debug()
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
@@ -329,25 +290,22 @@ def alert_sustained_median(settings, db):
     if not re_alert:
         current_alerts = []
     else:
-        current_alerts = db.query("""
-            SELECT
-                a.id,
-                a.tdad_id,
-                a.status,
-                a.last_updated,
-                a.severity,
-                a.confidence,
-                a.details,
-                a.solution
-            FROM
-                alerts a
-            WHERE
-                {{where}}
-        """, {
-            "where": db.esfilter2sqlwhere({"and": [
-                {"terms": {"a.tdad_id": re_alert}},
+        current_alerts = qb.query({
+            "from": "alerts",
+            "select": [
+                "id",
+                "tdad_id",
+                "status",
+                "last_updated",
+                "severity",
+                "confidence",
+                "details",
+                "solution"
+            ],
+            "where": {"and": [
+                {"terms": {"tdad_id": re_alert}},
                 {"term": {"reason": REASON}}
-            ]})
+            ]}
         })
 
     found_alerts = Q.unique_index(alerts, "tdad_id")
@@ -387,12 +345,12 @@ def alert_sustained_median(settings, db):
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
-        "where": db.esfilter2sqlwhere({"terms": {"id": Q.select(obsolete_alerts, "id")}})
+        "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
     })
 
     db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
         "now": datetime.utcnow(),
-        "where": db.esfilter2sqlwhere({"term": {"code": REASON}})
+        "where": esfilter2sqlwhere(db, {"term": {"code": REASON}})
     })
 
     if debug:
@@ -408,9 +366,10 @@ def alert_sustained_median(settings, db):
         WHERE {{where}}
     """, {
         "objectstore": db.quote_column(settings.objectstore.schema),
-        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": all_touched | records_to_process}})
+        "where": esfilter2sqlwhere(db, {"terms": {"test_run_id": all_touched | records_to_process}})
     })
     db.flush()
+
 
 def main():
     settings = startup.read_settings()
