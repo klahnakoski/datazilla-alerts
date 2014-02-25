@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 import __builtin__
 
 from . import group_by
-from dzAlerts.util.collections import UNION
+from ..collections import UNION
 from ..queries import flat_list, query
 from ..queries.filters import TRUE_FILTER, FALSE_FILTER
 from ..queries.query import Query, _normalize_select, _normalize_selects
@@ -227,7 +227,7 @@ def select(data, field_name):
     # SIMPLE PYTHON ITERABLE ASSUMED
     if isinstance(field_name, basestring):
         if len(split_field(field_name)) == 1:
-            return [d[field_name] for d in data]
+            return StructList([d[field_name] for d in data])
         else:
             keys = split_field(field_name)
             output = []
@@ -239,7 +239,6 @@ def select(data, field_name):
     else:
         keys = [_select_a_field(field_name)]
         return _select(Struct(), unwrap(data), keys, 0)
-
 
 
 def _select_a_field(field):

@@ -10,7 +10,8 @@
 
 from __future__ import unicode_literals
 import functools
-from dzAlerts.util.collections import MIN, MAX
+from ..maths import stats
+from ..collections import MIN
 from ..maths import stats
 from ..env.logs import Log
 from ..maths import Math

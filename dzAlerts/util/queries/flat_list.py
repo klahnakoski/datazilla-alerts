@@ -48,6 +48,9 @@ class FlatList(list):
             yield r
 
     def select(self, field_name):
+        if isinstance(field_name, dict):
+            field_name=field_name.value
+
         if isinstance(field_name, basestring):
             # RETURN LIST OF VALUES
             if len(split_field(field_name)) == 1:

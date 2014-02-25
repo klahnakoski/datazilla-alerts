@@ -12,12 +12,12 @@ from datetime import datetime
 import re
 import sha
 import time
-from .. import struct
-
 import requests
 
+from .. import struct
 from ..thread.threads import ThreadedQueue
 from ..maths import Math
+from ..queries import Q
 from ..cnv import CNV
 from ..env.logs import Log
 from ..struct import nvl, Null, wrap
@@ -189,7 +189,9 @@ class ElasticSearch(object):
                 return False
         return True
 
-    def delete_record(self, query):
+    def delete_record(self, filter):
+        query = {"query": filter}
+
         if isinstance(query, dict):
             ElasticSearch.delete(
                 self.path + "/_query",
