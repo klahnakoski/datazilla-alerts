@@ -12,17 +12,17 @@ import re
 from .. import struct
 from ..cnv import CNV
 from ..env.logs import Log
-from ..struct import Struct, nvl, Null
+from ..struct import Struct, nvl, wrap
 
 
-ALGEBRAIC = ["time", "duration", "numeric", "count", "datetime"]  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
-KNOWN = ["set", "boolean", "duration", "time", "numeric"]    # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
-PARTITION = ["set", "boolean"]    # DIMENSIONS WITH CLEAR PARTS
+ALGEBRAIC = {"time", "duration", "numeric", "count", "datetime"}  # DOMAINS THAT HAVE ALGEBRAIC OPERATIONS DEFINED
+KNOWN = {"set", "boolean", "duration", "time", "numeric"}    # DOMAINS THAT HAVE A KNOWN NUMBER FOR PARTS AT QUERY TIME
+PARTITION = {"uid", "set", "boolean"}    # DIMENSIONS WITH CLEAR PARTS
 
 
 class Domain(object):
     def __new__(cls, **desc):
-        desc = struct.wrap(desc)
+        desc = wrap(desc)
         if desc.type == "value":
             return ValueDomain(**struct.unwrap(desc))
         elif desc.type == "default":
@@ -31,11 +31,13 @@ class Domain(object):
             if isinstance(desc.key, (list, tuple)):
                 Log.error("multi key not supported yet")
             return SetDomain(**struct.unwrap(desc))
+        elif desc.type == "uid":
+            return DefaultDomain(**struct.unwrap(desc))
         else:
             Log.error("Do not know domain of type {{type}}", {"type": desc.type})
 
     def __init__(self, **desc):
-        desc = struct.wrap(desc)
+        desc = wrap(desc)
         self.name = nvl(desc.name, desc.type)
         self.type = desc.type
         self.min = desc.min
@@ -145,7 +147,7 @@ class SetDomain(Domain):
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
-        desc = struct.wrap(desc)
+        desc = wrap(desc)
 
         self.NULL = Struct(value=None)
         self.partitions = []

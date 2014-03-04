@@ -8,7 +8,7 @@
 #
 
 from __future__ import unicode_literals
-import types
+from types import NoneType, GeneratorType
 
 _get = object.__getattribute__
 
@@ -18,12 +18,17 @@ class Struct(dict):
     Struct is an anonymous class with some properties good for manipulating JSON
 
     0) a.b==a["b"]
-    1) the IDE does tab completion, so my spelling mistakes get found at "compile time"
+    1) the IDE does tab completion, and my spelling mistakes get found at "compile time"
     2) it deals with missing keys gracefully, so I can put it into set operations (database
        operations) without choking
     2b) missing keys is important when dealing with JSON, which is often almost anything
-    3) you can access JSON paths as a variable:   a["b.c"]==a.b.c
-    4) attribute names (keys) are corrected to unicode - it appears Python object.getattribute()
+    3) you can access paths as a variable:   a["b.c"]==a.b.c
+    4) you can set paths to values, missing objects along the path are created:
+       a = wrap({})
+       > a == {}
+       a["b.c"] = 42
+       > a == {"b": {"c": 42}}
+    5) attribute names (keys) are corrected to unicode - it appears Python object.getattribute()
        is called with str() even when using from __future__ import unicode_literals
 
     MORE ON MISSING VALUES: http://www.numpy.org/NA-overview.html
@@ -41,7 +46,7 @@ class Struct(dict):
     def __init__(self, **map):
         """
         THIS WILL MAKE A COPY, WHICH IS UNLIKELY TO BE USEFUL
-        USE struct.wrap() INSTEAD
+        USE wrap() INSTEAD
         """
         dict.__init__(self)
         object.__setattr__(self, "__dict__", map)  #map IS A COPY OF THE PARAMETERS
@@ -183,6 +188,10 @@ class Struct(dict):
     def keys(self):
         d = _get(self, "__dict__")
         return d.keys()
+
+    def setdefault(self, k, d=None):
+        if self[k] == None:
+            self[k]=d
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL
 requested = set()
@@ -366,6 +375,9 @@ class _Null(object):
     def __repr__(self):
         return "Null"
 
+    def __class__(self):
+        return NoneType
+
 
 Null = _Null()
 EmptyList = Null
@@ -451,7 +463,7 @@ class StructList(list):
         return self
 
     def pop(self):
-        return _get(self, "list").pop()
+        return wrap(_get(self, "list").pop())
 
     def __add__(self, value):
         output = list(_get(self, "list"))
@@ -505,21 +517,37 @@ class StructList(list):
             return StructList([v[key] for v in _get(self, "list")])
 
 def wrap(v):
-    if v is None:
-        return Null
-    if isinstance(v, (Struct, _Null, StructList)):
-        return v
-    if isinstance(v, dict):
+    v_type = v.__class__
+
+    if v_type is dict:
+        if isinstance(v, Struct):
+            return v
         m = Struct()
         object.__setattr__(m, "__dict__", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
-    if isinstance(v, list):
+
+    if v_type is list:
+        if isinstance(v, StructList):
+            return v
+
         for vv in v:
+            # IN PRACTICE WE DO NOT EXPECT TO GO THROUGH THIS LIST, IF ANY ARE WRAPPED, THE FIRST IS PROBABLY WRAPPED
             if vv is not unwrap(vv):
-                return StructList([unwrap(vv) for vv in v])
+                #MUST KEEP THE LIST
+                temp = [unwrap(vv) for vv in v]
+                del v[:]
+                v.extend(temp)
+                return StructList(v)
         return StructList(v)
-    if isinstance(v, types.GeneratorType):
+
+    if v_type is NoneType:
+        if v is None:
+            return Null
+        return v
+
+    if v_type is GeneratorType:
         return (wrap(vv) for vv in v)
+
     return v
 
 
@@ -586,6 +614,16 @@ def listwrap(value):
         return wrap(value)
     else:
         return wrap([value])
+
+
+def tuplewrap(value):
+    """
+    INTENDED TO TURN lists INTO tuples FOR USE AS KEYS
+    """
+    if isinstance(value, (list, tuple, GeneratorType)):
+        return tuple(tuplewrap(v) for v in value)
+    return unwrap(value)
+
 
 
 def split_field(field):

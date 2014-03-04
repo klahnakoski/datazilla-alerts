@@ -13,6 +13,7 @@ from datetime import timedelta
 import re
 
 from . import struct
+from .struct import wrap
 
 
 def datetime(value):
@@ -102,7 +103,7 @@ def expand_template(template, value):
     template IS A STRING WITH {{variable_name}} INSTANCES, WHICH WILL
     BE EXPANDED TO WHAT IS IS IN THE value dict
     """
-    value = struct.wrap(value)
+    value = wrap(value)
     if isinstance(template, basestring):
         return _simple_expand(template, (value,))
 
@@ -116,7 +117,7 @@ def _expand(template, seq):
     if isinstance(template, basestring):
         return _simple_expand(template, seq)
     elif isinstance(template, dict):
-        template = struct.wrap(template)
+        template = wrap(template)
         assert template["from"], "Expecting template to have 'from' attribute"
         assert template.template, "Expecting template to have 'template' attribute"
 
@@ -203,3 +204,67 @@ def edit_distance(s1, s2):
         previous_row = current_row
 
     return float(previous_row[-1]) / len(s1)
+
+
+DIFF_PREFIX = re.compile(r"@@ -(\d+(?:\s*,\d+)?) \+(\d+(?:\s*,\d+)?) @@")
+def apply_diff(text, diff, reverse=False):
+    """
+    SOME EXAMPLES OF diff
+    #@@ -1 +1 @@
+    #-before china goes live, the content team will have to manually update the settings for the china-ready apps currently in marketplace.
+    #+before china goes live (end January developer release, June general audience release) , the content team will have to manually update the settings for the china-ready apps currently in marketplace.
+    @@ -0,0 +1,3 @@
+    +before china goes live, the content team will have to manually update the settings for the china-ready apps currently in marketplace.
+    +
+    +kward has the details.
+    @@ -1 +1 @@
+    -before china goes live (end January developer release, June general audience release), the content team will have to manually update the settings for the china-ready apps currently in marketplace.
+    +before china goes live , the content team will have to manually update the settings for the china-ready apps currently in marketplace.
+    @@ -3 +3 ,6 @@
+    -kward has the details.+kward has the details.
+    +
+    +Target Release Dates :
+    +https://mana.mozilla.org/wiki/display/PM/Firefox+OS+Wave+Launch+Cross+Functional+View
+    +
+    +Content Team Engagement & Tasks : https://appreview.etherpad.mozilla.org/40
+    """
+    if not diff:
+        return text
+    if diff[0].strip() == "":
+        return text
+
+    matches = DIFF_PREFIX.match(diff[0].strip())
+    if not matches:
+        from .env.logs import Log
+
+        Log.error("Can not handle {{diff}}\n", {"diff": diff[0]})
+
+    remove = [int(i.strip()) for i in matches.group(1).split(",")]
+    if len(remove) == 1:
+        remove = [remove[0], 1]  # DEFAULT 1
+    add = [int(i.strip()) for i in matches.group(2).split(",")]
+    if len(add) == 1:
+        add = [add[0], 1]
+
+    # UNUSUAL CASE WHERE @@ -x +x, n @@ AND FIRST LINE HAS NOT CHANGED
+    half = len(diff[1]) / 2
+    first_half = diff[1][:half]
+    last_half = diff[1][half:half * 2]
+    if remove[1] == 1 and add[0] == remove[0] and first_half[1:] == last_half[1:]:
+        diff[1] = first_half
+        diff.insert(2, last_half)
+
+    if not reverse:
+        if remove[1] != 0:
+            text = text[:remove[0] - 1] + text[remove[0] + remove[1] - 1:]
+        text = text[:add[0] - 1] + [d[1:] for d in diff[1 + remove[1]:1 + remove[1] + add[1]]] + text[add[0] - 1:]
+        text = apply_diff(text, diff[add[1]+remove[1]+1:], reverse=reverse)
+    else:
+        text = apply_diff(text, diff[add[1]+remove[1]+1:], reverse=reverse)
+        if add[1] != 0:
+            text = text[:add[0] - 1] + text[add[0] + add[1] - 1:]
+        text = text[:remove[0] - 1] + [d[1:] for d in diff[1:1 + remove[1]]] + text[remove[0] - 1:]
+
+    return text
+
+

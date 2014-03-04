@@ -27,7 +27,7 @@ def is_fieldop(query):
     select = struct.listwrap(query.select)
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        isSimple = AND([s.value != None and MVEL.isKeyword(s.value) for s in select])
+        isSimple = AND([s.value != None and isKeyword(s.value) for s in select])
         noAgg = AND([s.aggregate == "none" for s in select])
 
         if not isDeep and isSimple and noAgg:
@@ -38,6 +38,12 @@ def is_fieldop(query):
             return True
 
     return False
+
+def isKeyword(value):
+    if isinstance(value, list):
+        return AND(isKeyword(v) for v in value)
+    return MVEL.isKeyword(value)
+
 
 def es_fieldop(es, query):
     esQuery = es_query_util.buildESQuery(query)
@@ -50,8 +56,13 @@ def es_fieldop(es, query):
             "filter": filters.simplify(query.where)
         }
     }
-    esQuery.size = query.limit
-    esQuery.fields = select.value
+    esQuery.size = nvl(query.limit, 200000)
+    esQuery.fields = []
+    for s in select.value:
+        if isinstance(s, list):
+            esQuery.fields.extend(s)
+        else:
+            esQuery.fields.append(s)
     esQuery.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
 
     data = es_query_util.post(es, esQuery, query.limit)
@@ -61,6 +72,8 @@ def es_fieldop(es, query):
     for s in select:
         if s.value == "*":
             matricies[s.name] = Matrix.wrap([t._source for t in T])
+        elif isinstance(s.value, list):
+            matricies[s.name] = Matrix.wrap([tuple(unwrap(t.fields)[ss] for ss in s.value) for t in T])
         elif not s.value:
             matricies[s.name] = Matrix.wrap([unwrap(t.fields)[s.value] for t in T])
         else:

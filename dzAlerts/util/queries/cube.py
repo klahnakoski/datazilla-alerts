@@ -9,12 +9,10 @@
 #
 from __future__ import unicode_literals
 from .. import struct
-from itertools import izip
 from ..collections.matrix import Matrix
 from ..collections import MAX, OR
-from dzAlerts.util.queries.query import _normalize_edge
-from dzAlerts.util.struct import StructList
-from ..maths import Math
+from ..queries.query import _normalize_edge
+from ..struct import StructList, wrap
 from ..env.logs import Log
 
 
@@ -84,7 +82,7 @@ class Cube(object):
         if not self.edges:
             return list.__iter__([])
 
-        if len(self.edges) == 1 and struct.wrap(self.edges[0]).domain.type == "index":
+        if len(self.edges) == 1 and wrap(self.edges[0]).domain.type == "index":
             # ITERATE AS LIST OF RECORDS
             keys = list(self.data.keys())
             output = (struct.zip(keys, r) for r in zip(*self.data.values()))
@@ -150,7 +148,7 @@ class Cube(object):
         selects = struct.listwrap(self.select)
         index, v = zip(*self.data[selects[0].name].groupby(selector))
 
-        coord = struct.wrap([{e.name: e.domain.getKey(e.domain.partitions[c[i]]) for i, e in enumerate(self.edges) if c[i] != -1} for c in index])
+        coord = wrap([{e.name: e.domain.getKey(e.domain.partitions[c[i]]) for i, e in enumerate(self.edges) if c[i] != -1} for c in index])
 
         if isinstance(self.select, list):
             values = [v]

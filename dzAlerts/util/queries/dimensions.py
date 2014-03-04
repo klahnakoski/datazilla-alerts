@@ -10,12 +10,9 @@
 from __future__ import unicode_literals
 from .. import struct
 from ..collections import SUM
-from ..maths import Math
-
-from ..queries.domains import PARTITION, Domain
-from ..struct import Struct, nvl, Null, StructList, join_field, split_field
+from ..queries.domains import PARTITION, Domain, ALGEBRAIC, KNOWN
+from ..struct import Struct, nvl, Null, StructList, join_field, split_field, wrap
 from ..times.timer import Timer
-
 from ..env.logs import Log
 
 DEFAULT_QUERY_LIMIT = 20
@@ -52,85 +49,93 @@ class Dimension(object):
         self.partitions = StructList()
         parse_partition(parent, self)
 
-        if dim.field and dim.type in PARTITION and not dim.partitions:
+        if not dim.field:
+            return  # NO FIELDS TO SEARCH
+        else:
             self.fields = struct.listwrap(dim.field)
 
-            # IF dim.field IS A NUMBER, THEN SET-WISE EDGES DO NOT WORK (CLASS CAST EXCEPTION)
-            edges = [{"name": f, "value": f, "allowNulls": False} for f in self.fields]
+        if dim.partitions:
+            return  # ALREADY HAVE PARTS
+        if dim.type not in KNOWN - ALGEBRAIC:
+            return  # PARTS OR TOO FUZZY (OR TOO NUMEROUS) TO FETCH
 
-            with Timer("Get parts of {{name}}", {"name": self.name}):
-                parts = qb.query({
-                    "from": self.index,
-                    "select": {"name": "count", "aggregate": "count"},
-                    "edges": edges,
-                    "esfilter": self.esfilter,
-                    "limit": self.limit
-                })
 
-            d = parts.edges[0].domain
+        # IF dim.field IS A NUMBER, THEN SET-WISE EDGES DO NOT WORK (CLASS CAST EXCEPTION)
+        edges = [{"name": f, "value": f, "allowNulls": False} for f in self.fields]
 
-            if dim.path:
-                if len(edges) > 1:
-                    Log.error("Not supported yet")
-                # EACH TERM RETURNED IS A PATH INTO A PARTITION TREE
-                temp = Struct(partitions=[])
-                for i, count in enumerate(parts):
-                    a = dim.path(d.getEnd(d.partitions[i]))
-                    if not isinstance(a, list):
-                        Log.error("The path function on " + dim.name + " must return an ARRAY of parts")
-                    addParts(
-                        temp,
-                        dim.path(d.getEnd(d.partitions[i])),
-                        count,
-                        0
-                    )
-                self.value = nvl(dim.value, "name")
-                self.partitions = temp.partitions
-            elif len(edges) == 1:
-                self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
+        with Timer("Get parts of {{name}}", {"name": self.name}):
+            parts = qb.query({
+                "from": self.index,
+                "select": {"name": "count", "aggregate": "count"},
+                "edges": edges,
+                "esfilter": self.esfilter,
+                "limit": self.limit
+            })
 
-                # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
-                self.partitions = struct.wrap([
-                    {
-                        "name": str(d.partitions[i].name),  # CONVERT TO STRING
-                        "value": d.getEnd(d.partitions[i]),
-                        "esfilter": {"term": {self.fields[0]: d.partitions[i].value}},
-                        "count": count
-                    }
-                    for i, count in enumerate(parts)
-                ])
-            elif len(edges) == 2:
-                self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
-                d2 = parts.edges[1].domain
+        d = parts.edges[0].domain
 
-                # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
-                array = parts.data.values()[0].cube  # DIG DEEP INTO RESULT (ASSUME SINGLE VALUE CUBE, WITH NULL AT END)
-                self.partitions = struct.wrap([
-                    {
-                        "name": str(d.partitions[i].name),  # CONVERT TO STRING
-                        "value": d.getEnd(d.partitions[i]),
-                        "esfilter": {"term": {dim.field[0]: d.partitions[i].value}},
-                        "count": SUM(subcube),
-                        "partitions": [
-                            {
-                                "name": "" + d2.partitions[j].name,  # CONVERT TO STRING
-                                "value": struct.join_field([d.getEnd(d.partitions[i]), d2.getEnd(d2.partitions[j])]),
-                                "esfilter": {"and": [
-                                    {"term": {dim.field[0]: d.partitions[i].value}},
-                                    {"term": {dim.field[1]: d2.partitions[j].value}}
-                                ]},
-                                "count": count2
-                            }
-                            for j, count2 in enumerate(subcube)
-                            if count2 > 0  # ONLY INCLUDE PROPERTIES THAT EXIST
-                        ]
-                    }
-                    for i, subcube in enumerate(array)
-                ])
-            else:
-                Log.error("Not supported")
+        if dim.path:
+            if len(edges) > 1:
+                Log.error("Not supported yet")
+            # EACH TERM RETURNED IS A PATH INTO A PARTITION TREE
+            temp = Struct(partitions=[])
+            for i, count in enumerate(parts):
+                a = dim.path(d.getEnd(d.partitions[i]))
+                if not isinstance(a, list):
+                    Log.error("The path function on " + dim.name + " must return an ARRAY of parts")
+                addParts(
+                    temp,
+                    dim.path(d.getEnd(d.partitions[i])),
+                    count,
+                    0
+                )
+            self.value = nvl(dim.value, "name")
+            self.partitions = temp.partitions
+        elif len(edges) == 1:
+            self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
 
-            parse_partition(parent, self)  # RELATE THE PARTS TO THE PARENTS
+            # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
+            self.partitions = wrap([
+                {
+                    "name": str(d.partitions[i].name),  # CONVERT TO STRING
+                    "value": d.getEnd(d.partitions[i]),
+                    "esfilter": {"term": {self.fields[0]: d.partitions[i].value}},
+                    "count": count
+                }
+                for i, count in enumerate(parts)
+            ])
+        elif len(edges) == 2:
+            self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
+            d2 = parts.edges[1].domain
+
+            # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
+            array = parts.data.values()[0].cube  # DIG DEEP INTO RESULT (ASSUME SINGLE VALUE CUBE, WITH NULL AT END)
+            self.partitions = wrap([
+                {
+                    "name": str(d.partitions[i].name),  # CONVERT TO STRING
+                    "value": d.getEnd(d.partitions[i]),
+                    "esfilter": {"term": {dim.field[0]: d.partitions[i].value}},
+                    "count": SUM(subcube),
+                    "partitions": [
+                        {
+                            "name": "" + d2.partitions[j].name,  # CONVERT TO STRING
+                            "value": (d.getEnd(d.partitions[i]), d2.getEnd(d2.partitions[j])),
+                            "esfilter": {"and": [
+                                {"term": {dim.field[0]: d.partitions[i].value}},
+                                {"term": {dim.field[1]: d2.partitions[j].value}}
+                            ]},
+                            "count": count2
+                        }
+                        for j, count2 in enumerate(subcube)
+                        if count2 > 0  # ONLY INCLUDE PROPERTIES THAT EXIST
+                    ]
+                }
+                for i, subcube in enumerate(array)
+            ])
+        else:
+            Log.error("Not supported")
+
+        parse_partition(parent, self)  # RELATE THE PARTS TO THE PARENTS
 
     def __getattr__(self, key):
         """
@@ -146,7 +151,7 @@ class Dimension(object):
 
     def getDomain(self, **kwargs):
         # param.depth IS MEANT TO REACH INTO SUB-PARTITIONS
-        kwargs = struct.wrap(kwargs)
+        kwargs = wrap(kwargs)
         kwargs.depth = nvl(kwargs.depth, len(self.fields)-1)
         kwargs.separator = nvl(kwargs.separator, ".")
 
@@ -199,7 +204,7 @@ class Dimension(object):
         return Domain(
             type=self.type,
             name=self.name,
-            partitions=struct.wrap(partitions),
+            partitions=wrap(partitions),
             min=self.min,
             max=self.max,
             interval=self.interval,
@@ -222,12 +227,19 @@ class Dimension(object):
         )
 
     def getSelect(self, **kwargs):
-        if self.fields and len(self.fields) == 1:
-            return Struct(
-                name=self.full_name,
-                value=self.fields[0],
-                aggregate="none"
-            )
+        if self.fields:
+            if len(self.fields) == 1:
+                return Struct(
+                    name=self.full_name,
+                    value=self.fields[0],
+                    aggregate="none"
+                )
+            else:
+                return Struct(
+                    name=self.full_name,
+                    value=self.fields,
+                    aggregate="none"
+                )
 
         domain = self.getDomain(**kwargs)
         if not domain.getKey:
@@ -279,5 +291,3 @@ def parse_partition(parent, part):
         # DEFAULT esfilter IS THE UNION OF ALL CHILD FILTERS
         if not part.esfilter:
             part.esfilter = {"or": part.partitions.esfilter}
-
-

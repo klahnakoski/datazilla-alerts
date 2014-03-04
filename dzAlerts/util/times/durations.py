@@ -1,8 +1,20 @@
-from datetime import timedelta
-from .. import regex, struct
+# encoding: utf-8
+#
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+from __future__ import unicode_literals
+
+from .. import regex
 from ..cnv import CNV
+from ..collections import MIN
 from ..env.logs import Log
 from ..maths import Math
+from ..struct import wrap
 
 
 class Duration(object):
@@ -215,7 +227,7 @@ def parse(value):
     return output
 
 
-MILLI_VALUES = struct.wrap({
+MILLI_VALUES = wrap({
     "year": 52 * 7 * 24 * 60 * 60 * 1000, # 52weeks
     "quarter": 13 * 7 * 24 * 60 * 60 * 1000, # 13weeks
     "month": 28 * 24 * 60 * 60 * 1000, # 4weeks
@@ -227,7 +239,7 @@ MILLI_VALUES = struct.wrap({
     "milli": 1
 })
 
-MONTH_VALUES = struct.wrap({
+MONTH_VALUES = wrap({
     "year": 12,
     "quarter": 3,
     "month": 1,

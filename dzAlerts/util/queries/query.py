@@ -11,10 +11,11 @@ from __future__ import unicode_literals
 from .. import struct
 from .dimensions import Dimension
 from .domains import Domain
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import MVEL
+from dzAlerts.util.collections import AND
+from ..env.logs import Log
+from ..queries import MVEL
 from ..queries.filters import TRUE_FILTER, simplify
-from ..struct import nvl, Struct, EmptyList
+from ..struct import nvl, Struct, EmptyList, wrap
 
 
 class Query(object):
@@ -31,13 +32,13 @@ class Query(object):
             return
 
         object.__init__(self)
-        query = struct.wrap(query)
+        query = wrap(query)
 
         self.name = query.name
 
         select = query.select
         if isinstance(select, list):
-            select = [_normalize_select(s, schema=schema) for s in select]
+            select = wrap([_normalize_select(s, schema=schema) for s in select])
         elif select:
             select = _normalize_select(select, schema=schema)
         else:
@@ -78,7 +79,7 @@ class Query(object):
 
 def _normalize_selects(selects, schema=None):
     if isinstance(selects, list):
-        return struct.wrap([_normalize_select(s, schema=schema) for s in selects])
+        return wrap([_normalize_select(s, schema=schema) for s in selects])
     else:
         return _normalize_select(selects, schema=schema)
 
@@ -129,7 +130,7 @@ def _normalize_from(frum, schema=None):
     elif isinstance(frum, dict) and frum["from"]:
         return Query(frum, schema=schema)
     else:
-        return struct.wrap(frum)
+        return wrap(frum)
 
 
 def _normalize_domain(domain=None, schema=None):
@@ -190,6 +191,24 @@ def _where_terms(where, schema):
                 dimension = schema.edges[k]
                 if dimension:
                     domain = schema.edges[k].getDomain()
+                    if dimension.fields:
+                        if len(dimension.fields) == 1 and MVEL.isKeyword(dimension.fields[0]):
+                            if domain.getPartByKey(v) is domain.NULL:
+                                output.append({"missing": {"field": dimension.fields[0]}})
+                            else:
+                                output.append({"term": {dimension.fields[0]: v}})
+                            continue
+
+                        if AND(MVEL.isKeyword(f) for f in dimension.fields):
+                            if not isinstance(v, tuple):
+                                Log.error("expecing {{name}}={{value}} to be a tuple", {"name": k, "value": v})
+                            for i, f in enumerate(dimension.fields):
+                                vv = v[i]
+                                if vv == None:
+                                    output.append({"missing": {"field": f}})
+                                else:
+                                    output.append({"term": {f: vv}})
+                            continue
                     if len(dimension.fields) == 1 and MVEL.isKeyword(dimension.fields[0]):
                         if domain.getPartByKey(v) is domain.NULL:
                             output.append({"missing": {"field": dimension.fields[0]}})
@@ -242,7 +261,7 @@ def _normalize_sort(sort=None):
             output.append({"field": s, "sort": 1})
         else:
             output.append({"field": nvl(s.field, s.value), "sort": nvl(sort_direction[s.sort], 1)})
-    return struct.wrap(output)
+    return wrap(output)
 
 
 sort_direction = {
