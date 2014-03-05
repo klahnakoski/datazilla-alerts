@@ -1,5 +1,5 @@
 {
-	"README":"settings for running tests",
+    "README": "settings for running tests",
     "param": {
         "min_confidence": 0.999,
         "window_size": 20,
@@ -10,12 +10,12 @@
         }
     },
     "perftest": {
-		"host":"localhost",
-		"port":3306,
-		"username":"manager",
-		"password":"password",
-		"schema":"test_alerts",
-		"debug":true
+        "host": "localhost",
+        "port": 3306,
+        "username": "manager",
+        "password": "password",
+        "schema": "test_alerts",
+        "debug": true
     },
     "objectstore": {
         "schema": "test_alerts"
@@ -27,19 +27,19 @@
         "README": "testing will use a dummy emailer, but not so dumb to ignore a from_address",
         "from_address": "klahnakoski@mozilla.com"
     },
-	"debug":{
-		"log":[
-		{
-			"class": "logging.handlers.RotatingFileHandler",
+    "debug": {
+        "log": [
+            {
+                "class": "logging.handlers.RotatingFileHandler",
                 "filename": "tests/results/logs/testing.log",
-			"maxBytes": 10000000,
+                "maxBytes": 10000000,
                 "backupCount": 100,
-			"encoding": "utf8"
+                "encoding": "utf8"
             },
             {
-                "class": "dzAlerts.util.env.logs.Log_usingStream",
+                "log_type": "stream",
                 "stream": "sys.stdout"
             }
         ]
     }
-}      
+}

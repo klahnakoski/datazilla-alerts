@@ -192,7 +192,18 @@ def _where_terms(where, schema):
                 if dimension:
                     domain = schema.edges[k].getDomain()
                     if dimension.fields:
+                        if isinstance(dimension.fields, dict):
+                            # EXPECTING A TUPLE
+                            for local_field, es_field in dimension.fields.items():
+                                local_value = v[local_field]
+                                if local_value == None:
+                                    output.append({"missing": {"field": es_field}})
+                                else:
+                                    output.append({"term": {es_field: local_value}})
+                            continue
+
                         if len(dimension.fields) == 1 and MVEL.isKeyword(dimension.fields[0]):
+                            # SIMPLE SINGLE-VALUED FIELD
                             if domain.getPartByKey(v) is domain.NULL:
                                 output.append({"missing": {"field": dimension.fields[0]}})
                             else:
@@ -200,6 +211,7 @@ def _where_terms(where, schema):
                             continue
 
                         if AND(MVEL.isKeyword(f) for f in dimension.fields):
+                            # EXPECTING A TUPLE
                             if not isinstance(v, tuple):
                                 Log.error("expecing {{name}}={{value}} to be a tuple", {"name": k, "value": v})
                             for i, f in enumerate(dimension.fields):

@@ -180,10 +180,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            all_touched.update(Q.tuple(test_results, ["test_run_id", "B2G.Test"]))
+            all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.tuple(test_results, ["test_run_id", "B2G.Test"]))
+            re_alert.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
 
             #FOR DEBUGGING
             # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
@@ -201,9 +201,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
-                    tdad_id=CNV.object2JSON((v.test_run_id, v.B2G.Test)),
+                    tdad_id={"test_run_id": v.test_run_id, "B2G": {"Test": v.B2G.Test}},
                     reason=REASON,
-                    revision=v.revision,
+                    revision=v.B2G.Revision,
                     details=v,
                     severity=SEVERITY,
                     confidence=v.result.confidence
@@ -215,6 +215,8 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
+
+        break
 
     if debug:
         Log.note("Get Current Alerts")
@@ -236,10 +238,15 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"terms": {"tdad_id": re_alert}},
+                {"terms": {"tdad_id":  re_alert}},
                 {"term": {"reason": REASON}}
             ]}
         })
+        for c in current_alerts:
+            c.tdad_id = CNV.JSON2object(c.tdad_id)
+            c.details = CNV.JSON2object(c.details)
+            c.revision = CNV.JSON2object(nvl(c.revision, "null"))
+
 
     found_alerts = Q.unique_index(alerts, "tdad_id")
     current_alerts = Q.unique_index(current_alerts, "tdad_id")
@@ -268,7 +275,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         if len(nvl(curr.solution, "").strip()) != 0:
             continue  # DO NOT TOUCH SOLVED ALERTS
 
-        a = found_alerts[curr.tdad_id]
+        a = found_alerts[(curr.tdad_id,)]
 
         if significant_difference(curr.severity, a.severity) or \
                 significant_difference(curr.confidence, a.confidence) or \
@@ -296,8 +303,8 @@ def alert_sustained_median(settings, qb, alerts_db):
         qb.update({
             "set": {"processed_sustained_median": "done"},
             "where": {"and": [
-                {"term": {"test_run_id": t[0]}},
-                {"term": {"B2G.Test": t[1]}}
+                {"term": {"test_run_id": t.test_run_id}},
+                {"term": {"B2G.Test": t.B2G.Test}}
             ]}
         })
 
@@ -307,15 +314,6 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
-        # with DB(settings.alerts) as db:
-        #     #TEMP FIX UNTIL IMPORT DOES IT FOR US
-        #     # db.execute("update test_data_all_dimensions set push_date=date_received where push_date is null")
-        #     #TODO: REMOVE, LEAVE IN DB
-        #     db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
-        #         "template": TEMPLATE,
-        #         "reason": REASON
-        #     })
-        #     db.flush()
 
         qb = ESQuery(ElasticSearch(settings.query["from"]))
         qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
@@ -327,7 +325,7 @@ def main():
                 alerts_db
             )
     except Exception, e:
-        Log.warning("Failure to find sustained_median exceptions", cause=e)
+        Log.warning("Failure to find sustained_median exceptions", e)
     finally:
         Log.stop()
 

@@ -48,7 +48,7 @@
                 "encoding": "utf8"
             },
             {
-                "class": "dzAlerts.util.env.logs.Log_usingStream",
+                "log_type": "stream",
                 "stream": "sys.stdout"
             }
         ]

@@ -18,7 +18,7 @@ from ..queries.filters import simplify, TRUE_FILTER
 from ..env.logs import Log
 from ..queries import MVEL, filters
 from ..queries.cube import Cube
-from ..struct import split_field, unwrap, nvl
+from ..struct import split_field, unwrap, nvl, join_field
 
 
 def is_fieldop(query):
@@ -27,8 +27,8 @@ def is_fieldop(query):
     select = struct.listwrap(query.select)
     if not query.edges:
         isDeep = len(split_field(query.frum.name)) > 1  # LOOKING INTO NESTED WILL REQUIRE A SCRIPT
-        isSimple = AND([s.value != None and isKeyword(s.value) for s in select])
-        noAgg = AND([s.aggregate == "none" for s in select])
+        isSimple = AND(s.value != None and isKeyword(s.value) for s in select)
+        noAgg = AND(s.aggregate == "none" for s in select)
 
         if not isDeep and isSimple and noAgg:
             return True
@@ -40,6 +40,8 @@ def is_fieldop(query):
     return False
 
 def isKeyword(value):
+    if isinstance(value, dict):
+        return AND(isKeyword(v) for k, v in value.items())
     if isinstance(value, list):
         return AND(isKeyword(v) for v in value)
     return MVEL.isKeyword(value)
@@ -61,6 +63,8 @@ def es_fieldop(es, query):
     for s in select.value:
         if isinstance(s, list):
             esQuery.fields.extend(s)
+        elif isinstance(s, dict):
+            esQuery.fields.extend(s.values())
         else:
             esQuery.fields.append(s)
     esQuery.sort = [{s.field: "asc" if s.sort >= 0 else "desc"} for s in query.sort]
@@ -72,6 +76,10 @@ def es_fieldop(es, query):
     for s in select:
         if s.value == "*":
             matricies[s.name] = Matrix.wrap([t._source for t in T])
+        elif isinstance(s.value, dict):
+            # for k, v in s.value.items():
+            #     matricies[join_field(split_field(s.name)+[k])] = Matrix.wrap([unwrap(t.fields)[v] for t in T])
+            matricies[s.name] = Matrix.wrap([{k: unwrap(t.fields)[v] for k, v in s.value.items()}for t in T])
         elif isinstance(s.value, list):
             matricies[s.name] = Matrix.wrap([tuple(unwrap(t.fields)[ss] for ss in s.value) for t in T])
         elif not s.value:

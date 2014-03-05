@@ -9,9 +9,8 @@
 #
 
 from __future__ import unicode_literals
-from types import GeneratorType
 from ..env.logs import Log
-from ..struct import unwrap, wrap, tuplewrap
+from ..struct import unwrap, wrap
 
 
 class UniqueIndex(object):
@@ -28,39 +27,33 @@ class UniqueIndex(object):
 
     def __getitem__(self, key):
         try:
-            if isinstance(key, dict):
-                key = tuplewrap(key[k] for k in self._keys)
-            else:
-                key = tuplewrap(key)
-
+            key = value2key(self._keys, key)
             d = self._data.get(key, None)
-
-            if len(key) < len(self._keys):
-                # RETURN ANOTHER Index
-                output = UniqueIndex(self._keys[len(key):])
-                output._data = d
-                return output
-            else:
-                return wrap(d)
+            return wrap(d)
         except Exception, e:
             Log.error("something went wrong", e)
 
     def __setitem__(self, key, value):
-        Log.error("Not implemented")
+        try:
+            key = value2key(self._keys, key)
+            d = self._data.get(key, None)
+            if d != None:
+                Log.error("key already filled")
+
+            self._data[key] = unwrap(value)
+            self.count += 1
+
+        except Exception, e:
+            Log.error("something went wrong", e)
 
 
     def add(self, val):
-        if isinstance(val, dict):
-            key = tuplewrap(val[k] for k in self._keys)
-        else:
-            key = tuplewrap(val)
-
+        key = value2key(self._keys, val)
         d = self._data.get(key, None)
         if d != None:
             Log.error("key already filled")
-        else:
-            self._data[key] = unwrap(val)
 
+        self._data[key] = unwrap(val)
         self.count += 1
 
     def __contains__(self, key):
@@ -113,13 +106,7 @@ class Index(object):
 
     def __getitem__(self, key):
         try:
-            if isinstance(key, dict):
-                key = tuplewrap(key[k] for k in self._keys)
-            elif isinstance(key, tuple):
-                key = tuplewrap(key)
-            else:
-                Log.error("expecting a tuple")
-
+            key = value2key(self._keys, key)
             d = self._data.get(key, None)
 
             if len(key) < len(self._keys):
@@ -137,10 +124,7 @@ class Index(object):
 
 
     def add(self, val):
-        if isinstance(val, dict):
-            key = tuplewrap(val[k] for k in self._keys)
-        else:
-            key = tuplewrap(val)
+        key = value2key(self._keys, val)
 
         d = self._data.get(key, None)
         if d == None:
@@ -175,8 +159,10 @@ class Index(object):
 
     def __or__(self, other):
         output = UniqueIndex(self._keys)
-        for v in self: output.add(v)
-        for v in other: output.add(v)
+        for v in self:
+            output.add(v)
+        for v in other:
+            output.add(v)
         return output
 
     def __len__(self):
@@ -192,3 +178,10 @@ class Index(object):
         return self.__and__(other)
 
 
+def value2key(keys, val):
+    if isinstance(val, dict):
+        return wrap({k: val[k] for k in keys})
+    elif isinstance(val, (list, tuple)):
+        return wrap(dict(zip(keys, val)))
+    else:
+        return wrap(val)

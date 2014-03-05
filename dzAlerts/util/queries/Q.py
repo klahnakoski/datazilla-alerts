@@ -91,6 +91,7 @@ def unique_index(data, keys=None):
         try:
             o.add(d)
         except Exception, e:
+            o.add(d)
             Log.error("index {{index}} is not unique {{key}} maps to both {{value1}} and {{value2}}", {
                 "index": keys,
                 "key": select([d], keys)[0],
