@@ -73,6 +73,13 @@ INSERT INTO reasons VALUES (
 	'{"minOffset":0.999}',
 	NULL
 );;
+INSERT INTO reasons VALUES (
+	'b2g_alert_revision',
+	concat('{{test}} has regressed since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL
+);;
 
 
 CREATE TABLE page_thresholds (

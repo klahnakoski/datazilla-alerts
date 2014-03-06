@@ -106,16 +106,20 @@ class Index(object):
 
     def __getitem__(self, key):
         try:
+            if isinstance(key, (list, tuple)) and len(key)<len(self._keys):
+                # RETURN ANOTHER Index
+                filter_key = self._keys[0:len(key):]
+                filter_value = value2key(filter_key, key)
+                new_key = self._keys[len(key)::]
+                output = Index(new_key)
+                for d in self:
+                    if value2key(filter_key, d) == filter_value:
+                        output.add(d)
+                return output
+
             key = value2key(self._keys, key)
             d = self._data.get(key, None)
-
-            if len(key) < len(self._keys):
-                # RETURN ANOTHER Index
-                output = Index(self._keys[len(key):])
-                output._data = d
-                return output
-            else:
-                return wrap(list(d))
+            return wrap(list(d))
         except Exception, e:
             Log.error("something went wrong", e)
 
@@ -124,7 +128,7 @@ class Index(object):
 
 
     def add(self, val):
-        key = value2key(self._keys, val)
+        key = value2key(self._keys, wrap(val))
 
         d = self._data.get(key, None)
         if d == None:
@@ -141,7 +145,7 @@ class Index(object):
         def itr():
             for v in self._data.values():
                 for vv in v:
-                    yield vv
+                    yield wrap(vv)
         return itr()
 
     def __sub__(self, other):

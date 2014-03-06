@@ -243,16 +243,25 @@ def _where_terms(where, schema):
             for k, v in where.terms.items():
                 if schema.edges[k]:
                     domain = schema.edges[k].getDomain()
-                    if len(domain.dimension.fields) == 1 and MVEL.isKeyword(domain.dimension.fields[0]):
+                    fields = domain.dimension.fields
+                    if isinstance(fields, dict):
+                        for local_field, es_field in fields.items():
+                            vv = v[local_field]
+                            if vv == None:
+                                output.append({"missing": {"field": es_field}})
+                            else:
+                                output.append({"term": {es_field: vv}})
+                        continue
+                    if isinstance(fields, list) and len(fields) == 1 and MVEL.isKeyword(fields[0]):
                         if domain.getPartByKey(v) is domain.NULL:
-                            output.append({"missing": {"field": domain.dimension.fields[0]}})
+                            output.append({"missing": {"field": fields[0]}})
                         else:
-                            output.append({"terms": {domain.dimension.fields[0]: v}})
+                            output.append({"term": {fields[0]: v}})
                         continue
                     if domain.partitions:
                         output.append({"or": [domain.getPartByKey(vv).esfilter for vv in v]})
                         continue
-                output.append({"terms": {k: v}})
+                output.append({"term": {k: v}})
             return {"and": output}
         elif where["and"] or where["or"]:
             return {k: [_where_terms(vv, schema) for vv in v] for k, v in where.items()}

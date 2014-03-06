@@ -21,8 +21,8 @@ from dzAlerts.util.struct import nvl
 from dzAlerts.daemons.alert import significant_difference
 
 
-REASON = "alert_regression"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=20)
+REASON = "b2g_alert_revision"   # name of the reason in alert_reason
+LOOK_BACK = timedelta(days=90)
 SEVERITY = 0.7
 TEMPLATE = [
     """

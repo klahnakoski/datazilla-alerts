@@ -207,6 +207,9 @@ class DBQuery(object):
             # RETURN BORING RESULT SET
             selects = []
             for s in query.select:
+                if isinstance(s.value, dict):
+                    for k, v in s.value.items:
+                        selects.append(v + " AS " + self.db.quote_column(s.name+"."+k))
                 if isinstance(s.value, list):
                     for i, ss in enumerate(s.value):
                         selects.append(s.value + " AS " + self.db.quote_column(s.name+","+str(i)))
@@ -231,13 +234,22 @@ class DBQuery(object):
 
             def post_process(sql):
                 result = self.db.query(sql)
-                for s in query.select:
+                for s in selects:
+                    if isinstance(s.value, dict):
+                        for r in result:
+                            r[s.name] = {}
+                            for k, v in s.value:
+                                r[s.name][k] = r[s.name+"."+k]
+                                r[s.name+"."+k] = None
+
                     if isinstance(s.value, list):
                         #REWRITE AS TUPLE
                         for r in result:
                             r[s.name] = tuple(r[s.name + "," + str(i)] for i, ss in enumerate(s.value))
                             for i, ss in enumerate(s.value):
                                 r[s.name + "," + str(i)] = None
+
+                expand_json(result)
                 return result
 
             return sql, post_process  # RETURN BORING RESULT SET
@@ -266,7 +278,12 @@ class DBQuery(object):
             })
 
             if query.select.value == "*":
-                return sql, lambda sql: self.db.query(sql)  # RETURN RESULT SET
+                def post(sql):
+                    result = self.db.query(sql)
+                    expand_json(result)
+                    return result
+
+                return sql, post
             else:
                 return sql, lambda sql: [r[name] for r in self.db.query(sql)]  # RETURNING LIST OF VALUES
 
@@ -377,6 +394,18 @@ def _esfilter2sqlwhere(db, esfilter):
         return "1=1"
     else:
         Log.error("Can not convert esfilter to SQL: {{esfilter}}", {"esfilter": esfilter})
+
+
+def expand_json(rows):
+    #CONVERT JSON TO VALUES
+    for r in rows:
+        for k, json in list(r.items()):
+            if isinstance(json, basestring) and json[0:1] in ("[", "{"):
+                try:
+                    value = CNV.JSON2object(json)
+                    r[k] = value
+                except Exception, e:
+                    pass
 
 
 #MAP NAME TO SQL FUNCTION

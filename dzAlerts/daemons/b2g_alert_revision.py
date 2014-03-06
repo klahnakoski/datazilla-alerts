@@ -14,13 +14,13 @@ from dzAlerts.daemons import alert_sustained, b2g_sustained_median
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
+from dzAlerts.util.env.files import File
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.queries.index import tuplewrap
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.struct import nvl, wrap
 from dzAlerts.daemons.alert import significant_difference
 
 
@@ -54,6 +54,7 @@ def b2g_alert_revision(settings):
 
         dbq = DBQuery(db)
         esq = ESQuery(ElasticSearch(settings.query["from"]))
+        esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
         #TODO: REMOVE, LEAVE IN DB
         db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
@@ -71,10 +72,6 @@ def b2g_alert_revision(settings):
                 {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
             ]}
         })
-        for e in existing_sustained_alerts:
-            e.tdad_id = tuplewrap(CNV.JSON2object(e.tdad_id))
-            e.details = CNV.JSON2object(e.details)
-            e.revision = tuplewrap(CNV.JSON2object(e.revision))
 
         tests = Q.index(existing_sustained_alerts, ["revision", "details.B2G.Test"])
 
@@ -87,15 +84,7 @@ def b2g_alert_revision(settings):
                 {"term": {"reason": REASON}}
             ]}
         })
-        for e in old_alerts:
-            e.tdad_id = tuplewrap(CNV.JSON2object(e.tdad_id))
-            e.details = CNV.JSON2object(e.details)
-            e.revision = tuplewrap(CNV.JSON2object(e.revision))
         old_alerts = Q.unique_index(old_alerts, "revision")
-
-
-
-
 
         #SUMMARIZE
         known_alerts = []
@@ -104,13 +93,12 @@ def b2g_alert_revision(settings):
             total_tests = esq.query({
                 "from": "b2g_alerts",
                 "select": {"name": "count", "aggregate": "count"},
-                "where": {"terms": {"B2G.Revision": existing_sustained_alerts.revision}}
+                "where": {"terms": {"B2G.Revision": revision}}
             })
-            total_exceptions = len(existing_sustained_alerts[revision])
+            total_exceptions = tests[(revision, )]  # FILTER BY revision
 
             parts = []
-            for t in tests[revision]:
-                exceptions = existing_sustained_alerts[t.revision, t.details.B2G.Test]
+            for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
                 worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()
 
                 num_except = len(exceptions)
@@ -118,9 +106,9 @@ def b2g_alert_revision(settings):
                     continue
 
                 part = {
-                    "test_name": t.details.B2G.Test,
+                    "test": g.details.B2G.Test,
                     "num_exceptions": num_except,
-                    "num_pages": t.num_tdad,
+                    "num_tests": total_tests,
                     "confidence": worst_in_test.confidence,
                     "example": worst_in_test.details
                 }
@@ -131,47 +119,50 @@ def b2g_alert_revision(settings):
 
             known_alerts.append({
                 "status": "new",
-                "create_time": CNV.unix2datetime(worst_in_revision.push_date),
+                "create_time": CNV.milli2datetime(worst_in_revision.push_date),
                 "reason": REASON,
                 "revision": revision,
-                "tdad_id": worst_in_revision.tdad_id,
+                "tdad_id": {"test_run_id": worst_in_revision.test_run_id, "B2G": {"Test": worst_in_revision.B2G.Test}},
                 "details": {
                     "revision": revision,
                     "total_tests": total_tests,
-                    "total_exceptions": total_exceptions,
+                    "total_exceptions": len(total_exceptions),
                     "tests": parts,
                     "example": worst_in_revision
                 },
                 "severity": SEVERITY,
-                "confidence": nvl(worst_in_revision.result.confidence, worst_in_revision.sustained_result.confidence)  # Take worst
+                "confidence": worst_in_revision.result.confidence
             })
 
-        known_alerts = Q.unique_index(known_alerts, "details.revision")
+        known_alerts = Q.unique_index(known_alerts, "revision")
+
+        testSelect = Q.select(known_alerts, ["tdad_id.test_run_id"])
 
         #NEW ALERTS, JUST INSERT
         new_alerts = known_alerts - old_alerts
-        for revision in new_alerts:
-            revision.id = SQL("util_newid()")
-            revision.last_updated = datetime.utcnow()
-        db.insert_list("alerts", new_alerts)
+        if new_alerts:
+            for revision in new_alerts:
+                revision.id = SQL("util_newid()")
+                revision.last_updated = datetime.utcnow()
+            db.insert_list("alerts", new_alerts)
 
         #SHOW SUSTAINED ALERTS ARE COVERED
         db.execute("""
-        INSERT INTO alert_hierarchy (parent, child)
-        SELECT
-            r.id parent,
-            p.id child
-        FROM
-            alerts p
-        LEFT JOIN
-            alert_hierarchy h on h.child=p.id
-        LEFT JOIN
-            alerts r on r.revision=p.revision AND r.reason={{parent_reason}}
-        WHERE
-            {{where}}
+            INSERT INTO alert_hierarchy (parent, child)
+            SELECT
+                r.id parent,
+                p.id child
+            FROM
+                alerts p
+            LEFT JOIN
+                alert_hierarchy h on h.child=p.id
+            LEFT JOIN
+                alerts r on r.revision=p.revision AND r.reason={{parent_reason}}
+            WHERE
+                {{where}}
         """, {
             "where": esfilter2sqlwhere(db, {"and": [
-                {"term": {"p.reason": alert_sustained.REASON}},
+                {"term": {"p.reason": b2g_sustained_median.REASON}},
                 {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                 {"missing": "h.parent"}
             ]}),
