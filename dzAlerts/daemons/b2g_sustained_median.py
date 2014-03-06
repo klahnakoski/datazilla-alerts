@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from dzAlerts.daemons.util import significant_difference
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -20,7 +21,6 @@ from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
-from dzAlerts.daemons.alert import significant_difference
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
@@ -66,6 +66,10 @@ def alert_sustained_median(settings, qb, alerts_db):
         "edges": query.edges,
         "where": {"and": [
             {"missing": {"field": "processed_sustained_median"}}
+            #FOR DEBUGGING SPECIFIC SERIES
+            # {"term": {"test_machine.type": "hamachi"}},
+            # {"term": {"testrun.suite": "browser"}},
+            # {"term": {"result.test_name": "fps"}}
         ]}
     })
 
@@ -188,15 +192,17 @@ def alert_sustained_median(settings, qb, alerts_db):
             #FOR DEBUGGING
             # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
 
-            File("test_values.txt").write("\n".join([str(f) for f in stats.value]))
-
-            if g.page_url == "Asteroids - Vectors":
-                #https://datazilla.mozilla.org/?start=1375989662&stop=1391541662&product=Firefox&repository=Birch&os=mac&os_version=OS%20X%2010.6.8&test=tcanvasmark&project=talos
-                Log.debug()
+            File("test_values.txt").write(CNV.list2tab(Q.select(stats, [
+                {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
+                "value",
+                {"name": "gaia", "value": "B2G.Revision.gaia"},
+                {"name": "gecko", "value": "B2G.Revision.gecko"},
+                {"name": "confidence", "value": "result.confidence"},
+                "pass"
+            ])))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
-
             for v in new_exceptions:
                 alert = Struct(
                     status="new",

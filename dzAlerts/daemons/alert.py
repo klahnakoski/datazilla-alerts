@@ -9,6 +9,8 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from math import log
+from dzAlerts.daemons import b2g_alert_revision
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries import Q
@@ -16,10 +18,11 @@ from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
 from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
-from dzAlerts.util.sql.db import DB
+from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.struct import nvl
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
-HEADER = "<h3>This is for testing only.  It may be misleading.</h3><br><br>"
+HEADER = "<h3>This is for testing only.</h3><br>"
 #TBPL link: https://tbpl.mozilla.org/?rev=c3598b276048
 #TBPL test results:  https://tbpl.mozilla.org/?tree=Mozilla-Inbound&rev=c9429cf294af
 #HG: https://hg.mozilla.org/mozilla-central/rev/330feedee4f1
@@ -35,6 +38,7 @@ RESEND_AFTER = timedelta(days=1)
 LOOK_BACK = timedelta(days=60)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
+SEND_REASONS = [b2g_alert_revision.REASON]
 
 
 def send_alerts(settings, db):
@@ -54,14 +58,11 @@ def send_alerts(settings, db):
                 a.severity,
                 a.confidence,
                 a.revision,
-                t.branch,
                 r.email_template
             FROM
                 alerts a
             JOIN
                 alert_reasons r on r.code = a.reason
-            JOIN
-                test_data_all_dimensions t ON t.id = a.tdad_id
             WHERE
                 (
                     a.last_sent IS NULL OR
@@ -71,17 +72,18 @@ def send_alerts(settings, db):
                 a.status <> 'obsolete' AND
                 bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
                 a.solution IS NULL AND
-                a.reason = 'alert_regression' AND
-                t.push_date > {{min_time}}
+                a.reason in {{reasons}} AND
+                a.create_time > {{min_time}}
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
             LIMIT
                 10
-            """, {
+        """, {
             "last_sent": datetime.utcnow() - RESEND_AFTER,
             "alert_limit": ALERT_LIMIT - EPSILON,
-            "min_time": datetime.utcnow()-LOOK_BACK
+            "min_time": datetime.utcnow()-LOOK_BACK,
+            "reasons": SQL("("+", ".join(db.quote_value(v) for v in SEND_REASONS)+")")
         })
 
         if not new_alerts:
@@ -100,10 +102,15 @@ def send_alerts(settings, db):
                 alert.confidence = 0.999999
 
             alert.details = CNV.JSON2object(alert.details)
-            alert.score = str(round(Math.bayesian_add(alert.severity, alert.confidence) * 100, 0)) + "%"  #AS A PERCENT
+            alert.revision = CNV.JSON2object(alert.revision)
+            alert.score = str(-log(1.0-Math.bayesian_add(alert.severity, alert.confidence), 10))  #SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
-            if alert.details.push_date != None and alert.details.push_date_min != None:
-                alert.details.push_date_max = (2 * alert.details.push_date) - alert.details.push_date_min
+            example = alert.details.example
+            for e in alert.details.tests.example + [example]:
+                if e.push_date_min:
+                    e.push_date_max = (2 * e.push_date) - e.push_date_min
+                    e.date_range = (datetime.utcnow()-CNV.milli2datetime(e.push_date_min)).total_seconds()/(24*60*60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
+                    e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  #PICK FIRST v > CURRENT VALUE
 
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body)
@@ -129,6 +136,8 @@ def send_alerts(settings, db):
                     "time": datetime.utcnow(),
                     "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(new_alerts, "alert_id")}})
                 })
+
+            break  #FOR DEBUGGING
 
     except Exception, e:
         Log.error("Could not send alerts", e)
@@ -160,21 +169,6 @@ def update_h0_rejected(db, start_date, possible_alerts):
         "where": esfilter2sqlwhere(db, {"terms": {"a.tdad_id": possible_alerts}})
     })
 
-
-#ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
-#UPDATE?
-SIGNIFICANT = 0.2
-
-
-def significant_difference(a, b):
-    if a / b < (1 - SIGNIFICANT) or (1 + SIGNIFICANT) < a / b:
-        return True
-    if a in (0.0, 1.0) or b in (0.0, 1.0):
-        return True
-    b_diff = Math.bayesian_subtract(a, b)
-    if 0.3 < b_diff < 0.7:
-        return False
-    return True
 
 
 if __name__ == '__main__':

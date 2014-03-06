@@ -10,7 +10,8 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
-from dzAlerts.daemons import alert_sustained, b2g_sustained_median
+from dzAlerts.daemons import b2g_sustained_median
+from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -20,27 +21,39 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl, wrap
-from dzAlerts.daemons.alert import significant_difference
+from dzAlerts.util.struct import nvl
 
 
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=90)
+LOOK_BACK = timedelta(days=70)
 SEVERITY = 0.7
+
+# What needs to be in a notifications email?
+#      * Link to datazilla graph centered on event that triggered notification.  Ideally, highlight the regression range datapoints.
+#      * Gaia git revision before and after event.  Preferably as a github compare URL.
+#      * Gecko hg revision before and after event.  Preferably as a pushlog URL.
+#      * Also nice to have Gecko git revisions before and after event.  Some people prefer git for gecko, but they seem the minority.
+#      * Firmware version before and after event; reported in datazilla as fields starting with "Firmware".
+#      * Device type; hamachi vs inari vs tarako, etc
+#      * b2gperf version (not currently reported in datazilla)
+#      * Summary statistics for the regression; mean, median, stdev before and after event
+#
+
 TEMPLATE = [
     """
-    <div><h2>{{score}} - {{revision}}</h2>
-    {{details.total_exceptions}} exceptional events<br>
-    <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}">Bugzilla - {{details.bug_description}}</a><br>
-    <a href="https://datazilla.mozilla.org/?start={{example.push_date_min}}&stop={{example.push_date_max}}&product={{example.product}}&repository={{example.branch}}&os={{example.operating_system_name}}&os_version={{example.operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
+    <div><h2>Score: {{score}}</h2>
+    <h3>Gaia: {{revision.gaia}}</h3>
+    <h3>Gecko: {{revision.gecko}}</h2>
+    {{details.total_exceptions}} exceptional events:<br>
     """, {
         "from": "details.tests",
         "template": """
-            {{test_name}}: {{num_exceptions}} exceptions, out of {{num_pages}} pages,
-            (<a href="https://datazilla.mozilla.org/?start={{example.push_date_min}}&stop={{example.push_date_max}}&product={{example.product}}&repository={{example.branch}}&os={{example.operating_system_name}}&os_version={{example.operating_system_version}}&test={{test_name}}&graph_search={{..revision}}&error_bars=false&project=talos\">
-            {{example.page_url}}</a> {{example.push_date|datetime}}, before: {{example.past_stats.mean}}, after: {{example.future_stats.mean}})<br>
+            {{example.B2G.Device|upper}}: {{test.suite}}.{{test.name}}: {{num_exceptions}} exceptions,
+            (<a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">
+            Datazilla!</a> {{example.push_date|datetime}}, before: {{example.past_stats.mean}}, after: {{example.future_stats.mean}})<br>
         """
-    }
+    },
+    "</div>"
 ]
 
 #GET ACTIVE ALERTS
@@ -61,6 +74,7 @@ def b2g_alert_revision(settings):
             "template": CNV.object2JSON(TEMPLATE),
             "reason": REASON
         })
+        db.flush()
 
         #EXISTING SUSTAINED EXCEPTIONS
         existing_sustained_alerts = dbq.query({
@@ -170,20 +184,20 @@ def b2g_alert_revision(settings):
         })
 
         #CURRENT ALERTS, UPDATE IF DIFFERENT
-        for existing in known_alerts & old_alerts:
-            if len(nvl(existing.solution, "").strip()) != 0:
+        for known_alert in known_alerts & old_alerts:
+            if len(nvl(known_alert.solution, "").strip()) != 0:
                 continue  # DO NOT TOUCH SOLVED ALERTS
 
-            e = old_alerts[existing.revision]
-            if significant_difference(existing.severity, e.severity) or significant_difference(existing.confidence, e.confidence):
-                existing.last_updated = datetime.utcnow()
-                db.update("alerts", {"id": existing.id}, existing)
+            old_alert = old_alerts[known_alert]
+            if significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
+                known_alert.last_updated = datetime.utcnow()
+                db.update("alerts", {"id": old_alert.id}, known_alert)
 
         #OLD ALERTS, OBSOLETE
-        for e in old_alerts - known_alerts:
-            e.status = 'obsolete'
-            e.last_updated = datetime.utcnow()
-            db.update("alerts", {"id": e.id}, e)
+        for old_alert in old_alerts - known_alerts:
+            old_alert.status = 'obsolete'
+            old_alert.last_updated = datetime.utcnow()
+            db.update("alerts", {"id": old_alert.id}, old_alert)
 
 
 def main():

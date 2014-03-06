@@ -17,7 +17,7 @@ import dzAlerts
 
 def median_test(samples1, samples2, interpolate=True):
     """
-    interpolate=True WILL USE FINER VERSION OF THIS TEST
+    interpolate=True WILL USE AN INTERPOLATED MEDIAN VALUE (FOR WHEN INTEGER VALUES ARE COMMON)
     """
     if len(samples1) < 3 or len(samples2) < 3:
         return {"diff": 0, "confidence": 0}
