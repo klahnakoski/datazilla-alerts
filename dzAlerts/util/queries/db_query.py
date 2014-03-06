@@ -18,7 +18,7 @@ from .query import Query
 from ..sql.db import int_list_packer, SQL, DB
 from ..env.logs import Log
 from ..strings import indent, expand_template
-from ..struct import nvl, wrap
+from ..struct import nvl, wrap, listwrap
 
 
 class DBQuery(object):
@@ -206,7 +206,7 @@ class DBQuery(object):
         if isinstance(query.select, list):
             # RETURN BORING RESULT SET
             selects = []
-            for s in query.select:
+            for s in listwrap(query.select):
                 if isinstance(s.value, dict):
                     for k, v in s.value.items:
                         selects.append(v + " AS " + self.db.quote_column(s.name+"."+k))
@@ -234,7 +234,7 @@ class DBQuery(object):
 
             def post_process(sql):
                 result = self.db.query(sql)
-                for s in selects:
+                for s in listwrap(query.select):
                     if isinstance(s.value, dict):
                         for r in result:
                             r[s.name] = {}

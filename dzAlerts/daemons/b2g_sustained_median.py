@@ -216,6 +216,8 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
+        # break  # DEBUGGING ONLY
+
     if debug:
         Log.note("Get Current Alerts")
 
@@ -240,11 +242,6 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"term": {"reason": REASON}}
             ]}
         })
-        for c in current_alerts:
-            c.tdad_id = CNV.JSON2object(c.tdad_id)
-            c.details = CNV.JSON2object(c.details)
-            c.revision = CNV.JSON2object(nvl(c.revision, "null"))
-
 
     found_alerts = Q.unique_index(alerts, "tdad_id")
     current_alerts = Q.unique_index(current_alerts, "tdad_id")
@@ -297,12 +294,12 @@ def alert_sustained_median(settings, qb, alerts_db):
     if debug:
         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
 
-    for t in all_touched:
+    for g, t in Q.groupby(all_touched, "B2G.Test"):
         qb.update({
             "set": {"processed_sustained_median": "done"},
             "where": {"and": [
-                {"term": {"test_run_id": t.test_run_id}},
-                {"term": {"B2G.Test": t.B2G.Test}}
+                {"terms": {"test_run_id": t.test_run_id}},
+                {"term": {"B2G.Test": g.B2G.Test}}
             ]}
         })
 
