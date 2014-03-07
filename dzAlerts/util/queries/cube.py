@@ -112,6 +112,12 @@ class Cube(object):
             return False
         return self.value == other
 
+    def __add__(self, other):
+        return self.value + other
+
+    def __radd__(self, other):
+        return self.value + other
+
     def __getitem__(self, item):
         return self.data[item]
 

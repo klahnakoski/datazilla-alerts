@@ -241,6 +241,8 @@ def _all_default(d, default):
     ANY VALUE NOT SET WILL BE SET BY THE default
     THIS IS RECURSIVE
     """
+    if default is None:
+        return
     for k, default_value in default.items():
         existing_value = d.get(k, None)
         if existing_value is None:
@@ -388,7 +390,10 @@ class _Null(object):
             raise e
 
     def keys(self):
-        return set()
+        return return_zero_set
+
+    def items(self):
+        return return_zero_list
 
     def pop(self, key, default=None):
         return Null
@@ -407,6 +412,13 @@ Null = _Null()
 EmptyList = Null
 
 ZeroList = []
+def return_zero_list():
+    return []
+
+def return_zero_set():
+    return set()
+
+
 
 
 class StructList(list):

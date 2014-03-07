@@ -25,7 +25,7 @@ from dzAlerts.util.struct import nvl
 
 
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=70)
+LOOK_BACK = timedelta(days=30)
 SEVERITY = 0.7
 
 # What needs to be in a notifications email?
