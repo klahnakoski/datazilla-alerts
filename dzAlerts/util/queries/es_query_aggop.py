@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import AND
-from dz2es.util.struct import unwrap
+from ..struct import unwrap
 from ..queries import es_query_util
 from ..queries.es_query_util import aggregates, fix_es_stats, buildESQuery
 from ..queries.filters import simplify

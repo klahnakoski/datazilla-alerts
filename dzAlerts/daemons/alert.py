@@ -176,7 +176,7 @@ if __name__ == '__main__':
     try:
         Log.note("Running alerts off of schema {{schema}}", {"schema": settings.perftest.schema})
 
-        with DB(settings.perftest) as db:
+        with DB(settings.alerts) as db:
             send_alerts(
                 settings=settings,
                 db=db

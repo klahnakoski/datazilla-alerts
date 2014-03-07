@@ -16,7 +16,7 @@ from ..env.logs import Log
 from ..queries import MVEL
 from ..queries.filters import TRUE_FILTER, simplify
 from ..struct import nvl, Struct, EmptyList, wrap, split_field, join_field, StructList
-from util.queries.es_query_util import INDEX_CACHE
+from .es_query_util import INDEX_CACHE
 
 
 class Query(object):

@@ -76,7 +76,7 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Running email using schema {{schema}}", {"schema": settings.perftest.schema})
-        with DB(settings.perftest) as db:
+        with DB(settings.alerts) as db:
             email_send(
                 db=db,
                 emailer=Emailer(settings.email),
