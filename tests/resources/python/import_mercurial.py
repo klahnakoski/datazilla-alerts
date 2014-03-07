@@ -1,18 +1,29 @@
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
+
+from __future__ import unicode_literals
 from datetime import timedelta
 import os
 import subprocess
 import urllib
 from dzAlerts.util import struct, sql
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import DB
-from dzAlerts.util.elasticsearch import ElasticSearch
-from dzAlerts.util.files import File
-from dzAlerts.util.logs import Log
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.elasticsearch import ElasticSearch
+from dzAlerts.util.env.files import File
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util import startup
 from dzAlerts.util.strings import between
-from dzAlerts.util.struct import Null, nvl
-from dzAlerts.util.timer import Timer
+from dzAlerts.util.struct import nvl
+from dzAlerts.util.times.timer import Timer
 
 DEBUG = True
 
@@ -137,6 +148,12 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                     continue
                 Log.note(line)
 
+
+                # changeset = "{date|hgdate|urlescape}\t{node}\t{rev}\t{author|urlescape}\t{branches}\t\t\t\t{p1rev}\t{p1node}\t{parents}\t{children}\t{tags}\t{desc|urlescape}\n"
+                # branch = "{branch}%0A"
+                # parent = "{parent}%0A"
+                # tag = "{tag}%0A"
+                # child = "{child}%0A"
                 (
                     date,
                     node,
@@ -191,7 +208,7 @@ def main():
     Log.start(settings.debug)
     try:
         for repo in settings.param.repos:
-            with DB(settings.perftest) as db:
+            with DB(settings.database) as db:
                 try:
                     pull_repo(repo)
 

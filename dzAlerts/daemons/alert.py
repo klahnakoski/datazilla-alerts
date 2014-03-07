@@ -1,24 +1,28 @@
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
-
-
+from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from math import log
+from dzAlerts.daemons import b2g_alert_revision
 from dzAlerts.util.cnv import CNV
+from dzAlerts.util.env import startup
 from dzAlerts.util.queries import Q
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
 from dzAlerts.util.maths import Math
-from dzAlerts.util.logs import Log
-from dzAlerts.util.db import DB
-from dzAlerts.util import startup
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.struct import nvl
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
-HEADER = "<h3>This is for testing only.  It may be misleading.</h3><br><br>"
+HEADER = "<h3>This is for testing only.</h3><br>"
 #TBPL link: https://tbpl.mozilla.org/?rev=c3598b276048
 #TBPL test results:  https://tbpl.mozilla.org/?tree=Mozilla-Inbound&rev=c9429cf294af
 #HG: https://hg.mozilla.org/mozilla-central/rev/330feedee4f1
@@ -28,26 +32,18 @@ HEADER = "<h3>This is for testing only.  It may be misleading.</h3><br><br>"
 #                            "branch":v.branch,
 #                            "branch_version":v.branch_version,
 #                            "revision":v.revision
-TEMPLATE =  """<div><h3>{{score}} - {{reason}}</h3><br>
-            On page {{page_url}}<br>
-            <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
-            <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
-            <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
-            <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date_max}}&product={{product}}&repository={{branch}}&os={{operating_system_name}}&os_version={{operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
-            <a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
-            Raw data:  {{details}}
-            </div>"""
+
 SEPARATOR = "<hr>\n"
-RESEND_AFTER = timedelta(days = 1)
+RESEND_AFTER = timedelta(days=1)
+LOOK_BACK = timedelta(days=80)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
-
+SEND_REASONS = [b2g_alert_revision.REASON]
 
 
 def send_alerts(settings, db):
     """
     BLINDLY SENDS ALERTS FROM THE ALERTS TABLE, ASSUMING ALL HAVE THE SAME STRUCTURE.
-    THIS SHOULD BE CHANGED SO EACH TYPE OF ALERT IS RESPONSBLE FOR IT'S OWN TEMPLATE
     """
     debug = settings.param.debug
     db.debug = debug
@@ -61,14 +57,12 @@ def send_alerts(settings, db):
                 a.details,
                 a.severity,
                 a.confidence,
-                t.revision,
-                t.branch
+                a.revision,
+                r.email_template
             FROM
                 alerts a
             JOIN
                 alert_reasons r on r.code = a.reason
-            JOIN
-                test_data_all_dimensions t ON t.id = a.tdad_id
             WHERE
                 (
                     a.last_sent IS NULL OR
@@ -77,69 +71,74 @@ def send_alerts(settings, db):
                 ) AND
                 a.status <> 'obsolete' AND
                 bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
-                a.solution IS NULL
+                a.solution IS NULL AND
+                a.reason in {{reasons}} AND
+                a.create_time > {{min_time}}
             ORDER BY
                 bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
-            """, {
-                "last_sent":datetime.utcnow()-RESEND_AFTER,
-                "alert_limit":ALERT_LIMIT-EPSILON
-            })
+            LIMIT
+                10
+        """, {
+            "last_sent": datetime.utcnow() - RESEND_AFTER,
+            "alert_limit": ALERT_LIMIT - EPSILON,
+            "min_time": datetime.utcnow()-LOOK_BACK,
+            "reasons": SQL("("+", ".join(db.quote_value(v) for v in SEND_REASONS)+")")
+        })
 
-        if len(new_alerts)==0:
+        if not new_alerts:
             if debug:
                 Log.note("Nothing important to email")
             return
-
-        body = [HEADER]
-        for alert in new_alerts:
-            if alert.confidence >= 1:
-                alert.confidence = 0.999999
-
-            details = CNV.JSON2object(alert.details)
-            for k, v in alert.items():
-                if k not in details:
-                    details[k] = v
-            details.score = str(round(Math.bayesian_add(alert.severity, alert.confidence)*100, 0))+"%"  #AS A PERCENT
-            details.ulr=details.page_url
-            if details.push_date != None and details.push_date_min != None:
-                details.push_date_max = (2 * details.push_date) - details.push_date_min
-            details.reason = expand_template(alert.description, details)
-
-            body.append(expand_template(TEMPLATE, details))
-        body = SEPARATOR.join(body)
 
         #poor souls that signed up for emails
         listeners = db.query("SELECT email FROM alert_listeners")
         listeners = [x["email"] for x in listeners]
         listeners = ";".join(listeners)
 
-        if debug:
-            Log.note("EMAIL: {{email}}", {"email": body})
+        for alert in new_alerts:
+            body = [HEADER]
+            if alert.confidence >= 1:
+                alert.confidence = 0.999999
 
-        if len(body)>MAX_EMAIL_LENGTH:
-            Log.note("Truncated the email body")
-            suffix="... (has been truncated)"
-            body = body[0:MAX_EMAIL_LENGTH-len(suffix)]+suffix   #keep it reasonable
+            alert.details = CNV.JSON2object(alert.details)
+            alert.revision = CNV.JSON2object(alert.revision)
+            alert.score = str(-log(1.0-Math.bayesian_add(alert.severity, alert.confidence), 10))  #SHOW NUMBER OF NINES
+            alert.details.url = alert.details.page_url
+            example = alert.details.example
+            for e in alert.details.tests.example + [example]:
+                if e.push_date_min:
+                    e.push_date_max = (2 * e.push_date) - e.push_date_min
+                    e.date_range = (datetime.utcnow()-CNV.milli2datetime(e.push_date_min)).total_seconds()/(24*60*60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
+                    e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  #PICK FIRST v > CURRENT VALUE
 
-        db.call("email_send", (
-            listeners, #to
-            settings.param.email.title,
-            body, #body
-            None
-        ))
+            body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
+            body = "".join(body)
 
-        #I HOPE I CAN SEND ARRAYS OF NUMBERS
-        if len(new_alerts) > 0:
+            if debug:
+                Log.note("EMAIL: {{email}}", {"email": body})
+
+            if len(body) > MAX_EMAIL_LENGTH:
+                Log.note("Truncated the email body")
+                suffix = "... (has been truncated)"
+                body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
+
+            db.call("email_send", (
+                listeners, #to
+                settings.param.email.title,
+                body, #body
+                None
+            ))
+
+            #I HOPE I CAN SEND ARRAYS OF NUMBERS
             db.execute(
                 "UPDATE alerts SET last_sent={{time}} WHERE {{where}}", {
                     "time": datetime.utcnow(),
-                    "where": db.esfilter2sqlwhere({"terms": {"id": Q.select(new_alerts, "alert_id")}})
+                    "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(new_alerts, "alert_id")}})
                 })
 
     except Exception, e:
         Log.error("Could not send alerts", e)
-
 
 
 def update_h0_rejected(db, start_date, possible_alerts):
@@ -165,16 +164,8 @@ def update_h0_rejected(db, start_date, possible_alerts):
             ) a ON a.tdad_id = t.id
         SET t.h0_rejected = a.h0
     """, {
-        "where": db.esfilter2sqlwhere({"terms": {"a.tdad_id": possible_alerts}})
+        "where": esfilter2sqlwhere(db, {"terms": {"a.tdad_id": possible_alerts}})
     })
-
-
-#ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
-#UPDATE?
-SIGNIFICANT = 0.2
-def significant_difference(a, b):
-    return (1-SIGNIFICANT)<a/b or a/b<(1+SIGNIFICANT)
-
 
 
 
@@ -183,15 +174,15 @@ if __name__ == '__main__':
     Log.start(settings.debug)
 
     try:
-        Log.note("Running alerts off of schema {{schema}}", {"schema":settings.perftest.schema})
+        Log.note("Running alerts off of schema {{schema}}", {"schema": settings.perftest.schema})
 
         with DB(settings.perftest) as db:
             send_alerts(
                 settings=settings,
-                db = db
+                db=db
             )
     except Exception, e:
-        Log.warning("Failure to run alerts", cause = e)
+        Log.warning("Failure to run alerts", cause=e)
     finally:
         Log.stop()
 

@@ -1,11 +1,14 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
-from datetime import datetime, timedelta, date
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
+from __future__ import unicode_literals
+from datetime import datetime, timedelta
 from math import sqrt
 import pytest
 import dzAlerts
@@ -13,11 +16,11 @@ from dzAlerts.daemons.alert_exception import alert_exception, REASON
 from dzAlerts.util import struct
 
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import SQL, DB
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.stats import closeEnough
+from dzAlerts.util.maths.stats import closeEnough
 from util.testing import make_test_database
 
 
@@ -60,7 +63,7 @@ class test_alert_exception():
         assert len(alert) == 1
         assert alert[0].status == 'new'
         assert closeEnough(alert[0].severity, EXPECTED_SEVERITY)
-        assert alert[0].confidence > settings.param.min_confidence
+        assert alert[0].confidence > settings.param.exception.min_confidence
 
         #VERIFY last_run HAS BEEN UPDATED
         last_run = self.db.query(
@@ -165,7 +168,7 @@ class test_alert_exception():
 
         self.db.flush()
         self.db.execute("""
-            INSERT INTO objectstore (id, test_run_id, date_loaded, processed_flag, branch, json_blob)
+            INSERT INTO objectstore (id, test_run_id, date_loaded, processed_exception, branch, json_blob)
             SELECT
                 {{id}},
                 test_run_id,

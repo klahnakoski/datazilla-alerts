@@ -1,18 +1,21 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
+from __future__ import unicode_literals
 from datetime import datetime, timedelta
 import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
 from dzAlerts.util import struct
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import SQL, DB
+from dzAlerts.util.env.logs import Log
 from util import testing
 
 

@@ -1,12 +1,16 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
-from dzAlerts.util.db import DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util.struct import StructList
+
+from __future__ import unicode_literals
+from dzAlerts.util.sql.db import DB
+from dzAlerts.util.env.logs import Log
 
 
 class Emailer:
@@ -14,11 +18,9 @@ class Emailer:
     dummy emailer
     """
 
-
     def __init__(self, settings):
         self.settings = settings
-        self.sent = StructList()
-
+        self.sent = []
 
     def send_email(self, **args):
         self.sent.append(args)      #SIMPLY RECORD THE CALL FOR LATER VERIFICATION
@@ -42,7 +44,7 @@ def make_test_database(settings):
         DB.execute_file(settings.perftest, "tests/resources/sql/Add test_data_all_dimensions.sql")
 
         Log.note("MIGRATE {{database}} TO NEW SCHEMA", {"database": settings.perftest.schema})
-        DB.execute_file(settings.perftest, "resources/migration/v1.1 alerts.sql")
+        DB.execute_file(settings.perftest, "resources/migration/alerts.sql")
         DB.execute_file(settings.perftest, "resources/migration/v1.2 email.sql")
 
         with DB(settings.perftest) as db:

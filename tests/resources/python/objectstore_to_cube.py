@@ -1,22 +1,26 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
+from __future__ import unicode_literals
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL, DB
-from dzAlerts.util.logs import Log
-from dzAlerts.util import startup
-from dzAlerts.util.stats import z_moment2stats, Z_moment, median
-from dzAlerts.util.struct import Null, nvl
-from dzAlerts.util.timer import Timer
+from dzAlerts.util.env import startup
+from dzAlerts.util.sql.db import SQL, DB
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
+from dzAlerts.util.maths.stats import median, Stats
+from dzAlerts.util.struct import nvl
+from dzAlerts.util.times.timer import Timer
 from dzAlerts.util.queries import Q
 
 
 BATCH_SIZE = 1000  #SMALL, SO IT DOES NOT LOCK UP DB FOR LONG
-TEST_RESULTS_PER_RUN = 100000
+TEST_RESULTS_PER_RUN = 1000
 
 
 def objectstore_to_cube(r):
@@ -45,7 +49,7 @@ def objectstore_to_cube(r):
                 "machine_name": json.test_machine.name,
                 "pushlog_id": r.pushlog_id,
                 "push_date": nvl(r.push_date, json.testrun.date),
-                "test_name": json.testrun.suite,
+                "test_name": json.testrun.suite[6:] if json.testrun.suite.startswith("Talos ") else json.testrun.suite,
                 "page_url": None,
                 "mean": None,
                 "std": None,
@@ -54,7 +58,7 @@ def objectstore_to_cube(r):
 
         output = []
         for p, m in json.results.items():
-            S = z_moment2stats(Z_moment.new_instance(m[5:]))
+            S = Stats(samples=m)
             output.append({
                 "test_run_id": r.test_run_id,
                 "product_id": 0,
@@ -75,7 +79,7 @@ def objectstore_to_cube(r):
                 "machine_name": json.test_machine.name,
                 "pushlog_id": nvl(r.pushlog_id, 0),
                 "push_date": nvl(r.push_date, json.testrun.date),
-                "test_name": json.testrun.suite,
+                "test_name": json.testrun.suite[6:] if json.testrun.suite.startswith("Talos ") else json.testrun.suite,
                 "page_url": p[:255],
                 "mean": median(m),
                 "std": S.std,
@@ -88,15 +92,13 @@ def objectstore_to_cube(r):
 
 def get_missing_ids(db, settings):
     missing = db.query("""
-        SELECT STRAIGHT_JOIN
+        SELECT
             o.test_run_id
         FROM
             ekyle_objectstore_1.objectstore o
-        LEFT JOIN
-            ekyle_perftest_1.test_data_all_dimensions t on t.test_run_id =o.test_run_id
         WHERE
-            t.test_run_id is NULL OR
-            o.processed_flag in ('ready', 'loading')
+            o.processed_cube = 'ready' AND
+            o.test_run_id IS NOT NULL   # HAPPENS WHEN TEST RESULT IS NOT PROCESSED
         LIMIT
             {{limit}}
         """, {
@@ -106,6 +108,7 @@ def get_missing_ids(db, settings):
 
     missing_ids = Q.select(missing, field_name="test_run_id")
     Log.note("{{num}} objectstore records to be processed into cube", {"num": len(missing_ids)})
+
     return missing_ids
 
 
@@ -114,13 +117,19 @@ def main(settings):
         missing_ids = get_missing_ids(db, settings)
 
         with DB(settings.destination.objectstore, settings.destination.perftest.schema) as write_db:
+            if missing_ids:
+                write_db.execute(
+                    "DELETE FROM test_data_all_dimensions WHERE {{where}}", {
+                        "where": esfilter2sqlwhere(db, {"terms": {"test_run_id": missing_ids}})
+                    })
+
             for group, values in Q.groupby(missing_ids, size=BATCH_SIZE):
                 values = set(values)
 
                 with Timer("Process {{num}} objectstore", {"num": len(values)}) as t:
                     ## GET EVERYTHING MISSING FROM tdad (AND JOIN IN PUSHLOG)
                     blobs = db.query("""
-                        SELECT STRAIGHT_JOIN
+                        SELECT
                             o.test_run_id `test_run_id`,
                             'non' build_type,
                             json_blob
@@ -130,7 +139,7 @@ def main(settings):
                             {{where}}
                         """, {
                         "objectstore": SQL(settings.destination.objectstore.schema),
-                        "where": db.esfilter2sqlwhere({"and": [
+                        "where": esfilter2sqlwhere(db, {"and": [
                             {"exists": "o.test_run_id"},
                             {"terms": {"o.test_run_id": values}}
                         ]})
@@ -140,17 +149,16 @@ def main(settings):
                     for b in blobs:
                         tdads.extend(objectstore_to_cube(b))
                     write_db.insert_list("test_data_all_dimensions", tdads)
-                    write_db.flush()
 
                     #MARK WE ARE DONE HERE
                     db.execute("""
                         UPDATE {{objectstore}}.objectstore o
-                        SET o.processed_flag = 'complete'
+                        SET o.processed_cube = 'done'
                         WHERE {{where}}
                     """, {
                         "objectstore": SQL(settings.destination.objectstore.schema),
                         "values": values,
-                        "where": db.esfilter2sqlwhere({"terms": {"test_run_id": values}})
+                        "where": esfilter2sqlwhere(db, {"terms": {"test_run_id": values}})
                     })
                     db.flush()
 
@@ -163,7 +171,3 @@ except Exception, e:
     Log.error("Problem", e)
 finally:
     Log.stop()
-
-
-
-

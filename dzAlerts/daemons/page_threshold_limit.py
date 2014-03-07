@@ -1,19 +1,22 @@
-################################################################################
-## This Source Code Form is subject to the terms of the Mozilla Public
-## License, v. 2.0. If a copy of the MPL was not distributed with this file,
-## You can obtain one at http://mozilla.org/MPL/2.0/.
-################################################################################
-## Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-################################################################################
+# encoding: utf-8
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
 
-
+from __future__ import unicode_literals
 from datetime import timedelta, datetime
+
 from dzAlerts.daemons.alert import update_h0_rejected
 from dzAlerts.util.queries import Q
+from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.db import SQL
-from dzAlerts.util.logs import Log
+from dzAlerts.util.sql.db import SQL
+from dzAlerts.util.env.logs import Log
 
 
 REASON = "page_threshold_limit"     #name of the reason in alert_reason
@@ -107,7 +110,7 @@ def page_threshold_limit(db, debug):
         })
 
         if obsolete:
-            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": db.esfilter2sqlwhere({"terms": {"id": Q.select(obsolete, "id")}})})
+            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(obsolete, "id")}})})
 
         db.execute(
             "UPDATE alert_reasons SET last_run={{now}} WHERE code={{reason}}",

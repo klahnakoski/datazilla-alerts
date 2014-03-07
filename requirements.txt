@@ -1,4 +1,4 @@
-requests==1.2.3
+requests
 pymysql
 numpy
 scipy

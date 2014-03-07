@@ -1,11 +1,11 @@
 {
     "param": {
-        "min_confidence":0.999,
-        "window_size":20,
-        "max_test_results_per_run":50,  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
+        "min_confidence": 0.999,
+        "window_size": 20,
+        "max_test_results_per_run": 50,  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
         "debug": true,
-        "email":{
-            "title":"Regressions found with datazilla-alerts"
+        "email": {
+            "title": "Regressions found with datazilla-alerts"
         }
     },
     "perftest": {
@@ -40,7 +40,7 @@
                 "encoding": "utf8"
             },
             {
-                "class": "dzAlerts.util.logs.Log_usingStream",
+                "log_type": "stream",
                 "stream": "sys.stdout"
             }
         ]
