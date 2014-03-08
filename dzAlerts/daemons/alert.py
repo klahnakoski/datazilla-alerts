@@ -35,7 +35,7 @@ HEADER = "<h3>This is for testing only.</h3><br>"
 
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = timedelta(days=1)
-LOOK_BACK = timedelta(days=80)
+LOOK_BACK = timedelta(days=30)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
 SEND_REASONS = [b2g_alert_revision.REASON]

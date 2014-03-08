@@ -43,17 +43,27 @@ TEMPLATE = [
     """
     <div><h2>Score: {{score}}</h2>
     <h3>Gaia: {{revision.gaia}}</h3>
+    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">CHANGESET</a>]
+    [<a href="https://github.com/mozilla-b2g/gaia/compare/{{details.past_revision.gaia}}...{{revision.gaia}}">DIFF</a>]
     <h3>Gecko: {{revision.gecko}}</h2>
+    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">CHANGESET</a>]<br>
     {{details.total_exceptions}} exceptional events:<br>
+    <table>
+    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
-        "template": """
-            {{example.B2G.Device|upper}}: {{test.suite}}.{{test.name}}: {{num_exceptions}} exceptions,
-            (<a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">
-            Datazilla!</a> {{example.push_date|datetime}}, before: {{example.past_stats.mean}}, after: {{example.future_stats.mean}})<br>
+        "template": """<tr>
+        <td>{{example.B2G.Device|upper}}</td>
+        <td>{{test.suite}}</td>
+        <td>{{test.name}}</td>
+        <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
+        <td>{{example.push_date|datetime}}</td>
+        <td>{{example.past_stats.mean|round(digits=3)}}</td>
+        <td>{{example.future_stats.mean|round(digits=3)}}</td>
+        <td>{{example.diff|round(digits=3)}}</td></tr>
         """
     },
-    "</div>"
+    """</table></div>"""
 ]
 
 #GET ACTIVE ALERTS
@@ -70,11 +80,12 @@ def b2g_alert_revision(settings):
         esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
         #TODO: REMOVE, LEAVE IN DB
-        db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
-            "template": CNV.object2JSON(TEMPLATE),
-            "reason": REASON
-        })
-        db.flush()
+        if db.debug:
+            db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
+                "template": CNV.object2JSON(TEMPLATE),
+                "reason": REASON
+            })
+            db.flush()
 
         #EXISTING SUSTAINED EXCEPTIONS
         existing_sustained_alerts = dbq.query({

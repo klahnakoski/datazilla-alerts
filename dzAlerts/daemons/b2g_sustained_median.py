@@ -147,6 +147,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
+                        "name": "past_revision",
+                        "value": lambda r, i, rows: rows[i-1].B2G.Revision,
+                        "sort": "push_date"
+                    }, {
                         "name": "past_stats",
                         "value": lambda r: r.value,
                         # "edges": query.edges,
