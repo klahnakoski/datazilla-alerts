@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from dzAlerts.daemons.util import significant_difference
 
-from dzAlerts.util.collections import MIN, MAX
+from dzAlerts.util.collections import MIN, MAX, AND, OR
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
 from dzAlerts.util.queries.es_query import ESQuery
@@ -57,8 +57,15 @@ def alert_sustained_median(settings, qb, alerts_db):
     PUSH_DATE = "datazilla.date_loaded"
 
     debug = nvl(settings.param.debug, DEBUG)
-
     query = settings.query
+
+    def is_bad(r):
+        if settings.param.sustained_median.trigger > r.result.confidence:
+            if r.diff > 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
+                return True
+            if r.diff < 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
+                return True
+        return False
 
     new_test_points = qb.query({
         "from": TDAD,
@@ -120,9 +127,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "sort": "push_date"
             })
 
-            Log.note("{{num}} test results found for\n{{group}}", {
+            Log.note("{{num}} test results found for {{group}} dating back no further than {{start_date}}", {
                 "num": len(test_results),
-                "group": g
+                "group": g,
+                "start_date": CNV.milli2datetime(min_date)
             })
 
             # if g.test_name not in ALLOWED_TESTS:
@@ -173,11 +181,14 @@ def alert_sustained_median(settings, qb, alerts_db):
                         ),
                         "sort": "push_date"
                     }, {
-                        "name": "is_diff",
-                        "value": lambda r: True if settings.param.sustained_median.trigger < r.result.confidence else False
-                    }, {
                         "name": "diff",
-                        "value": lambda r: Math.abs(r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
+                        "value": lambda r: r.future_stats.mean - r.past_stats.mean
+                    }, {
+                        "name": "diff_percent",
+                        "value": lambda r: (r.future_stats.mean - r.past_stats.mean)/r.past_stats.mean
+                    }, {
+                        "name": "is_diff",
+                        "value": is_bad
                     }
                 ]
             })
@@ -312,6 +323,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"term": {"B2G.Test": g.B2G.Test}}
             ]}
         })
+
+
 
 
 def main():

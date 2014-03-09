@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
+from dzAlerts.daemons.util import significant_difference
 
 from dzAlerts.daemons.util.single_ttest import single_ttest
 from dzAlerts.util import struct
@@ -17,7 +18,7 @@ from dzAlerts.util.collections import MIN
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
-from dzAlerts.daemons.alert import update_h0_rejected, significant_difference
+from dzAlerts.daemons.alert import update_h0_rejected
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
@@ -212,13 +213,14 @@ def alert_exception(settings, db):
                 "where": esfilter2sqlwhere(db, {"and": [
                     {"term": g},
                     {"exists": "n_replicates"},
-                    {"range": {"push_date": {"gte": MIN([min_date, first_in_window.min_date])}}}
+                    {"range": {"push_date": {"gte": MIN(min_date, first_in_window.min_date)}}}
                 ]})
             })
 
-            Log.note("{{num}} test results found for\n{{group}}", {
+            Log.note("{{num}} test results found for {{group}} dating back no further than {{start_date}}", {
                 "num": len(test_results),
-                "group": g
+                "group": g,
+                "start_date": CNV.milli2datetime(MIN(min_date, first_in_window.min_date))
             })
 
             if debug:
