@@ -19,7 +19,6 @@ from dzAlerts.util.env import startup
 from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.maths import Math
 from dzAlerts.util.queries import windows
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.sql.db import SQL
@@ -78,8 +77,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             # {"term": {"test_machine.platform": "Gonk"}},
             # {"term": {"test_machine.os": "Firefox OS"}},
             # {"term": {"test_build.branch": "master"}},
-            # {"term": {"testrun.suite": "rss"}},
-            # {"term": {"result.test_name": "settings_memory"}}
+            # {"term": {"testrun.suite": "browser"}},
+            # {"term": {"result.test_name": "fps"}}
         ]}
     })
 

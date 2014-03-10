@@ -236,13 +236,16 @@ def z_moment2dict(z):
 setattr(CNV, "z_moment2dict", staticmethod(z_moment2dict))
 
 
-def median(values, simple=True):
+def median(values, simple=True, mean_weight=0.0):
     """
     RETURN MEDIAN VALUE
 
     IF simple=False THEN IN THE EVENT MULTIPLE INSTANCES OF THE
     MEDIAN VALUE, THE MEDIAN IS INTERPOLATED BASED ON ITS POSITION
     IN THE MEDIAN RANGE
+
+    mean_weight IS TO PICK A MEDIAN VALUE IN THE ODD CASE THAT IS
+    CLOSER TO THE MEAN (PICK A MEDIAN BETWEEN TWO MODES IN BIMODAL CASE)
     """
 
     if OR(v == None for v in values):
@@ -272,14 +275,18 @@ def median(values, simple=True):
         while stop_index < l and _sorted[stop_index] == _median:
             stop_index += 1
 
+        num_middle = stop_index - start_index
+
         if l % 2 == 0:
-            if start_index == stop_index:
-                return float(_sorted[middle - 1] + median) / 2
+            if num_middle == 1:
+                return float(_sorted[middle - 1] + _median) / 2
             else:
-                return (_median - 0.5) + float(middle - start_index) / float(stop_index - start_index)
+                return (_median - 0.5) + float(middle - start_index) / float(num_middle)
         else:
-            middle += 0.5
-            return (_median - 0.5) + float(middle - start_index) / float(stop_index - start_index)
+            if num_middle == 1:
+                return (1 - mean_weight) * _median + mean_weight * (_sorted[middle - 1] + _sorted[middle + 1]) / 2
+            else:
+                return (_median - 0.5) + float(middle + 0.5 - start_index) / float(num_middle)
     except Exception, e:
         Log.error("problem with median of {{values}}", {"values": values}, e)
 

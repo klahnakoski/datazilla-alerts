@@ -37,3 +37,15 @@ class TestMedianTest(unittest.TestCase):
         smooth_result = median_test(sample1, sample2)
         assert smooth_result["confidence"] < 0.90, "These are not different!"
 
+    def test_odd_series(self):
+        sample1 = [             43.35910744, 43.65596955, 43.6805196, 43.78713329, 43.54635098, 43.9086471, 43.54120044, 43.27229271, 43.35015387, 40.03955818]
+        sample2 = [             40.18726543, 40.71542234, 40.15441333, 39.95611288, 38.30201645, 35.48697324, 40.16275306, 39.96934014]
+        smooth_result_a = median_test(sample1, sample2)
+        assert smooth_result_a["confidence"] > 0.997
+
+        sample1 = [43.41440184, 43.35910744, 43.65596955, 43.6805196, 43.78713329, 43.54635098, 43.9086471, 43.54120044, 43.27229271, 43.35015387]
+        sample2 = [40.03955818, 40.18726543, 40.71542234, 40.15441333, 39.95611288, 38.30201645, 35.48697324, 40.16275306, 39.96934014]
+        smooth_result_b = median_test(sample1, sample2)
+        assert smooth_result_b["confidence"] > smooth_result_a["confidence"]
+
+
