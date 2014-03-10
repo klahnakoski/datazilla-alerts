@@ -72,7 +72,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
         "edges": query.edges,
         "where": {"and": [
-            # {"missing": {"field": "processed_sustained_median"}}
+            {"missing": {"field": "processed_sustained_median"}}
             #FOR DEBUGGING SPECIFIC SERIES
             # {"term": {"test_machine.type": "hamachi"}},
             # {"term": {"test_machine.platform": "Gonk"}},

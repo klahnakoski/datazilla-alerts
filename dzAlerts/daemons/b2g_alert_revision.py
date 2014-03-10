@@ -48,7 +48,7 @@ TEMPLATE = [
     [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">CHANGESET</a>]<br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
@@ -56,7 +56,7 @@ TEMPLATE = [
         <td>{{test.suite}}</td>
         <td>{{test.name}}</td>
         <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
-        <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{past_revision.gaia}}...{{revision.gaia}}">DIFF</a></td>
+        <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
         <td>{{example.push_date|datetime}}</td>
         <td>{{example.past_stats.mean|round(digits=3)}}</td>
         <td>{{example.future_stats.mean|round(digits=3)}}</td>
@@ -105,9 +105,11 @@ def b2g_alert_revision(settings):
             "from": "alerts",
             "select": "*",
             "where": {"and": [
-                # {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                 {"term": {"reason": REASON}},
-                {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
+                {"or":[
+                    {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                    {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
+                ]}
             ]}
         })
         old_alerts = Q.unique_index(old_alerts, "revision")
@@ -207,7 +209,8 @@ def b2g_alert_revision(settings):
         for old_alert in old_alerts - known_alerts:
             old_alert.status = 'obsolete'
             old_alert.last_updated = datetime.utcnow()
-            db.update("alerts", {"id": old_alert.id}, old_alert)
+            old_alert.details = None
+            db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": datetime.utcnow()})
 
 
 def main():
