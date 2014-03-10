@@ -316,7 +316,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             "set": {"processed_sustained_median": "done"},
             "where": {"and": [
                 {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                {"term": {"B2G.Test": g.B2G.Test}}
+                {"term": {"B2G.Test": g.B2G.Test}},
+                {"missing": {"field": "processed_sustained_median"}}
             ]}
         })
 
