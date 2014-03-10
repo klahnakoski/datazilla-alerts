@@ -109,7 +109,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         {"range": {PUSH_DATE: {"lt": first_sample}}}
                     ]},
                     "sort": {"field": PUSH_DATE, "sort": -1},
-                    "limit": settings.param.sustained_median.window_size + 1
+                    "limit": settings.param.sustained_median.window_size * 2
                 }})
 
             min_date = MIN(first_sample, first_in_window.min_date)
