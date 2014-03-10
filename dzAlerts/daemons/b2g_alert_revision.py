@@ -25,7 +25,7 @@ from dzAlerts.util.struct import nvl
 
 
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=30)
+LOOK_BACK = timedelta(days=90)
 SEVERITY = 0.7
 
 # What needs to be in a notifications email?
@@ -44,7 +44,6 @@ TEMPLATE = [
     <div><h2>Score: {{score}}</h2>
     <h3>Gaia: {{revision.gaia}}</h3>
     [<a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">CHANGESET</a>]
-    [<a href="https://github.com/mozilla-b2g/gaia/compare/{{details.past_revision.gaia}}...{{revision.gaia}}">DIFF</a>]
     <h3>Gecko: {{revision.gecko}}</h2>
     [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">CHANGESET</a>]<br>
     {{details.total_exceptions}} exceptional events:<br>
@@ -57,6 +56,7 @@ TEMPLATE = [
         <td>{{test.suite}}</td>
         <td>{{test.name}}</td>
         <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
+        <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{past_revision.gaia}}...{{revision.gaia}}">DIFF</a></td>
         <td>{{example.push_date|datetime}}</td>
         <td>{{example.past_stats.mean|round(digits=3)}}</td>
         <td>{{example.future_stats.mean|round(digits=3)}}</td>
@@ -105,8 +105,9 @@ def b2g_alert_revision(settings):
             "from": "alerts",
             "select": "*",
             "where": {"and": [
-                {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                {"term": {"reason": REASON}}
+                # {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                {"term": {"reason": REASON}},
+                {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
             ]}
         })
         old_alerts = Q.unique_index(old_alerts, "revision")
@@ -147,7 +148,7 @@ def b2g_alert_revision(settings):
                 "create_time": CNV.milli2datetime(worst_in_revision.push_date),
                 "reason": REASON,
                 "revision": revision,
-                "tdad_id": {"test_run_id": worst_in_revision.test_run_id, "B2G": {"Test": worst_in_revision.B2G.Test}},
+                "tdad_id": revision,
                 "details": {
                     "revision": revision,
                     "total_tests": total_tests,
@@ -160,8 +161,6 @@ def b2g_alert_revision(settings):
             })
 
         known_alerts = Q.unique_index(known_alerts, "revision")
-
-        testSelect = Q.select(known_alerts, ["tdad_id.test_run_id"])
 
         #NEW ALERTS, JUST INSERT
         new_alerts = known_alerts - old_alerts

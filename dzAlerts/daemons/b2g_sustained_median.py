@@ -60,7 +60,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     query = settings.query
 
     def is_bad(r):
-        if settings.param.sustained_median.trigger > r.result.confidence:
+        if settings.param.sustained_median.trigger < r.result.confidence:
             if r.diff > 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
                 return True
             if r.diff < 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
@@ -72,11 +72,14 @@ def alert_sustained_median(settings, qb, alerts_db):
         "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
         "edges": query.edges,
         "where": {"and": [
-            {"missing": {"field": "processed_sustained_median"}}
+            # {"missing": {"field": "processed_sustained_median"}}
             #FOR DEBUGGING SPECIFIC SERIES
             # {"term": {"test_machine.type": "hamachi"}},
-            # {"term": {"testrun.suite": "browser"}},
-            # {"term": {"result.test_name": "fps"}}
+            # {"term": {"test_machine.platform": "Gonk"}},
+            # {"term": {"test_machine.os": "Firefox OS"}},
+            # {"term": {"test_build.branch": "master"}},
+            # {"term": {"testrun.suite": "rss"}},
+            # {"term": {"result.test_name": "settings_memory"}}
         ]}
     })
 
@@ -133,24 +136,20 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "start_date": CNV.milli2datetime(min_date)
             })
 
-            # if g.test_name not in ALLOWED_TESTS:
-            #     if debug:
-            #         Log.note("Skipping sustained_median exceptions (test is known multimodal)")
-            #     all_touched.update(Q.select(test_results, "test_run_id"))
-            #     continue
-
             if debug:
                 Log.note("Find sustained_median exceptions")
 
             #APPLY WINDOW FUNCTIONS
             stats = Q.run({
-                "from": test_results,
+                "from":{
+                    "from": test_results,
+                    "where": {"exists": {"field": "value"}}
+                },
                 "window": [
                     {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_min",
                         "value": lambda r: r.push_date,
-                        # "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
@@ -161,14 +160,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                     }, {
                         "name": "past_stats",
                         "value": lambda r: r.value,
-                        # "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
                         "name": "future_stats",
                         "value": lambda r: r.value,
-                        # "edges": query.edges,
                         "sort": "push_date",
                         "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": 0, "max": settings.param.sustained_median.window_size}
@@ -319,7 +316,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         qb.update({
             "set": {"processed_sustained_median": "done"},
             "where": {"and": [
-                {"terms": {"test_run_id": t.test_run_id}},
+                {"terms": {"datazilla.test_run_id": t.test_run_id}},
                 {"term": {"B2G.Test": g.B2G.Test}}
             ]}
         })

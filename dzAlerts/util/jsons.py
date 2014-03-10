@@ -294,7 +294,9 @@ INDENT = "    "
 
 def pretty_json(value):
     try:
-        if isinstance(value, dict):
+        if value == None:
+            return "null"
+        elif isinstance(value, dict):
             try:
                 if not value:
                     return "{}"
@@ -348,7 +350,7 @@ def pretty_json(value):
                 return "[\n" + indent(content) + "\n]"
 
             return "[\n" + ",\n".join([indent(pretty_json(v)) for v in value]) + "\n]"
-        elif hasattr(value, '__json__') and hasattr(value.__json__, "__call__"):
+        elif hasattr(value, '__json__'):
             j = value.__json__()
             return pretty_json(json_decoder.decode(j))
         elif hasattr(value, '__iter__'):

@@ -11,6 +11,7 @@
 from __future__ import unicode_literals
 from math import sqrt
 from ..cnv import CNV
+from dzAlerts.util.collections import OR
 from ..struct import nvl, Struct, Null
 from ..env.logs import Log
 
@@ -243,6 +244,10 @@ def median(values, simple=True):
     MEDIAN VALUE, THE MEDIAN IS INTERPOLATED BASED ON ITS POSITION
     IN THE MEDIAN RANGE
     """
+
+    if OR(v == None for v in values):
+        Log.error("median is not ready to handle None")
+
     try:
         if not values:
             return Null
@@ -276,7 +281,7 @@ def median(values, simple=True):
             middle += 0.5
             return (_median - 0.5) + float(middle - start_index) / float(stop_index - start_index)
     except Exception, e:
-        Log.error("problem with median", e)
+        Log.error("problem with median of {{values}}", {"values": values}, e)
 
 
 zero = Stats()
