@@ -201,7 +201,7 @@ def b2g_alert_revision(settings):
                 continue  # DO NOT TOUCH SOLVED ALERTS
 
             old_alert = old_alerts[known_alert]
-            if significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
+            if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
                 known_alert.last_updated = datetime.utcnow()
                 db.update("alerts", {"id": old_alert.id}, known_alert)
 
