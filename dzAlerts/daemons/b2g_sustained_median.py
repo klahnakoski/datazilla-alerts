@@ -77,8 +77,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             # {"term": {"test_machine.platform": "Gonk"}},
             # {"term": {"test_machine.os": "Firefox OS"}},
             # {"term": {"test_build.branch": "master"}},
-            # {"term": {"testrun.suite": "browser"}},
-            # {"term": {"result.test_name": "fps"}}
+            # {"term": {"testrun.suite": "communications/ftu"}},
+            # {"term": {"result.test_name": "startup_time"}}
         ]}
     })
 
@@ -255,7 +255,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"terms": {"tdad_id":  re_alert}},
+                {"or": [
+                    {"terms": {"tdad_id": re_alert}},
+                    {"range": {"create_time": {"gte": CNV.datetime2milli(datetime.utcnow() - MAX_AGE)}}}
+                ]},
                 {"term": {"reason": REASON}}
             ]}
         })
