@@ -207,6 +207,9 @@ def b2g_alert_revision(settings):
 
         #OLD ALERTS, OBSOLETE
         for old_alert in old_alerts - known_alerts:
+            if old_alert.status == 'obsolete':
+                continue
+
             old_alert.status = 'obsolete'
             old_alert.last_updated = datetime.utcnow()
             old_alert.details = None
