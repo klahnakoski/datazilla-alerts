@@ -50,5 +50,3 @@ class TestMedianTest(unittest.TestCase):
         sample2 = [40.03955818, 40.18726543, 40.71542234, 40.15441333, 39.95611288, 38.30201645, 35.48697324, 40.16275306, 39.96934014]
         smooth_result_b = median_test(sample1, sample2)
         assert smooth_result_b["confidence"] > smooth_result_a["confidence"]
-
-

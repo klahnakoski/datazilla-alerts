@@ -64,11 +64,7 @@ def send_alerts(settings, db):
             JOIN
                 alert_reasons r on r.code = a.reason
             WHERE
-                (
-                    a.last_sent IS NULL OR
-                    a.last_sent < a.last_updated OR
-                    a.last_sent < {{last_sent}}
-                ) AND
+                a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
                 bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
                 a.solution IS NULL AND
