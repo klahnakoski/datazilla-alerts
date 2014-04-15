@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 from math import sqrt
 from ..cnv import CNV
-from dzAlerts.util.collections import OR
+from ..collections import OR
 from ..struct import nvl, Struct, Null
 from ..env.logs import Log
 
@@ -209,7 +209,6 @@ class Z_moment(object):
     def new_instance(values=None):
         if values == None:
             return Z_moment()
-        values = [float(v) for v in values if v != None]
 
         return Z_moment(
             len(values),
@@ -260,6 +259,9 @@ def median(values, simple=True, mean_weight=0.0):
 
         middle = l / 2
         _median = float(_sorted[middle])
+
+        if len(_sorted) == 1:
+            return _median
 
         if simple:
             if l % 2 == 0:

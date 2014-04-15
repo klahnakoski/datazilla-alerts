@@ -21,7 +21,7 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.struct import nvl, StructList
 
 
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
@@ -115,7 +115,7 @@ def b2g_alert_revision(settings):
         old_alerts = Q.unique_index(old_alerts, "revision")
 
         #SUMMARIZE
-        known_alerts = []
+        known_alerts = StructList()
         for revision in set(existing_sustained_alerts.revision):
         #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
             total_tests = esq.query({
@@ -125,7 +125,7 @@ def b2g_alert_revision(settings):
             })
             total_exceptions = tests[(revision, )]  # FILTER BY revision
 
-            parts = []
+            parts = StructList()
             for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
                 worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()
 

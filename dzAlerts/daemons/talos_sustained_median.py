@@ -20,17 +20,19 @@ from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.queries.query import Query
+from dzAlerts.util.struct import nvl, StructList
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
+from dzAlerts.util.times.timer import Timer
 
 
 SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
 # MIN_CONFIDENCE = 0.9999
-REASON = "b2g_alert_sustained_median"     # name of the reason in alert_reason
+REASON = "talos_alert_sustained_median"     # name of the reason in alert_reason
 MAX_AGE = timedelta(days=90)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
@@ -60,27 +62,32 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            if r.diff > 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
+            if r.diff > 0 and OR(AND(r.Talos.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
                 return True
-            if r.diff < 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
+            if r.diff < 0 and OR(AND(r.Talos.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
                 return True
         return False
 
-    new_test_points = qb.query({
-        "from": TDAD,
-        "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
-        "edges": query.edges,
-        "where": {"and": [
-            {"missing": {"field": "processed_sustained_median"}}
-            #FOR DEBUGGING SPECIFIC SERIES
-            # {"term": {"test_machine.type": "hamachi"}},
-            # {"term": {"test_machine.platform": "Gonk"}},
-            # {"term": {"test_machine.os": "Firefox OS"}},
-            # {"term": {"test_build.branch": "master"}},
-            # {"term": {"testrun.suite": "communications/ftu"}},
-            # {"term": {"result.test_name": "startup_time"}}
-        ]}
-    })
+    with Timer("pull combinations"):
+        temp = Query({
+            "from": TDAD,
+            "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
+            "edges": query.edges,
+            "where": {"and": [
+                {"missing": {"field": "processed_sustained_median"}},
+                {"term": {"testrun.suite": "tp5o"}},
+                {"exists": {"field": "result.test_name"}}
+                #FOR DEBUGGING SPECIFIC SERIES
+                # {"term": {"test_machine.type": "hamachi"}},
+                # {"term": {"test_machine.platform": "Gonk"}},
+                # {"term": {"test_machine.os": "Firefox OS"}},
+                # {"term": {"test_build.branch": "master"}},
+                # {"term": {"testrun.suite": "communications/ftu"}},
+                # {"term": {"result.test_name": "startup_time"}}
+            ]}
+        }, qb)
+
+        new_test_points = qb.query(temp)
 
     #BRING IN ALL NEEDED DATA
     if debug:
@@ -117,7 +124,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             #LOAD TEST RESULTS FROM DATABASE
             test_results = qb.query({
                 "from": {
-                    "from": "b2g_alerts",
+                    "from": "talos",
                     "select": [{"name": "push_date", "value": PUSH_DATE}] +
                               query.select +
                               query.edges,
@@ -154,7 +161,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
                         "name": "past_revision",
-                        "value": lambda r, i, rows: rows[i-1].B2G.Revision,
+                        "value": lambda r, i, rows: rows[i-1].Talos.Revision,
                         "sort": "push_date"
                     }, {
                         "name": "past_stats",
@@ -206,10 +213,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
+            all_touched.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
+            re_alert.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
 
             #FOR DEBUGGING
             # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
@@ -217,8 +224,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             File("test_values.txt").write(CNV.list2tab(Q.select(stats, [
                 {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
                 "value",
-                {"name": "gaia", "value": "B2G.Revision.gaia"},
-                {"name": "gecko", "value": "B2G.Revision.gecko"},
+                {"name": "gaia", "value": "Talos.Revision.gaia"},
+                {"name": "gecko", "value": "Talos.Revision.gecko"},
                 {"name": "confidence", "value": "result.confidence"},
                 "pass"
             ])))
@@ -229,9 +236,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
-                    tdad_id={"test_run_id": v.test_run_id, "B2G": {"Test": v.B2G.Test}},
+                    tdad_id={"test_run_id": v.test_run_id, "Talos": {"Test": v.Talos.Test}},
                     reason=REASON,
-                    revision=v.B2G.Revision,
+                    revision=v.Talos.Revision,
                     details=v,
                     severity=SEVERITY,
                     confidence=v.result.confidence
@@ -325,12 +332,12 @@ def alert_sustained_median(settings, qb, alerts_db):
     if debug:
         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
 
-    for g, t in Q.groupby(all_touched, "B2G.Test"):
+    for g, t in Q.groupby(all_touched, "Talos.Test"):
         qb.update({
             "set": {"processed_sustained_median": "done"},
             "where": {"and": [
                 {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                {"term": {"B2G.Test": g.B2G.Test}},
+                {"term": {"Talos.Test": g.Talos.Test}},
                 {"missing": {"field": "processed_sustained_median"}}
             ]}
         })
@@ -342,7 +349,7 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
+        Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
         qb = ESQuery(ElasticSearch(settings.query["from"]))
         qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))

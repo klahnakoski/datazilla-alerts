@@ -43,7 +43,7 @@ class Cube(object):
                 if length >= 1:
                     self.edges = [{"name": "rownum", "domain": {"type": "index"}}]
                 else:
-                    self.edges = []
+                    self.edges = StructList()
             elif isinstance(data, list):
                 if isinstance(select, list):
                     Log.error("not expecting a list of records")
@@ -60,7 +60,7 @@ class Cube(object):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix(value=data)}
-                self.edges = []
+                self.edges = StructList()
         else:
             self.edges = edges
 
@@ -98,6 +98,9 @@ class Cube(object):
             Log.error("can not get value of multi-valued cubes")
         return self.data[self.select.name].cube
 
+    def __float__(self):
+        return self.value
+
     def __lt__(self, other):
         return self.value < other
 
@@ -106,8 +109,13 @@ class Cube(object):
 
     def __eq__(self, other):
         if other == None:
+            if self.value == None:
+                return True
             return False
         return self.value == other
+
+    def __ne__(self, other):
+        return not Cube.__eq__(self, other)
 
     def __add__(self, other):
         return self.value + other
@@ -166,12 +174,15 @@ class Cube(object):
         if len(stacked) + len(remainder) != len(self.edges):
             Log.error("can not find some edges to group by")
 
-        selects = struct.listwrap(self.select)
-        index, v = zip(*self.data[selects[0].name].groupby(selector))
-
-        coord = wrap([{e.name: e.domain.getKey(e.domain.partitions[c[i]]) for i, e in enumerate(self.edges) if c[i] != -1} for c in index])
+        def coord2term(coord):
+            return {e.name: e.domain.getKey(e.domain.partitions[coord[i]]) for i, e in enumerate(self.edges) if coord[i] != -1}
 
         if isinstance(self.select, list):
+            selects = struct.listwrap(self.select)
+            index, v = zip(*self.data[selects[0].name].groupby(selector))
+
+            coord = wrap([coord2term(c) for c in index])
+
             values = [v]
             for s in selects[1::]:
                 i, v = zip(*self.data[s.name].group_by(selector))
@@ -179,7 +190,13 @@ class Cube(object):
 
             output = zip(coord, [Cube(self.select, remainder, {s.name: v[i] for i, s in enumerate(selects)}) for v in zip(*values)])
         else:
-            output = zip(coord, [Cube(self.select, remainder, vv) for vv in v])
+            output = (
+                (
+                    coord2term(coord),
+                    Cube(self.select, remainder, v)
+                )
+                for coord, v in self.data[self.select.name].groupby(selector)
+            )
 
         return output
 

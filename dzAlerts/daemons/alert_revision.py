@@ -148,12 +148,12 @@ def alert_revision(settings):
 
 
         #SUMMARIZE
-        known_alerts = []
+        known_alerts = StructList()
         for revision in interesting_revisions:
             total_tests = sum(Q.select(tests[revision], "num_tdad"))
             total_exceptions = len(existing_points[revision])
 
-            parts = []
+            parts = StructList()
             for t in tests[revision]:
                 exceptions = existing_points[t.revision, t.test_name]
                 worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()

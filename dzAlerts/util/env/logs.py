@@ -10,14 +10,14 @@
 
 
 from __future__ import unicode_literals
-import cProfile
 from datetime import datetime
-import pstats
 import sys
 
 from .. import struct
+from ..env import profiles
+from ..jsons import json_encoder
 from ..thread import threads
-from ..struct import listwrap, nvl, Struct, wrap
+from ..struct import listwrap, nvl, Struct, wrap, StructList
 from ..strings import indent, expand_template
 from ..thread.threads import Thread
 
@@ -36,7 +36,7 @@ class Log(object):
     main_log = None
     logging_multi = None
     profiler = None
-
+    error_mode = False  # prevent error loops
 
     @classmethod
     def new_instance(cls, settings):
@@ -112,8 +112,17 @@ class Log(object):
         if cause and not isinstance(cause, Except):
             cause = Except(WARNING, unicode(cause), trace=extract_tb(0))
 
-        e = Except(WARNING, template, params, cause, extract_stack(1))
-        Log.note(unicode(e))
+        trace = extract_stack(1)
+        e = Except(WARNING, template, params, cause, trace)
+        Log.note(unicode(e), {
+            "warning": {
+                "template": template,
+                "params": params,
+                "cause": cause,
+                "trace": trace
+            }
+        })
+
 
     @classmethod
     def error(
@@ -169,7 +178,25 @@ class Log(object):
 
         trace = extract_stack(1 + offset)
         e = Except(ERROR, template, params, cause, trace)
-        sys.stderr.write(str(e))
+        str_e = unicode(e)
+
+        error_mode = cls.error_mode
+        try:
+            if not error_mode:
+                cls.error_mode = True
+                Log.note(str_e, {
+                    "error": {
+                        "template": template,
+                        "params": params,
+                        "cause": cause,
+                        "trace": trace
+                    }
+                })
+        except Exception, f:
+            pass
+        cls.error_mode = error_mode
+
+        sys.stderr.write(str_e)
 
 
     #RUN ME FIRST TO SETUP THE THREADED LOGGING
@@ -179,6 +206,7 @@ class Log(object):
         if not settings:
             return
 
+        cls.settings = settings
         cls.trace = cls.trace | nvl(settings.trace, False)
         if cls.trace:
             from ..thread.threads import Thread
@@ -193,33 +221,17 @@ class Log(object):
             Log.add_log(Log.new_instance(log))
 
         if settings.profile:
-            cls.profiler = cProfile.Profile()
-            cls.profiler.enable()
+            if isinstance(settings.profile, bool):
+                settings.profile = {"enabled":True, "filename":"profile.tab"}
+
+            if settings.profile.enabled:
+                profiles.ON=True
 
 
     @classmethod
     def stop(cls):
-        if cls.profiler:
-            from ..cnv import CNV
-            from .files import File
-
-            p = pstats.Stats(cls.profiler)
-            stats = [{
-                "num_calls":d[1],
-                "self_time":d[2],
-                "total_time":d[3],
-                "self_time_per_call":d[2]/d[1],
-                "total_time_per_call":d[3]/d[1],
-                "file":(f[0] if f[0] != "~" else "").replace("\\", "/"),
-                "line":f[1],
-                "method":f[2].lstrip("<").rstrip(">")
-            }
-                for f, d, in p.stats.iteritems()
-            ]
-            CNV.list2tab(stats)
-            filename = "profile "+CNV.datetime2string(datetime.now(), "%Y%m%d-%H%M%S")+".tab"
-            File(filename).write(CNV.list2tab(stats))
-
+        if profiles.ON and hasattr(cls, "settings"):
+            profiles.write(cls.settings.profile)
         cls.main_log.stop()
 
 
@@ -292,8 +304,9 @@ def extract_tb(start):
 
 def format_trace(tbs, start=0):
     trace = []
-    for d in tbs[start:]:
-        item = expand_template('at File {{file}}, line {{line}}, in {{method}}\n', d)
+    for d in tbs[start::]:
+        d["file"] = d["file"].replace("/", "\\")
+        item = expand_template('File "{{file}}", line {{line}}, in {{method}}\n', d)
         trace.append(item)
     return "".join(trace)
 
@@ -332,6 +345,15 @@ class Except(Exception):
 
         return output + "\n"
 
+    def __json__(self):
+        return json_encoder.encode(Struct(
+            type = self.type,
+            template = self.template,
+            params = self.params,
+            cause = self.cause,
+            trace = self.trace
+        ))
+
 
 class BaseLog(object):
     def write(self, template, params):
@@ -368,7 +390,7 @@ class Log_usingThread(BaseLog):
         #DELAYED LOAD FOR THREADS MODULE
         from ..thread.threads import Queue
 
-        self.queue = Queue()
+        self.queue = Queue(max=10000, silent=True)
         self.logger = logger
 
         def worker(please_stop):
@@ -417,7 +439,6 @@ class Log_usingThread(BaseLog):
 class Log_usingMulti(BaseLog):
     def __init__(self):
         self.many = []
-
     def write(self, template, params):
         for m in self.many:
             try:
@@ -436,7 +457,6 @@ class Log_usingMulti(BaseLog):
 
     def clear_log(self):
         self.many = []
-
     def stop(self):
         for m in self.many:
             try:
@@ -445,6 +465,35 @@ class Log_usingMulti(BaseLog):
                 pass
 
 
+def write_profile(profile_settings, profiler):
+    from ..cnv import CNV
+    from .files import File
+    import pstats
+
+    p = pstats.Stats(profiler)
+    stats = [{
+            "num_calls": d[1],
+            "self_time": d[2],
+            "total_time": d[3],
+            "self_time_per_call": d[2] / d[1],
+            "total_time_per_call": d[3] / d[1],
+            "file": (f[0] if f[0] != "~" else "").replace("\\", "/"),
+            "line": f[1],
+            "method": f[2].lstrip("<").rstrip(">")
+        }
+        for f, d, in p.stats.iteritems()
+    ]
+    stats_file = File(profile_settings.filename, suffix=CNV.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
+    stats_file.write(CNV.list2tab(stats))
+
+
+
+
+
 if not Log.main_log:
     from log_usingStream import Log_usingStream
     Log.main_log = Log_usingStream("sys.stdout")
+
+
+
+

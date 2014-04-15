@@ -19,7 +19,7 @@ from dzAlerts.util.env import startup
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.daemons.alert import update_h0_rejected
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.struct import nvl, StructList
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, Null
@@ -291,7 +291,7 @@ def alert_exception(settings, db):
 
     #CHECK THE CURRENT ALERTS
     if len(re_alert) == 0:
-        current_alerts = []
+        current_alerts = StructList()
     else:
         current_alerts = db.query("""
             SELECT

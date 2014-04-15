@@ -288,7 +288,7 @@ def alert_sustained_median(settings, db):
 
     #CHECK THE CURRENT ALERTS
     if not re_alert:
-        current_alerts = []
+        current_alerts = StructList()
     else:
         current_alerts = qb.query({
             "from": "alerts",
