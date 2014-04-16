@@ -152,7 +152,9 @@ class SetDomain(Domain):
 
         self.NULL = Struct(value=None)
         self.partitions = StructList()
-        if desc.partitions and isinstance(desc.partitions[0][desc.key], dict):
+        if desc.partitions and desc.dimension.fields and len(desc.dimension.fields)>1:
+            self.map = UniqueIndex(keys=desc.dimension.fields)
+        elif desc.partitions and isinstance(desc.partitions[0][desc.key], dict):
             keys = UNION(set(d[desc.key].keys()) for d in desc.partitions)
             self.map = UniqueIndex(keys=keys)
         else:

@@ -59,7 +59,7 @@ class Dimension(object):
             edges = wrap([{"name": k, "value": v, "allowNulls": False} for k, v in self.fields.items()])
         else:
             self.fields = struct.listwrap(fields)
-            edges = wrap([{"name": f, "value": f, "allowNulls": False} for f in self.fields])
+            edges = wrap([{"name": f, "value": f, "index": i, "allowNulls": False} for i, f in enumerate(self.fields)])
 
         if dim.partitions:
             return  # ALREADY HAVE PARTS
@@ -128,6 +128,16 @@ class Dimension(object):
 
             # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
             array = parts.data.values()[0].cube  # DIG DEEP INTO RESULT (ASSUME SINGLE VALUE CUBE, WITH NULL AT END)
+
+            def edges2value(*values):
+                if isinstance(fields, dict):
+                    output = Struct()
+                    for e, v in zip(edges, values):
+                        output[e.name] = v
+                    return output
+                else:
+                    return tuple(values)
+
             self.partitions = wrap([
                 {
                     "name": str(d.partitions[i].name),  # CONVERT TO STRING
@@ -137,10 +147,7 @@ class Dimension(object):
                     "partitions": [
                         {
                             "name": str(d2.partitions[j].name),  # CONVERT TO STRING
-                            "value": {
-                                edges[0].name: d.getEnd(d.partitions[i]),
-                                edges[1].name: d2.getEnd(d2.partitions[j])
-                            },
+                            "value": edges2value(d.getEnd(d.partitions[i]), d2.getEnd(d2.partitions[j])),
                             "esfilter": {"and": [
                                 {"term": {edges[0].value: d.partitions[i].value}},
                                 {"term": {edges[1].value: d2.partitions[j].value}}

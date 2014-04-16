@@ -20,7 +20,7 @@ from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.struct import nvl, StructList
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
@@ -32,6 +32,7 @@ SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive i
 # MIN_CONFIDENCE = 0.9999
 REASON = "b2g_alert_sustained_median"     # name of the reason in alert_reason
 MAX_AGE = timedelta(days=90)
+OLDEST_TS = CNV.datetime2milli(datetime.utcnow() - MAX_AGE)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
@@ -71,14 +72,16 @@ def alert_sustained_median(settings, qb, alerts_db):
         "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
         "edges": query.edges,
         "where": {"and": [
-            {"missing": {"field": "processed_sustained_median"}}
+            {"missing": {"field": "processed_sustained_median"}},
+            {"exists": {"field": "result.test_name"}},
+            {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
             #FOR DEBUGGING SPECIFIC SERIES
-            # {"term": {"test_machine.type": "hamachi"}},
-            # {"term": {"test_machine.platform": "Gonk"}},
-            # {"term": {"test_machine.os": "Firefox OS"}},
-            # {"term": {"test_build.branch": "master"}},
-            # {"term": {"testrun.suite": "communications/ftu"}},
-            # {"term": {"result.test_name": "startup_time"}}
+            {"term": {"test_machine.type": "hamachi"}},
+            {"term": {"test_machine.platform": "Gonk"}},
+            {"term": {"test_machine.os": "Firefox OS"}},
+            {"term": {"test_build.branch": "master"}},
+            {"term": {"testrun.suite": "contacts"}},
+            {"term": {"result.test_name": "cold_load_time"}}
         ]}
     })
 
@@ -110,7 +113,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                     ]},
                     "sort": {"field": PUSH_DATE, "sort": -1},
                     "limit": settings.param.sustained_median.window_size * 2
-                }})
+                }
+            })
 
             min_date = MIN(first_sample, first_in_window.min_date)
 
@@ -206,6 +210,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["result.confidence", "diff"]).last()
                     best["pass"] = True
 
+            if Q.filter(test_results, {"term":{"test_run_id":83538}}):
+                Log.debug("")
+
             all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
@@ -243,7 +250,6 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
-
         # break  # DEBUGGING ONLY
 
     if debug:
@@ -301,7 +307,10 @@ def alert_sustained_median(settings, qb, alerts_db):
         if len(nvl(curr.solution, "").strip()) != 0:
             continue  # DO NOT TOUCH SOLVED ALERTS
 
-        a = found_alerts[(curr.tdad_id,)]
+        a = found_alerts[(curr.tdad_id, )]
+
+        if a == None:
+            Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
 
         if significant_difference(curr.severity, a.severity) or \
                 significant_difference(curr.confidence, a.confidence) or \
@@ -342,7 +351,7 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Finding exceptions in schema {{schema}}", {"schema": settings.perftest.schema})
+        Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
         qb = ESQuery(ElasticSearch(settings.query["from"]))
         qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))

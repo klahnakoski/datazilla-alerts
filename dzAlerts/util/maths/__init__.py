@@ -29,6 +29,8 @@ class Math(object):
             Log.error("Only allowed values *between* zero and one")
 
         for b in args[1:]:
+            if b == None:
+                continue
             if b >= 1 or b <= 0:
                 Log.error("Only allowed values *between* zero and one")
             a = a * b / (a * b + (1 - a) * (1 - b))

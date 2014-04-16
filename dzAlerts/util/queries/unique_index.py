@@ -97,7 +97,10 @@ def value2key(keys, val):
     if len(keys)==1:
         if isinstance(val, dict):
             return val[keys[0]]
-        return val
+        elif isinstance(val, (list, tuple)):
+            return val[0]
+        else:
+            return val
     else:
         if isinstance(val, dict):
             return wrap({k: val[k] for k in keys})

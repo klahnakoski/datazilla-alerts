@@ -109,6 +109,8 @@ class Cube(object):
 
     def __eq__(self, other):
         if other == None:
+            if self.edges:
+                return False
             if self.value == None:
                 return True
             return False

@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 import functools
+from ..struct import StructList
 from ..maths import stats
 from ..collections import MIN, MAX
 from ..env.logs import Log
@@ -95,6 +96,7 @@ class _Stats(WindowFunction):
         object.__init__(self)
         self.middle = middle
         self.samples = StructList()
+
     def add(self, value):
         if value == None:
             return

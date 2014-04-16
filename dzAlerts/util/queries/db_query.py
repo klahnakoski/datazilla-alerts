@@ -16,7 +16,7 @@ from .query import Query
 from ..sql.db import int_list_packer, SQL, DB
 from ..env.logs import Log
 from ..strings import indent, expand_template
-from ..struct import nvl, wrap, listwrap
+from ..struct import nvl, wrap, listwrap, StructList
 
 
 class DBQuery(object):

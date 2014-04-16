@@ -310,6 +310,9 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         a = found_alerts[(curr.tdad_id,)]
 
+        if a == None:
+            Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
+
         if significant_difference(curr.severity, a.severity) or \
                 significant_difference(curr.confidence, a.confidence) or \
                         curr.reason != a.reason:

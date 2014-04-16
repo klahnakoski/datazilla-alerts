@@ -410,28 +410,13 @@ def compileEdges2Term(mvel_compiler, edges, constants):
         domain = e.domain
         fields = domain.dimension.fields
 
-        if e.domain.type == "set" and fields:
-            def fromTerm(domain, term):
-                fields = domain.dimension.fields
-                if len(fields) == 1:
-                    terms = [term]
-                else:
-                    terms = [CNV.pipe2value(t) for t in term.split("|")]
-
-                rec = Struct()
-                for f, t in zip(fields, terms):
-                    rec[f] = t  # f CAN HAVE DOTS TO INDICATE PATH
-
-                for p in domain.partitions:
-                    if Q.filter([rec], p.esfilter):
-                        return p
-                return Null
-
+        if not e.value and fields:
+            code, decode = mvel_compiler.Parts2Term(e.domain)
             t = Struct(
-                toTerm=mvel_compiler.Parts2Term(e.domain),
-                fromTerm=functools.partial(fromTerm, domain)
+                toTerm=code,
+                fromTerm=decode
             )
-        elif not e.value and fields:
+        elif fields:
             Log.error("not expected")
         elif e.domain.type == "time":
             t = compileTime2Term(e)
@@ -443,14 +428,16 @@ def compileEdges2Term(mvel_compiler, edges, constants):
             def fromTerm(term):
                 return e.domain.getPartByKey(term)
 
+            code, decode = mvel_compiler.Parts2Term(e.domain)
             t = Struct(
-                toTerm=mvel_terms.Parts2Term(e.domain),
-                fromTerm=fromTerm
+                toTerm=code,
+                fromTerm=decode
             )
         else:
             t = compileString2Term(e)
 
         if not t.toTerm.body:
+            mvel_compiler.Parts2Term(e.domain)
             Log.error("")
 
         fromTerm2Part.append(t.fromTerm)

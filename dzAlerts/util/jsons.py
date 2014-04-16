@@ -11,13 +11,11 @@ from __future__ import unicode_literals
 
 import json
 from math import floor
-
 import re
 import time
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 import sys
-
 from .collections import AND, MAX
 from .struct import Struct, StructList
 
@@ -222,20 +220,26 @@ def _scrub(value):
         return None
 
     type = value.__class__
+
     if type in (date, datetime):
         return datetime2milli(value)
     elif type is timedelta:
         return unicode(value.total_seconds()) + "second"
     elif type is str:
         return unicode(value.decode("utf8"))
-    elif type in (dict, Struct):
+    elif type is Decimal:
+        return float(value)
+    elif type.__name__ == "bool_":  # DEAR ME!  Numpy has it's own booleans (value==False could be used, but 0==False in Python.  DOH!)
+        if value == False:
+            return False
+        else:
+            return True
+    elif isinstance(value, dict):
         output = {}
         for k, v in value.iteritems():
             v = _scrub(v)
             output[k] = v
         return output
-    elif type is Decimal:
-        return float(value)
     elif type in (list, StructList):
         output = []
         for v in value:
@@ -243,7 +247,12 @@ def _scrub(value):
             output.append(v)
         return output
     elif hasattr(value, '__json__'):
-        return json._default_decoder.decode(value.__json__())
+        try:
+            return json._default_decoder.decode(value.__json__())
+        except Exception, e:
+            from .env.logs import Log
+
+            Log.error("problem with calling __json__()", e)
     elif hasattr(value, '__iter__'):
         output = []
         for v in value:

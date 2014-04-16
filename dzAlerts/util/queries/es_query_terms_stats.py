@@ -97,6 +97,16 @@ def es_terms_stats(esq, mvel, query):
 
         Log.note("{{theory_count}} theoretical combinations, {{real_count}} actual combos found", {"real_count": len(esFacets), "theory_count":total_facets})
 
+        if not esFacets:
+            # MAKE EMPTY CUBE
+            matricies = {}
+            dims = [len(e.domain.partitions) + (1 if e.allowNulls else 0) for e in query.edges]
+            for s in select:
+                matricies[s.name] = Matrix(*dims)
+            cube = Cube(query.select, query.edges, matricies)
+            cube.frum = query
+            return cube
+
     else:
         # GENERATE ALL COMBOS
         esFacets = getAllEdges(facetEdges)
