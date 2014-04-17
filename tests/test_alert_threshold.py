@@ -130,7 +130,7 @@ class test_alert_threshold:
 
 
     def _setup(self):
-        uid = self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
+        uid = self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid
 
         ## VERFIY THE alert_reason EXISTS
         exists = self.db.query("""
@@ -195,8 +195,8 @@ class test_alert_threshold:
             time += diff_time
 
             self.db.insert("test_data_all_dimensions", {
-                "id": SQL("util_newid()"),
-                "test_run_id": SQL("util_newid()"),
+                "id": SQL("util.newid()"),
+                "test_run_id": SQL("util.newid()"),
                 "product_id": 0,
                 "operating_system_id": 0,
                 "test_id": 0,

@@ -94,7 +94,7 @@ class test_alert_exception():
         assert h0_rejected[0].h0_rejected == 1
 
     def _setup(self, test_data):
-        uid = self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
+        uid = self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid
 
         ## VERFIY THE alert_reason EXISTS
         exists = self.db.query("""
@@ -134,8 +134,8 @@ class test_alert_exception():
             time += diff_time
 
             self.db.insert("test_data_all_dimensions", {
-                "id": SQL("util_newid()"),
-                "test_run_id": SQL("util_newid()"),
+                "id": SQL("util.newid()"),
+                "test_run_id": SQL("util.newid()"),
                 "product_id": 0,
                 "operating_system_id": 0,
                 "test_id": 0,
@@ -181,7 +181,7 @@ class test_alert_exception():
             GROUP BY
                 test_run_id
         """, {
-            "id": SQL("util_newid()"),
+            "id": SQL("util.newid()"),
             "now": CNV.datetime2unix(datetime.utcnow())
         })
 

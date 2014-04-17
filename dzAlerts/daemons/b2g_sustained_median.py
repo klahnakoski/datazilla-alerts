@@ -14,6 +14,7 @@ from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.collections import MIN, MAX, AND, OR
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
@@ -63,10 +64,24 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            if r.diff > 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
+            test_param = settings.param.test[r.B2G.Test.name]
+
+            if test_param == None:
                 return True
-            if r.diff < 0 and OR(AND(r.B2G.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
+
+            if test_param.better == "higher":
+                diff = -r.diff
+            else:
+                diff = r.diff
+
+            if unicode(test_param.min_regression.strip()[-1]) == "%":
+                min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
+            else:
+                min_diff = Math.abs(float(test_param.min_regression))
+
+            if diff > min_diff:
                 return True
+
         return False
 
     new_test_points = qb.query({
@@ -74,7 +89,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
         "edges": query.edges,
         "where": {"and": [
-            {"missing": {"field": "processed_sustained_median"}},
+            {"missing": {"field": settings.param.mark_complete}},
             {"exists": {"field": "result.test_name"}},
             {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
             #FOR DEBUGGING SPECIFIC SERIES
@@ -298,7 +313,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     if new_alerts:
         for a in new_alerts:
-            a.id = SQL("util_newid()")
+            a.id = SQL("util.newid()")
             a.last_updated = datetime.utcnow()
         try:
             alerts_db.insert_list("alerts", new_alerts)
@@ -333,18 +348,18 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     alerts_db.flush()
 
-    if debug:
-        Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
-
-    for g, t in Q.groupby(all_touched, "B2G.Test"):
-        qb.update({
-            "set": {"processed_sustained_median": "done"},
-            "where": {"and": [
-                {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                {"term": {"B2G.Test": g.B2G.Test}},
-                {"missing": {"field": "processed_sustained_median"}}
-            ]}
-        })
+    # if debug:
+    #     Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
+    #
+    # for g, t in Q.groupby(all_touched, "B2G.Test"):
+    #     qb.update({
+    #         "set": {settings.param.mark_complete: "done"},
+    #         "where": {"and": [
+    #             {"terms": {"datazilla.test_run_id": t.test_run_id}},
+    #             {"term": {"B2G.Test": g.B2G.Test}},
+    #             {"missing": {"field": settings.param.mark_complete}}
+    #         ]}
+    #     })
 
 
 

@@ -38,7 +38,14 @@ SEVERITY = 0.7
 #      * b2gperf version (not currently reported in datazilla)
 #      * Summary statistics for the regression; mean, median, stdev before and after event
 #
-SUBJECT = "{{details.example.test.name}} on {{details.example.test.suite}} regressed by {{details.example.diff}}{{details.example.units}}"
+SUBJECT = [
+    "[ALERT][B2G] {{details.example.B2G.Test.suite}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} ",
+    {
+        "from": "details.tests",
+        "template": "{{test.name}}",
+        "separator": ", "
+    }
+    ]
 TEMPLATE = [
     """
     <div><h2>Score: {{score}}</h2>
@@ -58,9 +65,10 @@ TEMPLATE = [
             <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
-            <td>{{example.past_stats.mean|round(digits=3)}}</td>
-            <td>{{example.future_stats.mean|round(digits=3)}}</td>
-            <td>{{example.diff|round(digits=3)}}</td></tr>
+            <td>{{example.past_stats.mean|round(digits=4)}}</td>
+            <td>{{example.future_stats.mean|round(digits=4)}}</td>
+            <td>{{example.diff|round(digits=2)}}</td>
+            </tr>
         """
     },
     """</table></div>"""
@@ -169,20 +177,20 @@ def b2g_alert_revision(settings):
         new_alerts = known_alerts - old_alerts
         if new_alerts:
             for revision in new_alerts:
-                revision.id = SQL("util_newid()")
+                revision.id = SQL("util.newid()")
                 revision.last_updated = datetime.utcnow()
             db.insert_list("alerts", new_alerts)
 
         #SHOW SUSTAINED ALERTS ARE COVERED
         db.execute("""
-            INSERT INTO alert_hierarchy (parent, child)
+            INSERT INTO hierarchy (parent, child)
             SELECT
                 r.id parent,
                 p.id child
             FROM
                 alerts p
             LEFT JOIN
-                alert_hierarchy h on h.child=p.id
+                hierarchy h on h.child=p.id
             LEFT JOIN
                 alerts r on r.revision=p.revision AND r.reason={{parent_reason}}
             WHERE

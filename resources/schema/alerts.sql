@@ -1,5 +1,4 @@
-DROP DATABASE IF EXISTS alerts;
-CREATE DATABASE alerts;
+CREATE DATABASE IF NOT EXISTS alerts;
 USE alerts;
 DELIMITER ;;
 
@@ -22,12 +21,14 @@ CREATE TABLE reasons (
 	description    VARCHAR(2000), ##MORE DETAILS ABOUT WHAT THIS IS
 	last_run       DATETIME    NOT NULL,
 	config         VARCHAR(8000),
+	email_subject  VARCHAR(1000),
 	email_template VARCHAR(8000)
 );;
 INSERT INTO reasons VALUES (
 	'page_threshold_limit',
 	concat('The page has performed badly ({{actual}}), {{expected}} or less was expected'),
 	date_add(now(), INTERVAL -30 DAY),
+	NULL,
 	NULL,
 	NULL
 );;
@@ -36,6 +37,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has performed worse then usual by {{diff}} standard deviations ({{confidence}})'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -43,6 +45,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has performed worse then usual by {{diff}} standard deviations ({{confidence}})'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -50,6 +53,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has continued to perform worse since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -57,6 +61,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has continued to perform worse since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -64,6 +69,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has continued to perform worse since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -71,6 +77,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has regressed since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -78,6 +85,7 @@ INSERT INTO reasons VALUES (
 	concat('{{test}} has regressed since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 

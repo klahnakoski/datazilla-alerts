@@ -74,7 +74,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                {"missing": {"field": "processed_sustained_median"}},
+                {"missing": {"field": settings.param.mark_complete}},
                 {"term": {"testrun.suite": "tp5o"}},
                 {"exists": {"field": "result.test_name"}}
                 #FOR DEBUGGING SPECIFIC SERIES
@@ -297,7 +297,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     if new_alerts:
         for a in new_alerts:
-            a.id = SQL("util_newid()")
+            a.id = SQL("util.newid()")
             a.last_updated = datetime.utcnow()
         try:
             alerts_db.insert_list("alerts", new_alerts)
@@ -337,11 +337,11 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     for g, t in Q.groupby(all_touched, "Talos.Test"):
         qb.update({
-            "set": {"processed_sustained_median": "done"},
+            "set": {settings.param.mark_complete: "done"},
             "where": {"and": [
                 {"terms": {"datazilla.test_run_id": t.test_run_id}},
                 {"term": {"Talos.Test": g.Talos.Test}},
-                {"missing": {"field": "processed_sustained_median"}}
+                {"missing": {"field": settings.param.mark_complete}}
             ]}
         })
 

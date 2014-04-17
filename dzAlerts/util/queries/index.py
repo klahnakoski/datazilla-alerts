@@ -80,10 +80,12 @@ class Index(object):
         def iter(data, depth):
             if depth == 0:
                 for v in data:
-                    yield v
+                    yield wrap(v)
+                return
+
             for v in data.values():
                 for v1 in iter(v, depth - 1):
-                    yield v1
+                    yield wrap(v1)
 
         return iter(self._data, len(self._keys))
 

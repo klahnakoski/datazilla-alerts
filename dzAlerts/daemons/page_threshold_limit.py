@@ -68,7 +68,7 @@ def page_threshold_limit(db, debug):
             if page.alert_id != None: break
 
             alert = {
-                "id": SQL("util_newID()"),
+                "id": SQL("util.newid()"),
                 "status": "new",
                 "create_time": datetime.utcnow(),
                 "last_updated": datetime.utcnow(),

@@ -31,18 +31,18 @@ class test_email_send():
 
 
     def test_zero_receivers(self):
-        self.uid = str(self.db.query("SELECT util_newID() uid FROM DUAL")[0].uid)
+        self.uid = str(self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid)
         self.setup([])
         self.help_test_emailer([])
 
     def test_one_receivers(self):
-        self.uid = str(self.db.query("SELECT util_newID() uid FROM DUAL")[0].uid)
+        self.uid = str(self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid)
         to_list = [self.uid + "@mozilla.com"]
         self.setup(to_list)
         self.help_test_emailer(to_list)
 
     def test_many_receivers(self):
-        self.uid = str(self.db.query("SELECT util_newID() uid FROM DUAL")[0].uid)
+        self.uid = str(self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid)
         to_list = [self.uid + "_" + str(i) + "@mozilla.com" for i in range(0, 10)]
         self.setup(to_list)
         self.help_test_emailer(to_list)
@@ -75,7 +75,7 @@ class test_email_send():
     def setup(self, to_list):
         self.emailer = testing.Emailer(self.settings.email)
 
-        self.db.call("email_send", (
+        self.db.call("mail.send", (
             ";".join(to_list), #to
             "subject" + self.uid, #title
             "body" + self.uid, #body

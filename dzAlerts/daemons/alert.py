@@ -58,7 +58,7 @@ def send_alerts(settings, db):
                 a.severity,
                 a.confidence,
                 a.revision,
-                r.email_template
+                r.email_template,
                 r.email_subject
             FROM
                 alerts a
@@ -67,12 +67,12 @@ def send_alerts(settings, db):
             WHERE
                 a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
-                bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
+                math.bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
                 a.solution IS NULL AND
                 a.reason in {{reasons}} AND
                 a.create_time > {{min_time}}
             ORDER BY
-                bayesian_add(a.severity, a.confidence) DESC,
+                math.bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
             LIMIT
                 10
@@ -89,7 +89,7 @@ def send_alerts(settings, db):
             return
 
         #poor souls that signed up for emails
-        listeners = db.query("SELECT email FROM alert_listeners")
+        listeners = db.query("SELECT email FROM listeners")
         listeners = [x["email"] for x in listeners]
         listeners = ";".join(listeners)
 
@@ -121,7 +121,7 @@ def send_alerts(settings, db):
                 suffix = "... (has been truncated)"
                 body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
 
-            db.call("email_send", (
+            db.call("mail.send", (
                 listeners, #to
                 subject,
                 body, #body
