@@ -1,6 +1,11 @@
 use alerts;
 
+DELETE FROM alerts.listeners;
+DELETE FROM alerts.hierarchy;
+DELETE FROM alerts.alerts;
 DELETE FROM alerts.reasons;
+
+
 INSERT INTO alerts.reasons (
 	code      ,
 	description,
@@ -20,11 +25,9 @@ FROM
 	ekyle_perftest_1.alert_reasons
 ;
 
-DELETE FROM alerts.listeners;
+
 INSERT INTO alerts.listeners SELECT * FROM ekyle_perftest_1.alert_listeners;
 
-
-DELETE FROM alerts.alerts;
 INSERT INTO alerts.alerts (
 id,
 status	,
@@ -55,7 +58,7 @@ revision
 FROM ekyle_perftest_1.alerts;
 
 
-DELETE FROM alerts.hierarchy;
+
 INSERT INTO alerts.hierarchy(parent, child) SELECT parent, child FROM ekyle_perftest_1.alert_hierarchy;
 
 
