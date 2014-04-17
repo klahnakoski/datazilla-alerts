@@ -85,7 +85,7 @@ class test_email_send():
 
     def verify_notify_is_cleared(self):
         #THE NOTIFY FLAG IS PROPERLY CLEARED
-        notify = self.db.query("SELECT new_mail FROM email_notify")[0].new_mail
+        notify = self.db.query("SELECT new_mail FROM mail.notify")[0].new_mail
         assert notify == 0
 
 

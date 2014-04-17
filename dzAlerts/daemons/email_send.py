@@ -23,7 +23,7 @@ def email_send(db, emailer, debug):
     try:
 
         ## EXIT EARLY IF THERE ARE NO EMAILS TO SEND
-        has_mail = db.query("SELECT max(new_mail) new_mail FROM email_notify")
+        has_mail = db.query("SELECT max(new_mail) new_mail FROM mail.notify")
         if has_mail[0]["new_mail"] == 0:
             Log.note("No emails to send")
             return
@@ -65,7 +65,7 @@ def email_send(db, emailer, debug):
                 Log.warning("Problem sending email", e)
                 not_done = 1
 
-        db.execute("UPDATE email_notify SET new_mail={{not_done}}", {"not_done": not_done})
+        db.execute("UPDATE mail.notify SET new_mail={{not_done}}", {"not_done": not_done})
 
         Log.note(str(num_done) + " emails have been sent")
     except Exception, e:
