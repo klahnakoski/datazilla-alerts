@@ -82,6 +82,7 @@ def z_moment2stats(z_moment, unbiased=True):
         error = -EPSILON * (abs(Z2) + 1)  # EXPECTED FLOAT ERROR
 
         if error < variance <= 0:  # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
+            variance = 0
             skew = None
             kurtosis = None
         elif variance < error:
