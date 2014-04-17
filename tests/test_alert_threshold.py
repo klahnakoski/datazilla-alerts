@@ -62,7 +62,7 @@ class test_alert_threshold:
 
         #VERIFY last_run HAS BEEEN UPDATED
         last_run = self.db.query(
-            "SELECT last_run FROM alert_reasons WHERE code={{type}}",
+            "SELECT last_run FROM reasons WHERE code={{type}}",
             {"type": REASON}
         )[0].last_run
         assert last_run >= datetime.utcnow() + timedelta(minutes=-1)
@@ -137,7 +137,7 @@ class test_alert_threshold:
             SELECT
                 count(1) num
             FROM
-                alert_reasons
+                reasons
             WHERE
                 code={{reason}}
             """,

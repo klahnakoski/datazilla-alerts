@@ -325,7 +325,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": esfilter2sqlwhere(alerts_db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
         })
 
-    alerts_db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
+    alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
         "now": datetime.utcnow(),
         "where": esfilter2sqlwhere(alerts_db, {"term": {"code": REASON}})
     })

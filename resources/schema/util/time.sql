@@ -332,9 +332,6 @@ BEGIN
 	SET EndOfDay=date_add(BeginOfDay, INTERVAL 1 DAY);
 
 
-	##############################################################################
-	## IMPORTANT WU DATE RANGES
-	##############################################################################
 	DROP TEMPORARY TABLE IF EXISTS time.temp_ranges ;
 	CREATE TEMPORARY TABLE time.temp_ranges  (
 		ordering INTEGER,

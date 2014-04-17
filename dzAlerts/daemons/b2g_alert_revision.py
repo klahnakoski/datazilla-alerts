@@ -38,7 +38,7 @@ SEVERITY = 0.7
 #      * b2gperf version (not currently reported in datazilla)
 #      * Summary statistics for the regression; mean, median, stdev before and after event
 #
-
+SUBJECT = "{{details.example.test.name}} on {{details.example.test.suite}} regressed by {{details.example.diff}}{{details.example.units}}"
 TEMPLATE = [
     """
     <div><h2>Score: {{score}}</h2>
@@ -52,15 +52,15 @@ TEMPLATE = [
     """, {
         "from": "details.tests",
         "template": """<tr>
-        <td>{{example.B2G.Device|upper}}</td>
-        <td>{{test.suite}}</td>
-        <td>{{test.name}}</td>
-        <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
-        <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
-        <td>{{example.push_date|datetime}}</td>
-        <td>{{example.past_stats.mean|round(digits=3)}}</td>
-        <td>{{example.future_stats.mean|round(digits=3)}}</td>
-        <td>{{example.diff|round(digits=3)}}</td></tr>
+            <td>{{example.B2G.Device|upper}}</td>
+            <td>{{test.suite}}</td>
+            <td>{{test.name}}</td>
+            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
+            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
+            <td>{{example.push_date|datetime}}</td>
+            <td>{{example.past_stats.mean|round(digits=3)}}</td>
+            <td>{{example.future_stats.mean|round(digits=3)}}</td>
+            <td>{{example.diff|round(digits=3)}}</td></tr>
         """
     },
     """</table></div>"""
@@ -81,8 +81,9 @@ def b2g_alert_revision(settings):
 
         #TODO: REMOVE, LEAVE IN DB
         if db.debug:
-            db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
+            db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
                 "template": CNV.object2JSON(TEMPLATE),
+                "subject": CNV.object2JSON(SUBJECT),
                 "reason": REASON
             })
             db.flush()

@@ -49,7 +49,7 @@ def alert_regression(settings):
     settings.db.debug = settings.param.debug
     with DB(settings.perftest) as db:
         #TODO: REMOVE, LEAVE IN DB
-        db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
+        db.execute("update reasons set email_template={{template}} where code={{reason}}", {
             "template": CNV.object2JSON(TEMPLATE),
             "reason": REASON
         })

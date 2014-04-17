@@ -84,29 +84,24 @@ INSERT INTO reasons VALUES (
 
 CREATE TABLE page_thresholds (
 	id         INTEGER         NOT NULL PRIMARY KEY,
-	page       INTEGER         NOT NULL,
+	page       VARCHAR(200)    NOT NULL,
 	threshold  DECIMAL(20, 10) NOT NULL,
 	severity   DOUBLE          NOT NULL,
 	reason     VARCHAR(2000)   NOT NULL,
 	time_added DATETIME        NOT NULL,
-	contact    VARCHAR(200)    NOT NULL,
-	FOREIGN KEY (page) REFERENCES pages (id)
+	contact    VARCHAR(200)    NOT NULL
 );;
 
-INSERT INTO page_thresholds
-	SELECT
-		util.newID(),
-		p.id,
-		200,
-		0.5,
-		"(mozilla.com) because I like to complain",
-		now(),
-		"klahnakoski@mozilla.com"
-	FROM
-		pages p
-	WHERE
-		p.url = 'mozilla.com'
-;;
+INSERT INTO page_thresholds (id, page, threshold, severity, reason, time_added, contact)
+VALUES (
+	util.newID(),
+	'mozilla.com',
+	200,
+	0.5,
+	"(mozilla.com) because I like to complain",
+	now(),
+	"klahnakoski@mozilla.com"
+);;
 
 
 CREATE TABLE listeners (

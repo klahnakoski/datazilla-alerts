@@ -67,8 +67,8 @@ class test_alert:
 
         #MAKE A REASON FOR USE IN THIS TESTING
         self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason": self.reason})
-        self.db.execute("DELETE FROM alert_reasons WHERE code={{reason}}", {"reason": self.reason})
-        self.db.insert("alert_reasons", {
+        self.db.execute("DELETE FROM reasons WHERE code={{reason}}", {"reason": self.reason})
+        self.db.insert("reasons", {
             "code": self.reason,
             "description": ">>>>{{id}}<<<<", #SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
             "config": None,

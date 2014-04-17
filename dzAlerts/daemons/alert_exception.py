@@ -18,7 +18,6 @@ from dzAlerts.util.collections import MIN
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
-from dzAlerts.daemons.alert import update_h0_rejected
 from dzAlerts.util.struct import nvl, StructList
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
@@ -354,15 +353,13 @@ def alert_exception(settings, db):
         "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
     })
 
-    db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
+    db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
         "now": datetime.utcnow(),
         "where": esfilter2sqlwhere(db, {"term": {"code": REASON}})
     })
 
     if debug:
         Log.note("Reviewing h0")
-
-    update_h0_rejected(db, all_min_date, set(Q.select(current_alerts, "tdad_id")) | set(Q.select(found_alerts, "tdad_id")))
 
     if debug:
         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched | records_to_process)})
@@ -387,7 +384,7 @@ def main():
             #TEMP FIX UNTIL IMPORT DOES IT FOR US
             db.execute("update test_data_all_dimensions set push_date=date_received where push_date is null")
             #TODO: REMOVE, LEAVE IN DB
-            db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
+            db.execute("update reasons set email_template={{template}} where code={{reason}}", {
                 "template": TEMPLATE,
                 "reason": REASON
             })

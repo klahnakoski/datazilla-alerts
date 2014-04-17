@@ -59,10 +59,11 @@ def send_alerts(settings, db):
                 a.confidence,
                 a.revision,
                 r.email_template
+                r.email_subject
             FROM
                 alerts a
             JOIN
-                alert_reasons r on r.code = a.reason
+                reasons r on r.code = a.reason
             WHERE
                 a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
@@ -108,6 +109,7 @@ def send_alerts(settings, db):
                     e.date_range = (datetime.utcnow()-CNV.milli2datetime(e.push_date_min)).total_seconds()/(24*60*60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  #PICK FIRST v > CURRENT VALUE
 
+            subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body)
 
@@ -121,7 +123,7 @@ def send_alerts(settings, db):
 
             db.call("email_send", (
                 listeners, #to
-                settings.param.email.title,
+                subject,
                 body, #body
                 None
             ))
@@ -136,32 +138,6 @@ def send_alerts(settings, db):
     except Exception, e:
         Log.error("Could not send alerts", e)
 
-
-def update_h0_rejected(db, start_date, possible_alerts):
-    """
-    REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
-    COLUMN REFLECTS THE ALERT STATI
-    TODO: GETTING EXPENSIVE TO RUN (at 200K alerts)
-    """
-
-    db.execute("""
-        UPDATE
-            test_data_all_dimensions t
-        JOIN (
-            SELECT
-                tdad_id,
-                max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
-            FROM
-                alerts a
-            WHERE
-                {{where}}
-            GROUP BY
-                tdad_id
-            ) a ON a.tdad_id = t.id
-        SET t.h0_rejected = a.h0
-    """, {
-        "where": esfilter2sqlwhere(db, {"terms": {"a.tdad_id": possible_alerts}})
-    })
 
 
 

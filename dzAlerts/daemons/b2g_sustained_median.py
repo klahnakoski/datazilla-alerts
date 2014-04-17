@@ -34,6 +34,8 @@ REASON = "b2g_alert_sustained_median"     # name of the reason in alert_reason
 MAX_AGE = timedelta(days=90)
 OLDEST_TS = CNV.datetime2milli(datetime.utcnow() - MAX_AGE)
 
+
+
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
 <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
@@ -324,7 +326,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": esfilter2sqlwhere(alerts_db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
         })
 
-    alerts_db.execute("UPDATE alert_reasons SET last_run={{now}} WHERE {{where}}", {
+    alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
         "now": datetime.utcnow(),
         "where": esfilter2sqlwhere(alerts_db, {"term": {"code": REASON}})
     })
