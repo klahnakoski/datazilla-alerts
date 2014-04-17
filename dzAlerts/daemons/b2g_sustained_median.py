@@ -35,8 +35,6 @@ REASON = "b2g_alert_sustained_median"     # name of the reason in alert_reason
 MAX_AGE = timedelta(days=90)
 OLDEST_TS = CNV.datetime2milli(datetime.utcnow() - MAX_AGE)
 
-
-
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
 <a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
@@ -161,7 +159,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             #APPLY WINDOW FUNCTIONS
             stats = Q.run({
-                "from":{
+                "from": {
                     "from": test_results,
                     "where": {"exists": {"field": "value"}}
                 },
@@ -175,7 +173,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
                         "name": "past_revision",
-                        "value": lambda r, i, rows: rows[i-1].B2G.Revision,
+                        "value": lambda r, i, rows: rows[i - 1].B2G.Revision,
                         "sort": "push_date"
                     }, {
                         "name": "past_stats",
@@ -202,7 +200,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: r.future_stats.mean - r.past_stats.mean
                     }, {
                         "name": "diff_percent",
-                        "value": lambda r: (r.future_stats.mean - r.past_stats.mean)/r.past_stats.mean
+                        "value": lambda r: (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }, {
                         "name": "is_diff",
                         "value": is_bad
@@ -227,7 +225,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            if Q.filter(test_results, {"term":{"test_run_id":83538}}):
+            if Q.filter(test_results, {"term": {"test_run_id": 83538}}):
                 Log.debug("")
 
             all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
@@ -267,7 +265,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
-        # break  # DEBUGGING ONLY
+            # break  # DEBUGGING ONLY
 
     if debug:
         Log.note("Get Current Alerts")
@@ -349,19 +347,17 @@ def alert_sustained_median(settings, qb, alerts_db):
     alerts_db.flush()
 
     if debug:
-         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
+        Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
 
     for g, t in Q.groupby(all_touched, "B2G.Test"):
-         qb.update({
-             "set": {settings.param.mark_complete: "done"},
-             "where": {"and": [
-                 {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                 {"term": {"B2G.Test": g.B2G.Test}},
-                 {"missing": {"field": settings.param.mark_complete}}
-             ]}
-         })
-
-
+        qb.update({
+            "set": {settings.param.mark_complete: "done"},
+            "where": {"and": [
+                {"terms": {"datazilla.test_run_id": t.test_run_id}},
+                {"term": {"B2G.Test": g.B2G.Test}},
+                {"missing": {"field": settings.param.mark_complete}}
+            ]}
+        })
 
 
 def main():
