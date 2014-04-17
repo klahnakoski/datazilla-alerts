@@ -1,5 +1,4 @@
-DROP DATABASE IF EXISTS alerts;
-CREATE DATABASE alerts;
+CREATE DATABASE IF NOT EXISTS alerts;
 USE alerts;
 DELIMITER ;;
 
@@ -22,12 +21,14 @@ CREATE TABLE reasons (
 	description    VARCHAR(2000), ##MORE DETAILS ABOUT WHAT THIS IS
 	last_run       DATETIME    NOT NULL,
 	config         VARCHAR(8000),
+	email_subject  VARCHAR(1000),
 	email_template VARCHAR(8000)
 );;
 INSERT INTO reasons VALUES (
 	'page_threshold_limit',
 	concat('The page has performed badly ({{actual}}), {{expected}} or less was expected'),
 	date_add(now(), INTERVAL -30 DAY),
+	NULL,
 	NULL,
 	NULL
 );;
@@ -36,6 +37,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has performed worse then usual by {{diff}} standard deviations ({{confidence}})'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -43,6 +45,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has performed worse then usual by {{diff}} standard deviations ({{confidence}})'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -50,6 +53,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has continued to perform worse since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -57,6 +61,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has continued to perform worse since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -64,6 +69,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has continued to perform worse since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -71,6 +77,7 @@ INSERT INTO reasons VALUES (
 	concat('{{page_url}} has regressed since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 INSERT INTO reasons VALUES (
@@ -78,35 +85,31 @@ INSERT INTO reasons VALUES (
 	concat('{{test}} has regressed since {{revision}}'),
 	date_add(now(), INTERVAL -30 DAY),
 	'{"minOffset":0.999}',
+	NULL,
 	NULL
 );;
 
 
 CREATE TABLE page_thresholds (
 	id         INTEGER         NOT NULL PRIMARY KEY,
-	page       INTEGER         NOT NULL,
+	page       VARCHAR(200)    NOT NULL,
 	threshold  DECIMAL(20, 10) NOT NULL,
 	severity   DOUBLE          NOT NULL,
 	reason     VARCHAR(2000)   NOT NULL,
 	time_added DATETIME        NOT NULL,
-	contact    VARCHAR(200)    NOT NULL,
-	FOREIGN KEY (page) REFERENCES pages (id)
+	contact    VARCHAR(200)    NOT NULL
 );;
 
-INSERT INTO page_thresholds
-	SELECT
-		util.newID(),
-		p.id,
-		200,
-		0.5,
-		"(mozilla.com) because I like to complain",
-		now(),
-		"klahnakoski@mozilla.com"
-	FROM
-		pages p
-	WHERE
-		p.url = 'mozilla.com'
-;;
+INSERT INTO page_thresholds (id, page, threshold, severity, reason, time_added, contact)
+VALUES (
+	util.newID(),
+	'mozilla.com',
+	200,
+	0.5,
+	"(mozilla.com) because I like to complain",
+	now(),
+	"klahnakoski@mozilla.com"
+);;
 
 
 CREATE TABLE listeners (

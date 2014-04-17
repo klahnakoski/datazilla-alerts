@@ -34,8 +34,8 @@ HEADER = "<h3>This is for testing only.</h3><br>"
 #                            "revision":v.revision
 
 SEPARATOR = "<hr>\n"
-RESEND_AFTER = timedelta(days=1)
-LOOK_BACK = timedelta(days=80)
+RESEND_AFTER = timedelta(days=7)
+LOOK_BACK = timedelta(days=30)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
 SEND_REASONS = [b2g_alert_revision.REASON]
@@ -58,24 +58,21 @@ def send_alerts(settings, db):
                 a.severity,
                 a.confidence,
                 a.revision,
-                r.email_template
+                r.email_template,
+                r.email_subject
             FROM
                 alerts a
             JOIN
-                alert_reasons r on r.code = a.reason
+                reasons r on r.code = a.reason
             WHERE
-                (
-                    a.last_sent IS NULL OR
-                    a.last_sent < a.last_updated OR
-                    a.last_sent < {{last_sent}}
-                ) AND
+                a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
-                bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
+                math.bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
                 a.solution IS NULL AND
                 a.reason in {{reasons}} AND
                 a.create_time > {{min_time}}
             ORDER BY
-                bayesian_add(a.severity, a.confidence) DESC,
+                math.bayesian_add(a.severity, a.confidence) DESC,
                 json.number(details, "diff") DESC
             LIMIT
                 10
@@ -92,7 +89,7 @@ def send_alerts(settings, db):
             return
 
         #poor souls that signed up for emails
-        listeners = db.query("SELECT email FROM alert_listeners")
+        listeners = db.query("SELECT email FROM listeners")
         listeners = [x["email"] for x in listeners]
         listeners = ";".join(listeners)
 
@@ -112,6 +109,7 @@ def send_alerts(settings, db):
                     e.date_range = (datetime.utcnow()-CNV.milli2datetime(e.push_date_min)).total_seconds()/(24*60*60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  #PICK FIRST v > CURRENT VALUE
 
+            subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body)
 
@@ -123,9 +121,9 @@ def send_alerts(settings, db):
                 suffix = "... (has been truncated)"
                 body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
 
-            db.call("email_send", (
+            db.call("mail.send", (
                 listeners, #to
-                settings.param.email.title,
+                subject,
                 body, #body
                 None
             ))
@@ -141,32 +139,6 @@ def send_alerts(settings, db):
         Log.error("Could not send alerts", e)
 
 
-def update_h0_rejected(db, start_date, possible_alerts):
-    """
-    REVIEW THE ALERT TABLE AND ENSURE THE test_data_all_dimensions(h0_rejected)
-    COLUMN REFLECTS THE ALERT STATI
-    TODO: GETTING EXPENSIVE TO RUN (at 200K alerts)
-    """
-
-    db.execute("""
-        UPDATE
-            test_data_all_dimensions t
-        JOIN (
-            SELECT
-                tdad_id,
-                max(CASE WHEN status<>'obsolete' THEN 1 ELSE 0 END) h0
-            FROM
-                alerts a
-            WHERE
-                {{where}}
-            GROUP BY
-                tdad_id
-            ) a ON a.tdad_id = t.id
-        SET t.h0_rejected = a.h0
-    """, {
-        "where": esfilter2sqlwhere(db, {"terms": {"a.tdad_id": possible_alerts}})
-    })
-
 
 
 if __name__ == '__main__':
@@ -176,7 +148,7 @@ if __name__ == '__main__':
     try:
         Log.note("Running alerts off of schema {{schema}}", {"schema": settings.perftest.schema})
 
-        with DB(settings.perftest) as db:
+        with DB(settings.alerts) as db:
             send_alerts(
                 settings=settings,
                 db=db

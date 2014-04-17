@@ -10,7 +10,6 @@
 from __future__ import unicode_literals
 from datetime import timedelta, datetime
 
-from dzAlerts.daemons.alert import update_h0_rejected
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.struct import nvl
@@ -33,7 +32,7 @@ def page_threshold_limit(db, debug):
 
     try:
         #CALCULATE HOW FAR BACK TO LOOK
-        lasttime = db.query("SELECT last_run, description FROM alert_reasons WHERE code={{type}}", {"type": REASON})[0]
+        lasttime = db.query("SELECT last_run, description FROM reasons WHERE code={{type}}", {"type": REASON})[0]
         lasttime = nvl(lasttime.last_run, datetime.utcnow())
         min_date = lasttime + LOOK_BACK
 
@@ -69,7 +68,7 @@ def page_threshold_limit(db, debug):
             if page.alert_id != None: break
 
             alert = {
-                "id": SQL("util_newID()"),
+                "id": SQL("util.newid()"),
                 "status": "new",
                 "create_time": datetime.utcnow(),
                 "last_updated": datetime.utcnow(),
@@ -113,11 +112,9 @@ def page_threshold_limit(db, debug):
             db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(obsolete, "id")}})})
 
         db.execute(
-            "UPDATE alert_reasons SET last_run={{now}} WHERE code={{reason}}",
+            "UPDATE reasons SET last_run={{now}} WHERE code={{reason}}",
             {"now": datetime.utcnow(), "reason": REASON}
         )
-
-        update_h0_rejected(db, min_date, set(Q.select(pages, "tdad_id")) | set(Q.select(obsolete, "tdad_id")))
 
     except Exception, e:
 

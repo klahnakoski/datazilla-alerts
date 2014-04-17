@@ -21,11 +21,11 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl
+from dzAlerts.util.struct import nvl, StructList
 
 
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=30)
+LOOK_BACK = timedelta(days=90)
 SEVERITY = 0.7
 
 # What needs to be in a notifications email?
@@ -38,22 +38,40 @@ SEVERITY = 0.7
 #      * b2gperf version (not currently reported in datazilla)
 #      * Summary statistics for the regression; mean, median, stdev before and after event
 #
-
+SUBJECT = [
+    "[ALERT][B2G] {{details.example.B2G.Test.suite}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} ",
+    {
+        "from": "details.tests",
+        "template": "{{test.name}}",
+        "separator": ", "
+    }
+    ]
 TEMPLATE = [
     """
     <div><h2>Score: {{score}}</h2>
     <h3>Gaia: {{revision.gaia}}</h3>
+    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">CHANGESET</a>]
     <h3>Gecko: {{revision.gecko}}</h2>
+    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">CHANGESET</a>]<br>
     {{details.total_exceptions}} exceptional events:<br>
+    <table>
+    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
-        "template": """
-            {{example.B2G.Device|upper}}: {{test.suite}}.{{test.name}}: {{num_exceptions}} exceptions,
-            (<a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">
-            Datazilla!</a> {{example.push_date|datetime}}, before: {{example.past_stats.mean}}, after: {{example.future_stats.mean}})<br>
+        "template": """<tr>
+            <td>{{example.B2G.Device|upper}}</td>
+            <td>{{test.suite}}</td>
+            <td>{{test.name}}</td>
+            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
+            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
+            <td>{{example.push_date|datetime}}</td>
+            <td>{{example.past_stats.mean|round(digits=4)}}</td>
+            <td>{{example.future_stats.mean|round(digits=4)}}</td>
+            <td>{{example.diff|round(digits=2)}}</td>
+            </tr>
         """
     },
-    "</div>"
+    """</table></div>"""
 ]
 
 #GET ACTIVE ALERTS
@@ -70,11 +88,13 @@ def b2g_alert_revision(settings):
         esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
         #TODO: REMOVE, LEAVE IN DB
-        db.execute("update alert_reasons set email_template={{template}} where code={{reason}}", {
-            "template": CNV.object2JSON(TEMPLATE),
-            "reason": REASON
-        })
-        db.flush()
+        if db.debug:
+            db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+                "template": CNV.object2JSON(TEMPLATE),
+                "subject": CNV.object2JSON(SUBJECT),
+                "reason": REASON
+            })
+            db.flush()
 
         #EXISTING SUSTAINED EXCEPTIONS
         existing_sustained_alerts = dbq.query({
@@ -94,14 +114,17 @@ def b2g_alert_revision(settings):
             "from": "alerts",
             "select": "*",
             "where": {"and": [
-                {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                {"term": {"reason": REASON}}
+                {"term": {"reason": REASON}},
+                {"or":[
+                    {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                    {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
+                ]}
             ]}
         })
         old_alerts = Q.unique_index(old_alerts, "revision")
 
         #SUMMARIZE
-        known_alerts = []
+        known_alerts = StructList()
         for revision in set(existing_sustained_alerts.revision):
         #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
             total_tests = esq.query({
@@ -111,7 +134,7 @@ def b2g_alert_revision(settings):
             })
             total_exceptions = tests[(revision, )]  # FILTER BY revision
 
-            parts = []
+            parts = StructList()
             for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
                 worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()
 
@@ -136,7 +159,7 @@ def b2g_alert_revision(settings):
                 "create_time": CNV.milli2datetime(worst_in_revision.push_date),
                 "reason": REASON,
                 "revision": revision,
-                "tdad_id": {"test_run_id": worst_in_revision.test_run_id, "B2G": {"Test": worst_in_revision.B2G.Test}},
+                "tdad_id": revision,
                 "details": {
                     "revision": revision,
                     "total_tests": total_tests,
@@ -150,26 +173,24 @@ def b2g_alert_revision(settings):
 
         known_alerts = Q.unique_index(known_alerts, "revision")
 
-        testSelect = Q.select(known_alerts, ["tdad_id.test_run_id"])
-
         #NEW ALERTS, JUST INSERT
         new_alerts = known_alerts - old_alerts
         if new_alerts:
             for revision in new_alerts:
-                revision.id = SQL("util_newid()")
+                revision.id = SQL("util.newid()")
                 revision.last_updated = datetime.utcnow()
             db.insert_list("alerts", new_alerts)
 
         #SHOW SUSTAINED ALERTS ARE COVERED
         db.execute("""
-            INSERT INTO alert_hierarchy (parent, child)
+            INSERT INTO hierarchy (parent, child)
             SELECT
                 r.id parent,
                 p.id child
             FROM
                 alerts p
             LEFT JOIN
-                alert_hierarchy h on h.child=p.id
+                hierarchy h on h.child=p.id
             LEFT JOIN
                 alerts r on r.revision=p.revision AND r.reason={{parent_reason}}
             WHERE
@@ -189,15 +210,19 @@ def b2g_alert_revision(settings):
                 continue  # DO NOT TOUCH SOLVED ALERTS
 
             old_alert = old_alerts[known_alert]
-            if significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
+            if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
                 known_alert.last_updated = datetime.utcnow()
                 db.update("alerts", {"id": old_alert.id}, known_alert)
 
         #OLD ALERTS, OBSOLETE
         for old_alert in old_alerts - known_alerts:
+            if old_alert.status == 'obsolete':
+                continue
+
             old_alert.status = 'obsolete'
             old_alert.last_updated = datetime.utcnow()
-            db.update("alerts", {"id": old_alert.id}, old_alert)
+            old_alert.details = None
+            db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": datetime.utcnow()})
 
 
 def main():

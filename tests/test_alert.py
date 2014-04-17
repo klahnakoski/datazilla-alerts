@@ -52,23 +52,23 @@ class test_alert:
 
 
     def setup(self, to_list):
-        self.uid = self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
+        self.uid = self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid
 
         #CLEAR EMAILS
         self.db.execute("DELETE FROM email_delivery")
         self.db.execute("DELETE FROM email_attachment")
         self.db.execute("DELETE FROM email_content")
 
-        #TEST NUMBER OF LISTENERS IN alert_listeners TABLE
-        self.db.execute("DELETE FROM alert_listeners")
+        #TEST NUMBER OF LISTENERS IN listeners TABLE
+        self.db.execute("DELETE FROM listeners")
         for l in to_list:
-            self.db.insert("alert_listeners", {"email": l})
+            self.db.insert("listeners", {"email": l})
 
 
         #MAKE A REASON FOR USE IN THIS TESTING
         self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason": self.reason})
-        self.db.execute("DELETE FROM alert_reasons WHERE code={{reason}}", {"reason": self.reason})
-        self.db.insert("alert_reasons", {
+        self.db.execute("DELETE FROM reasons WHERE code={{reason}}", {"reason": self.reason})
+        self.db.insert("reasons", {
             "code": self.reason,
             "description": ">>>>{{id}}<<<<", #SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
             "config": None,

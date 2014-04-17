@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from dzAlerts.util.env.logs import Log
 from dzAlerts.util.maths import Math
 
 
@@ -17,11 +18,14 @@ SIGNIFICANT = 0.2
 
 
 def significant_difference(a, b):
-    if a / b < (1 - SIGNIFICANT) or (1 + SIGNIFICANT) < a / b:
+    try:
+        if a in (0.0, 1.0) or b in (0.0, 1.0):
+            return True
+        if a / b < (1 - SIGNIFICANT) or (1 + SIGNIFICANT) < a / b:
+            return True
+        b_diff = Math.bayesian_subtract(a, b)
+        if 0.3 < b_diff < 0.7:
+            return False
         return True
-    if a in (0.0, 1.0) or b in (0.0, 1.0):
-        return True
-    b_diff = Math.bayesian_subtract(a, b)
-    if 0.3 < b_diff < 0.7:
-        return False
-    return True
+    except Exception, e:
+        Log.error("Problem", e)

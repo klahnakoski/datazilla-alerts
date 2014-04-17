@@ -59,6 +59,7 @@ def email_send(db, emailer, debug):
                 )
 
                 db.execute("UPDATE email_content SET date_sent={{now}} WHERE id={{id}}", {"id": email.id, "now": datetime.utcnow()})
+                db.flush()
                 num_done += len(email.to.split(','))
             except Exception, e:
                 Log.warning("Problem sending email", e)
@@ -76,7 +77,7 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Running email using schema {{schema}}", {"schema": settings.perftest.schema})
-        with DB(settings.perftest) as db:
+        with DB(settings.alerts) as db:
             email_send(
                 db=db,
                 emailer=Emailer(settings.email),

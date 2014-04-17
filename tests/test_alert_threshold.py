@@ -62,7 +62,7 @@ class test_alert_threshold:
 
         #VERIFY last_run HAS BEEEN UPDATED
         last_run = self.db.query(
-            "SELECT last_run FROM alert_reasons WHERE code={{type}}",
+            "SELECT last_run FROM reasons WHERE code={{type}}",
             {"type": REASON}
         )[0].last_run
         assert last_run >= datetime.utcnow() + timedelta(minutes=-1)
@@ -130,14 +130,14 @@ class test_alert_threshold:
 
 
     def _setup(self):
-        uid = self.db.query("SELECT util_newid() uid FROM DUAL")[0].uid
+        uid = self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid
 
         ## VERFIY THE alert_reason EXISTS
         exists = self.db.query("""
             SELECT
                 count(1) num
             FROM
-                alert_reasons
+                reasons
             WHERE
                 code={{reason}}
             """,
@@ -195,8 +195,8 @@ class test_alert_threshold:
             time += diff_time
 
             self.db.insert("test_data_all_dimensions", {
-                "id": SQL("util_newid()"),
-                "test_run_id": SQL("util_newid()"),
+                "id": SQL("util.newid()"),
+                "test_run_id": SQL("util.newid()"),
                 "product_id": 0,
                 "operating_system_id": 0,
                 "test_id": 0,

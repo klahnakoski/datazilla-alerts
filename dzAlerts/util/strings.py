@@ -14,6 +14,8 @@ from datetime import datetime as builtin_datetime
 import re
 
 from . import struct
+import math
+import __builtin__
 from .struct import wrap
 
 
@@ -40,6 +42,10 @@ def newline(value):
     ADD NEWLINE, IF SOMETHING
     """
     return "\n" + toString(value).lstrip("\n")
+
+
+def quote(value):
+    return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 
 def indent(value, prefix=u"\t", indent=None):
@@ -69,6 +75,13 @@ def outdent(value):
         from ...env.logs import Log
 
         Log.error("can not outdent value", e)
+
+def round(value, decimal=None, digits=None):
+    if digits != None:
+        m = pow(10, math.ceil(math.log10(abs(value))))
+        return __builtin__.round(value / m, digits) * m
+
+    return __builtin__.round(value, decimal)
 
 
 def between(value, prefix, suffix):
@@ -100,8 +113,7 @@ def find_first(value, find_arr, start=0):
     return i
 
 
-pattern = re.compile(r"\{\{([\w_\.]+(\|[\w_]+)*)\}\}")
-
+pattern = re.compile(r"\{\{([\w_\.]+(\|[^\}^\|]+)*)\}\}")
 
 def expand_template(template, value):
     """
@@ -135,7 +147,7 @@ def _expand(template, seq):
     elif isinstance(template, list):
         return "".join(_expand(t, seq) for t in template)
     else:
-        from ...env.logs import Log
+        from .env.logs import Log
 
         Log.error("can not handle")
 
@@ -155,7 +167,11 @@ def _simple_expand(template, seq):
         try:
             val = seq[-depth][var]
             for filter in ops[1:]:
-                val = eval(filter + "(val)")
+                parts = filter.split('(')
+                if len(parts) > 1:
+                    val = eval(parts[0] + "(val, " + ("(".join(parts[1::])))
+                else:
+                    val = eval(filter + "(val)")
             val = toString(val)
             return val
         except Exception, e:
@@ -166,19 +182,24 @@ def _simple_expand(template, seq):
                     return val
             except Exception, f:
                 from .env.logs import Log
-                val = toString(val)
-                Log.error(u"Can not expand " + "|".join(ops) + u" in template:\n" + indent(template), e)
+
+                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template}}", {
+                    "template": template
+                }, e)
+        return "[template expansion error: ("+str(e.message)+")]"
 
     return pattern.sub(replacer, template)
 
 
 def toString(val):
     if val == None:
-        return u""
+        return ""
     elif isinstance(val, (dict, list, set)):
         from .jsons import json_encoder
 
-        return json_encoder.encode(val, pretty=True)
+        return json_encoder(val, pretty=True)
+    elif hasattr(val, "__json__"):
+        return val.__json__()
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
         return unicode(round(duration, 3))+" seconds"

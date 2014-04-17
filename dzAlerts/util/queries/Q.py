@@ -21,7 +21,7 @@ from .index import UniqueIndex, Index
 from .flat_list import FlatList
 from ..maths import Math
 from ..env.logs import Log
-from ..struct import nvl, listwrap, EmptyList, split_field, unwrap, wrap
+from ..struct import nvl, listwrap, EmptyList, split_field, unwrap, wrap, join_field
 from .. import struct
 from ..struct import Struct, Null, StructList
 
@@ -74,7 +74,7 @@ groupby = group_by.groupby
 
 def index(data, keys=None):
 #return dict that uses keys to index data
-    o = Index(listwrap(keys))
+    o = Index(keys)
     for d in data:
         o.add(d)
     return o
@@ -103,7 +103,7 @@ def unique_index(data, keys=None):
 
 def map2set(data, relation):
     """
-    EXPECTING A dict THAT MAPS VALUES TO lists
+    EXPECTING A isinstance(relation, dict) THAT MAPS VALUES TO lists
     THE LISTS ARE EXPECTED TO POINT TO MEMBERS OF A SET
     A set() IS RETURNED
     """
@@ -164,19 +164,19 @@ def tuple(data, field_name):
             return output
     elif isinstance(field_name, list):
         paths = [_select_a_field(f) for f in field_name]
-        output = []
+        output = StructList()
         _tuple((), unwrap(data), paths, 0, output)
         return output
     else:
         paths = [_select_a_field(field_name)]
-        output = []
+        output = StructList()
         _tuple((), data, paths, 0, output)
         return output
 
 
 def _tuple(template, data, fields, depth, output):
     deep_path = None
-    deep_fields = []
+    deep_fields = StructList()
     for d in data:
         record = template
         for f in fields:
@@ -224,9 +224,11 @@ def select(data, field_name):
     if isinstance(data, UniqueIndex):
         data = data._data.values()  # THE SELECT ROUTINE REQUIRES dicts, NOT Struct WHILE ITERATING
 
-    if isinstance(field_name, dict) and field_name.value:
-        # SIMPLIFY {"value":value} AS STRING
-        field_name = field_name.value
+    if isinstance(field_name, dict):
+        field_name = wrap(field_name)
+        if field_name.value:
+            # SIMPLIFY {"value":value} AS STRING
+            field_name = field_name.value
 
     # SIMPLE PYTHON ITERABLE ASSUMED
     if isinstance(field_name, basestring):
@@ -234,7 +236,7 @@ def select(data, field_name):
             return StructList([d[field_name] for d in data])
         else:
             keys = split_field(field_name)
-            output = []
+            output = StructList()
             flat_list._select1(data, keys, 0, output)
             return output
     elif isinstance(field_name, list):
@@ -256,9 +258,9 @@ def _select_a_field(field):
 
 
 def _select(template, data, fields, depth):
-    output = []
+    output = StructList()
     deep_path = None
-    deep_fields = []
+    deep_fields = StructList()
     for d in data:
         if isinstance(d, Struct):
             Log.error("programmer error, _select can not handle Struct")
@@ -293,6 +295,8 @@ def _select_deep(v, field, depth, record):
 
     for i, f in enumerate(field.value[depth:len(field.value) - 1:]):
         v = v.get(f, None)
+        if v is None:
+            return 0, None
         if isinstance(v, list):
             return depth + i + 1, v
 
@@ -324,13 +328,13 @@ def sort(data, fieldnames=None):
                 def comparer(left, right):
                     return cmp(nvl(left, Struct())[fieldnames], nvl(right, Struct())[fieldnames])
 
-                return wrap(sorted(data, cmp=comparer))
+                return StructList([unwrap(d) for d in sorted(data, cmp=comparer)])
             else:
                 #EXPECTING {"field":f, "sort":i} FORMAT
                 def comparer(left, right):
                     return fieldnames["sort"] * cmp(nvl(left, Struct())[fieldnames["field"]], nvl(right, Struct())[fieldnames["field"]])
 
-                return wrap(sorted(data, cmp=comparer))
+                return StructList([unwrap(d) for d in sorted(data, cmp=comparer)])
 
         formal = query._normalize_sort(fieldnames)
 
@@ -347,9 +351,9 @@ def sort(data, fieldnames=None):
             return 0
 
         if isinstance(data, list):
-            output = wrap(sorted(data, cmp=comparer))
+            output = StructList([unwrap(d) for d in sorted(data, cmp=comparer)])
         elif hasattr(data, "__iter__"):
-            output = wrap(sorted(list(data), cmp=comparer))
+            output = StructList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
 
@@ -375,6 +379,9 @@ def filter(data, where):
     """
     where  - a function that accepts (record, rownum, rows) and returns boolean
     """
+    if where == TRUE_FILTER:
+        return data
+
     if isinstance(data, Cube):
         Log.error("Do not know how to handle")
 
@@ -386,37 +393,37 @@ def drill_filter(esfilter, data):
     PARTIAL EVALUATE THE FILTER BASED ON DATA GIVEN
     """
     esfilter = struct.unwrap(esfilter)
-    primary_nested = []  #track if nested, changes if not
-    primary_column = []  #only one path allowed
-    primary_branch = []  #constantly changing as we dfs the tree
+    primary_nested = []  # track if nested, changes if not
+    primary_column = []  # only one path allowed
+    primary_branch = []  # CONTAINS LISTS OF RECORDS TO ITERATE: constantly changing as we dfs the tree
 
     def parse_field(fieldname, data, depth):
         """
         RETURN (first, rest) OF fieldname
         """
         col = split_field(fieldname)
-        d = data[col[0]]
-        if isinstance(d, list) and len(col) > 1:
-            if len(primary_column) <= depth:
-                primary_nested.append(True)
-                primary_column.append(col[0])
-                primary_branch.append(d)
-            elif primary_nested[depth] and primary_column[depth] != col[0]:
-                Log.error("only one branch of tree allowed")
-            else:
-                primary_nested[depth] = True
-                primary_column[depth] = col[0]
-                primary_branch[depth] = d
-        else:
-            if len(primary_column) <= depth:
-                primary_nested.append(False)
-                primary_column.append(col[0])
-                primary_branch.append(d)
+        d = data
+        for i, c in enumerate(col):
+            d = d[c]
+            if isinstance(d, list) and len(col) > 1:
+                if len(primary_column) <= depth+i:
+                    primary_nested.append(True)
+                    primary_column.append(c)
+                    primary_branch.append(d)
+                elif primary_nested[depth] and primary_column[depth+i] != c:
+                    Log.error("only one branch of tree allowed")
+                else:
+                    primary_nested[depth+i] = True
+                    primary_column[depth+i] = c
+                    primary_branch[depth+i] = d
 
-        if len(col) == 1:
-            return col[0], None
-        else:
-            return col[0], ".".join(col[1:])
+                return c, join_field(col[i+1:])
+            else:
+                if len(primary_column) <= depth+i:
+                    primary_nested.append(False)
+                    primary_column.append(c)
+                    primary_branch.append([d])
+        return fieldname, None
 
     def pe_filter(filter, data, depth):
         """
@@ -426,10 +433,11 @@ def drill_filter(esfilter, data):
             return True
         if filter is FALSE_FILTER:
             return False
+        filter = wrap(filter)
 
-        if "and" in filter:
+        if filter["and"]:
             result = True
-            output = []
+            output = StructList()
             for a in filter[u"and"]:
                 f = pe_filter(a, data, depth)
                 if f is False:
@@ -440,8 +448,8 @@ def drill_filter(esfilter, data):
                 return {"and": output}
             else:
                 return result
-        elif "or" in filter:
-            output = []
+        elif filter["or"]:
+            output = StructList()
             for o in filter[u"or"]:
                 f = pe_filter(o, data, depth)
                 if f is True:
@@ -452,15 +460,15 @@ def drill_filter(esfilter, data):
                 return {"or": output}
             else:
                 return False
-        elif "not" in filter:
-            f = pe_filter(filter[u"not"], data, depth)
+        elif filter["not"]:
+            f = pe_filter(filter["not"], data, depth)
             if f is True:
                 return False
             elif f is False:
                 return True
             else:
                 return {"not": f}
-        elif "term" in filter:
+        elif filter.term:
             result = True
             output = {}
             for col, val in filter["term"].items():
@@ -471,11 +479,12 @@ def drill_filter(esfilter, data):
                         result = False
                 else:
                     output[rest] = val
+
             if result and output:
                 return {"term": output}
             else:
                 return result
-        elif "terms" in filter:
+        elif filter.terms:
             result = True
             output = {}
             for col, vals in filter["terms"].items():
@@ -491,7 +500,7 @@ def drill_filter(esfilter, data):
             else:
                 return result
 
-        elif "range" in filter:
+        elif filter.range:
             result = True
             output = {}
             for col, ranges in filter["range"].items():
@@ -513,7 +522,7 @@ def drill_filter(esfilter, data):
                 return {"range": output}
             else:
                 return result
-        elif "missing" in filter:
+        elif filter.missing:
             if isinstance(filter.missing, basestring):
                 field = filter["missing"]
             else:
@@ -527,8 +536,23 @@ def drill_filter(esfilter, data):
                 return False
             else:
                 return {"missing": rest}
+        elif filter.prefix:
+            result = True
+            output = {}
+            for col, val in filter["prefix"].items():
+                first, rest = parse_field(col, data, depth)
+                d = data[first]
+                if not rest:
+                    if not d.startswith(val):
+                        result = False
+                else:
+                    output[rest] = val
+            if result and output:
+                return {"prefix": output}
+            else:
+                return result
 
-        elif "exists" in filter:
+        elif filter.exists:
             if isinstance(filter["exists"], basestring):
                 field = filter["exists"]
             else:
@@ -568,17 +592,21 @@ def drill_filter(esfilter, data):
 
     # OUTPUT
     for d in data:
-        main([], esfilter, d, 0)
+        if isinstance(d, dict):
+            main([], esfilter, wrap(d), 0)
+        else:
+            Log.error("filter is expecting a structure, not {{type}}", {"type": d.__class__})
 
     # AT THIS POINT THE primary_column[] IS DETERMINED
     # USE IT TO EXPAND output TO ALL NESTED OBJECTS
-    max = 0
+    max = 0  # EVEN THOUGH A ROW CAN HAVE MANY VALUES, WE ONLY NEED UP TO max
     for i, n in enumerate(primary_nested):
         if n:
             max = i + 1
 
-    uniform_output = []
-
+    # OUTPUT IS A LIST OF ROWS,
+    # WHERE EACH ROW IS A LIST OF VALUES SEEN DURING A WALK DOWN A PATH IN THE HIERARCHY
+    uniform_output = StructList()
     def recurse(row, depth):
         if depth == max:
             uniform_output.append(row)
@@ -596,11 +624,11 @@ def drill_filter(esfilter, data):
                     recurse(r, depth + 1)
 
     for o in output:
-        recurse(o, len(o) - 1)
+        recurse(o, 0)
 
     if not max:
         #SIMPLE LIST AS RESULT
-        return wrap([u[0] for u in uniform_output])
+        return wrap([unwrap(u[0]) for u in uniform_output])
 
     return FlatList(primary_column[0:max], uniform_output)
 
@@ -636,16 +664,25 @@ def window(data, param):
     """
     name = param.name            # column to assign window function result
     edges = param.edges          # columns to gourp by
+    where = param.where          # DO NOT CONSIDER THESE VALUES
     sortColumns = param.sort            # columns to sort by
     calc_value = wrap_function(param.value) # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
     _range = param.range          # of form {"min":-10, "max":0} to specify the size and relative position of window
+
+    data = filter(data, where)
+
+    if sortColumns:
+        data = sort(data, sortColumns)
 
     if not aggregate and not edges:
         #SIMPLE CALCULATED VALUE
         for rownum, r in enumerate(data):
             r[name] = calc_value(r, rownum, data)
         return
+
+
+
 
     for rownum, r in enumerate(data):
         r["__temp__"] = calc_value(r, rownum, data)
@@ -682,11 +719,13 @@ def intervals(_min, _max=None, size=1):
     """
     RETURN (min, max) PAIRS OF GIVEN SIZE, WHICH COVER THE _min, _max RANGE
     THE LAST PAIR MAY BE SMALLER
+    (Yes!  It's just like range(), only cooler!
     """
     if _max == None:
         _max = _min
         _min = 0
     _max = int(Math.ceiling(_max))
+    _min = int(Math.floor(_min))
 
     output = ((x, min(x + size, _max)) for x in __builtin__.range(_min, _max, size))
     return output
