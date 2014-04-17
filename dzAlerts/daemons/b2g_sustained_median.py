@@ -93,12 +93,12 @@ def alert_sustained_median(settings, qb, alerts_db):
             {"exists": {"field": "result.test_name"}},
             {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
             #FOR DEBUGGING SPECIFIC SERIES
-            {"term": {"test_machine.type": "hamachi"}},
-            {"term": {"test_machine.platform": "Gonk"}},
-            {"term": {"test_machine.os": "Firefox OS"}},
-            {"term": {"test_build.branch": "master"}},
-            {"term": {"testrun.suite": "contacts"}},
-            {"term": {"result.test_name": "cold_load_time"}}
+            # {"term": {"test_machine.type": "hamachi"}},
+            # {"term": {"test_machine.platform": "Gonk"}},
+            # {"term": {"test_machine.os": "Firefox OS"}},
+            # {"term": {"test_build.branch": "master"}},
+            # {"term": {"testrun.suite": "contacts"}},
+            # {"term": {"result.test_name": "cold_load_time"}}
         ]}
     })
 
