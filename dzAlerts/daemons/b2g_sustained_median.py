@@ -348,18 +348,18 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     alerts_db.flush()
 
-    # if debug:
-    #     Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
-    #
-    # for g, t in Q.groupby(all_touched, "B2G.Test"):
-    #     qb.update({
-    #         "set": {settings.param.mark_complete: "done"},
-    #         "where": {"and": [
-    #             {"terms": {"datazilla.test_run_id": t.test_run_id}},
-    #             {"term": {"B2G.Test": g.B2G.Test}},
-    #             {"missing": {"field": settings.param.mark_complete}}
-    #         ]}
-    #     })
+    if debug:
+         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
+
+    for g, t in Q.groupby(all_touched, "B2G.Test"):
+         qb.update({
+             "set": {settings.param.mark_complete: "done"},
+             "where": {"and": [
+                 {"terms": {"datazilla.test_run_id": t.test_run_id}},
+                 {"term": {"B2G.Test": g.B2G.Test}},
+                 {"missing": {"field": settings.param.mark_complete}}
+             ]}
+         })
 
 
 
