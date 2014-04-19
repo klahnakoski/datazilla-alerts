@@ -116,7 +116,7 @@ class ESQuery(object):
         for id in results.hits.hits._id:
             #SEND UPDATE TO EACH
             try:
-                response = self.post(
+                response = self.es.post(
                     self.es.path + "/" + id + "/_update",
                     data=CNV.object2JSON({"script": script}).encode("utf8"),
                     headers={"Content-Type": "application/json"}
