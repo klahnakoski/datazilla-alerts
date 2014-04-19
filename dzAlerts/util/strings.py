@@ -99,8 +99,14 @@ def between(value, prefix, suffix):
 
 
 def right(value, len):
-    if len <= 0: return u""
+    if len <= 0:
+        return u""
     return value[-len:]
+
+def left(value, len):
+    if len <= 0:
+        return u""
+    return value[0:len]
 
 
 def find_first(value, find_arr, start=0):

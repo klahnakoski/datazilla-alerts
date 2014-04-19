@@ -50,9 +50,9 @@ def make_test_database(settings):
         with DB(settings.perftest) as db:
             db.execute("ALTER TABLE test_data_all_dimensions DROP FOREIGN KEY `fk_test_run_id_tdad`")
             db.execute("ALTER TABLE pages DROP FOREIGN KEY `fk_pages_test`")
-            db.execute("DELETE FROM email_delivery")
-            db.execute("DELETE FROM email_attachment")
-            db.execute("DELETE FROM email_content")
+            db.execute("DELETE FROM mail.delivery")
+            db.execute("DELETE FROM mail.attachment")
+            db.execute("DELETE FROM mail.content")
 
         #ADD FUNCTIONS FOR TEST VERIFICATION
         DB.execute_file(settings.perftest, "tests/resources/sql/add_objectstore.sql")

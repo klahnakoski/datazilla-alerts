@@ -55,9 +55,9 @@ class test_alert:
         self.uid = self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid
 
         #CLEAR EMAILS
-        self.db.execute("DELETE FROM email_delivery")
-        self.db.execute("DELETE FROM email_attachment")
-        self.db.execute("DELETE FROM email_content")
+        self.db.execute("DELETE FROM mail.delivery")
+        self.db.execute("DELETE FROM mail.attachment")
+        self.db.execute("DELETE FROM mail.content")
 
         #TEST NUMBER OF LISTENERS IN listeners TABLE
         self.db.execute("DELETE FROM listeners")
@@ -154,7 +154,7 @@ class test_alert:
             #VERIFY ONE MAIL SENT
             assert len(emails) == 1
             #VERIFY to MATCHES WHAT WAS PASSED TO THIS FUNCTION
-            assert set(emails[0].to) == set(to_list), "email_delivery not matching what's send"
+            assert set(emails[0].to) == set(to_list), "mail.delivery not matching what's send"
 
             #VERIFY last_sent IS WRITTEN
             alert_state = self.db.query("""
@@ -196,9 +196,9 @@ class test_alert:
                 group_concat(d.deliver_to SEPARATOR ',') `to`,
                 c.body
             FROM
-                email_content c
+                mail.content c
             LEFT JOIN
-                email_delivery d ON d.content=c.id
+                mail.delivery d ON d.content=c.id
             WHERE
                 c.date_sent IS NULL
             GROUP BY

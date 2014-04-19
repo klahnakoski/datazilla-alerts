@@ -36,9 +36,9 @@ def email_send(db, emailer, debug):
                 c.subject,
                 c.body
             FROM
-                email_content c
+                mail.content c
             LEFT JOIN
-                email_delivery d ON d.content=c.id
+                mail.delivery d ON d.content=c.id
             WHERE
                 d.content IS NOT NULL AND
                 c.date_sent IS NULL
@@ -58,7 +58,7 @@ def email_send(db, emailer, debug):
                     html_data=email.body
                 )
 
-                db.execute("UPDATE email_content SET date_sent={{now}} WHERE id={{id}}", {"id": email.id, "now": datetime.utcnow()})
+                db.execute("UPDATE mail.content SET date_sent={{now}} WHERE id={{id}}", {"id": email.id, "now": datetime.utcnow()})
                 db.flush()
                 num_done += len(email.to.split(','))
             except Exception, e:

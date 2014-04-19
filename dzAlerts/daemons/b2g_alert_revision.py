@@ -39,20 +39,25 @@ SEVERITY = 0.7
 #      * Summary statistics for the regression; mean, median, stdev before and after event
 #
 SUBJECT = [
-    "[ALERT][B2G] {{details.example.B2G.Test.suite}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} ",
+    "[ALERT][B2G] {{details.example.B2G.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} ",
     {
         "from": "details.tests",
-        "template": "{{test.name}}",
+        "template": "{{test.suite}}",
         "separator": ", "
     }
     ]
 TEMPLATE = [
     """
-    <div><h2>Score: {{score}}</h2>
-    <h3>Gaia: {{revision.gaia}}</h3>
-    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">CHANGESET</a>]
-    <h3>Gecko: {{revision.gecko}}</h2>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">CHANGESET</a>]<br>
+    <div>
+    	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
+    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
+    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
+
+    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
+    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
+
+    <br>
+    <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
     <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
