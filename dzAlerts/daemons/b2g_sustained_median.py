@@ -32,8 +32,10 @@ from dzAlerts.util.sql.db import DB
 SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
 # MIN_CONFIDENCE = 0.9999
 REASON = "b2g_alert_sustained_median"     # name of the reason in alert_reason
+
+NOW = datetime.utcnow()
 MAX_AGE = timedelta(days=90)
-OLDEST_TS = CNV.datetime2milli(datetime.utcnow() - MAX_AGE)
+OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
@@ -115,7 +117,10 @@ def alert_sustained_median(settings, qb, alerts_db):
         if not test_points.min_push_date:
             continue
         try:
-            first_sample = MAX(MIN(test_points.min_push_date), CNV.datetime2milli(datetime.utcnow() - MAX_AGE))
+            if settings.args.restart:
+                first_sample = OLDEST_TS
+            else:
+                first_sample = MAX(MIN(test_points.min_push_date), OLDEST_TS)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
@@ -130,6 +135,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "limit": settings.param.sustained_median.window_size * 2
                 }
             })
+            if len(first_in_window) > settings.param.sustained_median.window_size * 2:
+                do_all = False
+            else:
+                do_all = True
 
             min_date = MIN(first_sample, first_in_window.min_date)
 
@@ -165,6 +174,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                 },
                 "window": [
                     {
+                        # WE DO NOT WANT TO CONSIDER THE POINTS BEFORE FULL WINDOW SIZE
+                        "name": "ignored",
+                        "value": lambda r, i: False if do_all or i > settings.param.sustained_median.window_size else True
+                    }, {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_min",
                         "value": lambda r: r.push_date,
@@ -225,13 +238,14 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            if Q.filter(test_results, {"term": {"test_run_id": 83538}}):
-                Log.debug("")
-
             all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
+            re_alert.update(Q.run({
+                "from": test_results,
+                "select": ["test_run_id", "B2G.Test"],
+                "where": {"term": {"ignored": False}}
+            }))
 
             #FOR DEBUGGING
             # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
@@ -248,6 +262,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
             for v in new_exceptions:
+                if v.ignored:
+                    continue
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
@@ -265,7 +281,8 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
-            # break  # DEBUGGING ONLY
+
+        #break  # DEBUGGING ONLY
 
     if debug:
         Log.note("Get Current Alerts")
@@ -287,10 +304,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"or": [
-                    {"terms": {"tdad_id": re_alert}},
-                    {"range": {"create_time": {"gte": CNV.datetime2milli(datetime.utcnow() - MAX_AGE)}}}
-                ]},
+                {"terms": {"tdad_id": re_alert}},
                 {"term": {"reason": REASON}}
             ]}
         })
@@ -312,7 +326,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     if new_alerts:
         for a in new_alerts:
             a.id = SQL("util.newid()")
-            a.last_updated = datetime.utcnow()
+            a.last_updated = NOW
         try:
             alerts_db.insert_list("alerts", new_alerts)
         except Exception, e:
@@ -330,17 +344,23 @@ def alert_sustained_median(settings, qb, alerts_db):
         if significant_difference(curr.severity, a.severity) or \
                 significant_difference(curr.confidence, a.confidence) or \
                         curr.reason != a.reason:
-            curr.last_updated = datetime.utcnow()
+            curr.last_updated = NOW
             alerts_db.update("alerts", {"id": curr.id}, a)
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     if obsolete_alerts:
         alerts_db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
-            "where": esfilter2sqlwhere(alerts_db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
+            "where": esfilter2sqlwhere(
+                alerts_db,
+                {"and": [
+                    {"terms": {"id": Q.select(obsolete_alerts, "id")}},
+                    {"not": {"term": {"status": "obsolete"}}}
+                ]}
+            )
         })
 
     alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
-        "now": datetime.utcnow(),
+        "now": NOW,
         "where": esfilter2sqlwhere(alerts_db, {"term": {"code": REASON}})
     })
 
@@ -361,7 +381,12 @@ def alert_sustained_median(settings, qb, alerts_db):
 
 
 def main():
-    settings = startup.read_settings()
+    settings = startup.read_settings(defs=[{
+        "name": ["--restart", "--reset", "--redo"],
+        "help": "use this to recalc alerts",
+        "action": "store_true",
+        "dest": "restart"
+    }])
     Log.start(settings.debug)
     try:
         Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})

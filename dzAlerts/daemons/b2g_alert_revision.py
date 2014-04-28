@@ -39,7 +39,7 @@ SEVERITY = 0.7
 #      * Summary statistics for the regression; mean, median, stdev before and after event
 #
 SUBJECT = [
-    "[ALERT][B2G] {{details.example.B2G.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} ",
+    "[ALERT][B2G] {{details.example.B2G.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} in ",
     {
         "from": "details.tests",
         "template": "{{test.suite}}",

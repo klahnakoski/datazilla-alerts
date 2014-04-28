@@ -265,9 +265,15 @@ class ElasticSearch(object):
 
             if not lines:
                 return
+
+            try:
+                data_bytes = ("\n".join(lines) + "\n").encode("utf8")
+            except Exception, e:
+                Log.error("can not make request body", e)
+
             response = self.post(
                 self.path + "/_bulk",
-                data=("\n".join(lines) + "\n").encode("utf8"),
+                data=data_bytes,
                 headers={"Content-Type": "text"},
                 timeout=self.settings.timeout
             )

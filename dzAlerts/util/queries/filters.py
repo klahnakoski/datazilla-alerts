@@ -60,7 +60,10 @@ def _normalize(esfilter):
         if esfilter["and"]:
             output = []
             for a in esfilter["and"]:
-                a = _normalize(a)
+                a_ = normalize(a)
+                if a_ is not a:
+                    isDiff = True
+                a = a_
                 if a == TRUE_FILTER:
                     isDiff = True
                     continue
@@ -78,6 +81,7 @@ def _normalize(esfilter):
             if not output:
                 return TRUE_FILTER
             elif len(output) == 1:
+                # output[0].isNormal = True
                 esfilter = output[0]
                 break
             elif isDiff:
@@ -87,7 +91,11 @@ def _normalize(esfilter):
         if esfilter["or"]:
             output = []
             for a in esfilter["or"]:
-                a = _normalize(a)
+                a_ = _normalize(a)
+                if a_ is not a:
+                    isDiff = True
+                a = a_
+
                 if a == TRUE_FILTER:
                     isDiff = True
                     output = None
