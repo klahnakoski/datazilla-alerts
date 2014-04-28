@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS mail.connection;;
 
 CREATE TABLE mail.content (
 	id			INTEGER primary key not null,
-	subject		VARCHAR(100),
+	subject		VARCHAR(200),
 	date_sent	DATETIME,
 	body		MEDIUMTEXT
 );;

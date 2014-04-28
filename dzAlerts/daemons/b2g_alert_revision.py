@@ -26,6 +26,7 @@ from dzAlerts.util.struct import nvl, StructList
 
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = timedelta(days=90)
+NOW = datetime.utcnow()
 SEVERITY = 0.7
 
 # What needs to be in a notifications email?
@@ -108,7 +109,7 @@ def b2g_alert_revision(settings):
             "where": {"and": [
                 {"term": {"reason": b2g_sustained_median.REASON}},
                 {"not": {"term": {"status": "obsolete"}}},
-                {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
+                {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
             ]}
         })
 
@@ -122,7 +123,7 @@ def b2g_alert_revision(settings):
                 {"term": {"reason": REASON}},
                 {"or":[
                     {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                    {"range": {"create_time": {"gte": datetime.utcnow() - LOOK_BACK}}}
+                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             ]}
         })
@@ -183,7 +184,7 @@ def b2g_alert_revision(settings):
         if new_alerts:
             for revision in new_alerts:
                 revision.id = SQL("util.newid()")
-                revision.last_updated = datetime.utcnow()
+                revision.last_updated = NOW
             db.insert_list("alerts", new_alerts)
 
         #SHOW SUSTAINED ALERTS ARE COVERED
@@ -216,18 +217,14 @@ def b2g_alert_revision(settings):
 
             old_alert = old_alerts[known_alert]
             if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
-                known_alert.last_updated = datetime.utcnow()
+                known_alert.last_updated = NOW
                 db.update("alerts", {"id": old_alert.id}, known_alert)
 
         #OLD ALERTS, OBSOLETE
         for old_alert in old_alerts - known_alerts:
             if old_alert.status == 'obsolete':
                 continue
-
-            old_alert.status = 'obsolete'
-            old_alert.last_updated = datetime.utcnow()
-            old_alert.details = None
-            db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": datetime.utcnow()})
+            db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW, "details":None})
 
 
 def main():

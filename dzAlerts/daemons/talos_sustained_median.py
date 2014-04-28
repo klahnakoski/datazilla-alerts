@@ -76,6 +76,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": {"and": [
                 {"missing": {"field": settings.param.mark_complete}},
                 {"term": {"testrun.suite": "tp5o"}},
+                {"term": {"test_build.branch": "Fx Team"}},
                 {"exists": {"field": "result.test_name"}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
@@ -218,14 +219,10 @@ def alert_sustained_median(settings, qb, alerts_db):
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             re_alert.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
 
-            #FOR DEBUGGING
-            # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
-
             File("test_values.txt").write(CNV.list2tab(Q.select(stats, [
                 {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
                 "value",
-                {"name": "gaia", "value": "Talos.Revision.gaia"},
-                {"name": "gecko", "value": "Talos.Revision.gecko"},
+                {"name": "revision", "value": "Talos.Revision"},
                 {"name": "confidence", "value": "result.confidence"},
                 "pass"
             ])))
@@ -251,7 +248,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
-        # break  # DEBUGGING ONLY
+        break  # DEBUGGING ONLY
 
     if debug:
         Log.note("Get Current Alerts")

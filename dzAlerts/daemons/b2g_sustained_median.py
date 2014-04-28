@@ -89,7 +89,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
         "edges": query.edges,
         "where": {"and": [
-            {"missing": {"field": settings.param.mark_complete}},
+            True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
             {"exists": {"field": "result.test_name"}},
             {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
             #FOR DEBUGGING SPECIFIC SERIES
