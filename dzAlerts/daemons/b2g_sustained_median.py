@@ -314,7 +314,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     new_alerts = found_alerts - current_alerts
     changed_alerts = current_alerts & found_alerts
-    obsolete_alerts = current_alerts - found_alerts
+    obsolete_alerts = Q.filter(current_alerts - found_alerts, {"not": {"term": {"status": "obsolete"}}})
 
     if debug:
         Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
@@ -353,7 +353,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": esfilter2sqlwhere(
                 alerts_db,
                 {"and": [
-                    {"terms": {"id": Q.select(obsolete_alerts, "id")}},
+                    {"terms": {"id": obsolete_alerts.id}},
                     {"not": {"term": {"status": "obsolete"}}}
                 ]}
             )

@@ -76,7 +76,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": {"and": [
                 {"missing": {"field": settings.param.mark_complete}},
                 {"term": {"testrun.suite": "tp5o"}},
-                {"term": {"test_build.branch": "Fx Team"}},
+                # {"term": {"test_build.branch": "Fx Team"}},
                 {"exists": {"field": "result.test_name"}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
@@ -85,7 +85,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                 # {"term": {"test_build.branch": "master"}},
                 # {"term": {"testrun.suite": "communications/ftu"}},
                 # {"term": {"result.test_name": "startup_time"}}
-            ]}
+            ]},
+            "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
 
         new_test_points = qb.query(temp)
@@ -247,8 +248,6 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
-
-        break  # DEBUGGING ONLY
 
     if debug:
         Log.note("Get Current Alerts")

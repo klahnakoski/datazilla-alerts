@@ -1,0 +1,100 @@
+{
+	"dimension": {
+		"filename": "dimension_talos.json"
+	},
+	"param": {
+		"test": {
+			"fps": {
+				"units": "frames/s",
+				"better": "higher",
+				"min_regression": "1%"
+			},
+			"cold_load_time": {
+				"units": "ms",
+				"better": "lower",
+				"min_regression": "1%"
+			}
+		},
+		"sustained": {
+			"trigger": 0.999, //WHEN THE WELCH'S T-TEST RETURNS POSITIVE RESULT
+			"max_test_results_per_run": 1,
+			"window_size": 10
+		},
+		"sustained_median": {
+			"trigger": 0.999,
+			"max_test_results_per_run": 1,
+			"window_size": 10
+		},
+		"exception": {
+			"min_confidence": 0.999,
+			"window_size": 20,
+			"max_test_results_per_run": 1  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
+		},
+		"debug": true,
+		"mark_complete": "kyle_test_talos_sustained_median",
+		"combo_limit": 100  //SO WE DO NOT DO TOO MUCH WORK EACH TIME
+	},
+	"query": {
+		"from": {
+			"name": "talos",
+			"host": "http://elasticsearch-private.bugs.scl3.mozilla.com",
+			"port": 9200,
+			"index": "talos",
+			"type": "test_results",
+			"debug": true
+		},
+		"select": [
+			{
+				"name": "test_run_id",
+				"value": "datazilla.test_run_id"
+			},
+			"Talos.Revision",
+			{
+				"name": "value",
+				"value": "result.stats.median"
+			}
+		],
+		"edges": [
+			"Talos.Product",
+			"Talos.Branch",
+			"Talos.OS",
+			"Talos.Platform",
+			"Talos.Test"
+		],
+		"sort": "datazilla.date_loaded"
+	},
+	"alerts": {
+		"host": "localhost",
+		"port": 3306,
+		"username": "username",
+		"password": "password",
+		"schema": "ekyle_perftest_1",
+		"debug": true
+	},
+	"pushlog": {
+		"schema": "pushlog_hgmozilla_1"
+	},
+	"email": {
+		"from_address": "klahnakoski@mozilla.com",
+		"host": "mail.mozilla.com",
+		"port": 465,
+		"username": "username",
+		"password": "password",
+		"use_ssl": 1
+	},
+	"debug": {
+		"log": [
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "results/logs/alert.log",
+				"maxBytes": 10000000,
+				"backupCount": 100,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "stream",
+				"stream": "sys.stdout"
+			}
+		]
+	}
+}
