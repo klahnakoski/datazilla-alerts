@@ -387,17 +387,18 @@ def main():
     }])
     Log.start(settings.debug)
     try:
-        Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
+        with startup.SingleInstance(flavor_id=settings.args.filename):
+            Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-        qb = ESQuery(ElasticSearch(settings.query["from"]))
-        qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
+            qb = ESQuery(ElasticSearch(settings.query["from"]))
+            qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
-        with DB(settings.alerts) as alerts_db:
-            alert_sustained_median(
-                settings,
-                qb,
-                alerts_db
-            )
+            with DB(settings.alerts) as alerts_db:
+                alert_sustained_median(
+                    settings,
+                    qb,
+                    alerts_db
+                )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
     finally:
