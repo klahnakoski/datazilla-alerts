@@ -247,9 +247,6 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "where": {"term": {"ignored": False}}
             }))
 
-            #FOR DEBUGGING
-            # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
-
             File("test_values.txt").write(CNV.list2tab(Q.select(stats, [
                 {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
                 "value",
@@ -282,8 +279,6 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
-        #break  # DEBUGGING ONLY
-
     if debug:
         Log.note("Get Current Alerts")
 
@@ -304,7 +299,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"terms": {"tdad_id": re_alert}},
+                {"or": [
+                    {"terms": {"tdad_id": re_alert}},
+                    {"range": {"create_time": {"gte": OLDEST_TS}}}
+                ]},
                 {"term": {"reason": REASON}}
             ]}
         })
