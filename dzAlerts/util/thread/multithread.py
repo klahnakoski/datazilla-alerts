@@ -9,6 +9,7 @@
 #
 
 from __future__ import unicode_literals
+from dzAlerts.util.struct import nvl
 from ..env.logs import Log
 from ..thread.threads import Queue, Thread
 
@@ -21,9 +22,17 @@ class Multithread(object):
 
     PASS A SET OF FUNCTIONS TO BE EXECUTED (ONE PER THREAD)
     PASS AN (ITERATOR/LIST) OF PARAMETERS TO BE ISSUED TO NEXT AVAILABLE THREAD
+
+    SET outbound==False TO SIMPLY THROW AWAY RESULTS
     """
-    def __init__(self, functions):
-        self.outbound = Queue()
+    def __init__(self, functions, outbound=None):
+        if outbound is None:
+            self.outbound = Queue()
+        elif outbound is False:
+            self.outbound = None
+        else:
+            self.outbound = outbound
+
         self.inbound = Queue()
 
         #MAKE THREADS
@@ -61,7 +70,7 @@ class Multithread(object):
             for t in self.threads:
                 t.keep_running = False
             self.inbound.close()
-            self.outbound.close()
+            if self.outbound: self.outbound.close()
             for t in self.threads:
                 t.join()
 
@@ -81,7 +90,10 @@ class Multithread(object):
                 else:
                     yield result["response"]
 
-        return output()
+        if self.outbound:
+            return output()
+        else:
+            return
 
     #EXTERNAL COMMAND THAT RETURNS IMMEDIATELY
     def stop(self):

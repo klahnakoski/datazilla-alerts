@@ -13,6 +13,7 @@ import __builtin__
 from ..struct import Null, nvl
 from ..env.logs import Log
 from ..strings import find_first
+from . import stats
 
 
 class Math(object):

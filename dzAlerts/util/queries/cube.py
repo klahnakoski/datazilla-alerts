@@ -28,6 +28,7 @@ class Cube(object):
         ALLOWED, USING THE select AND edges TO DESCRIBE THE data
         """
 
+
         self.is_value = False if isinstance(select, list) else True
         self.select = select
 
@@ -37,13 +38,19 @@ class Cube(object):
                 Log.error("Expecting data to be a dict with Matrix values")
 
         if not edges:
-            if isinstance(data, dict):
+            if not data:
+                if isinstance(select, list):
+                    Log.error("not expecting a list of records")
+
+                data = {select.name: Matrix.ZERO}
+                self.edges = StructList.EMPTY
+            elif isinstance(data, dict):
                 # EXPECTING NO MORE THAN ONE rownum EDGE IN THE DATA
                 length = MAX([len(v) for v in data.values()])
                 if length >= 1:
                     self.edges = [{"name": "rownum", "domain": {"type": "index"}}]
                 else:
-                    self.edges = StructList()
+                    self.edges = StructList.EMPTY
             elif isinstance(data, list):
                 if isinstance(select, list):
                     Log.error("not expecting a list of records")
@@ -60,7 +67,7 @@ class Cube(object):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix(value=data)}
-                self.edges = StructList()
+                self.edges = StructList.EMPTY
         else:
             self.edges = edges
 
@@ -176,8 +183,16 @@ class Cube(object):
         if len(stacked) + len(remainder) != len(self.edges):
             Log.error("can not find some edges to group by")
 
+        keys = [e.name for e in self.edges]
+        parts = [e.domain.partitions for e in self.edges]
+        getKey = [e.domain.getKey for e in self.edges]
         def coord2term(coord):
-            return {e.name: e.domain.getKey(e.domain.partitions[coord[i]]) for i, e in enumerate(self.edges) if coord[i] != -1}
+            output = {keys[i]: getKey[i](parts[i][coord[i]]) for i in range(len(edges))}
+            for k, v in output.items():
+                if v==None:
+                    Log.error("problem")
+            return output
+            # return {e.name: e.domain.getKey(e.domain.partitions[coord[i]]) for i, e in enumerate(self.edges) if coord[i] != -1}
 
         if isinstance(self.select, list):
             selects = struct.listwrap(self.select)

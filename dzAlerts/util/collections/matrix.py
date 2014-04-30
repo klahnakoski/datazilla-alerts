@@ -18,6 +18,7 @@ class Matrix(object):
     """
     SIMPLE n-DIMENSIONAL ARRAY OF OBJECTS
     """
+    ZERO = None
 
     def __init__(self, *dims, **kwargs):
         kwargs = wrap(kwargs)
@@ -149,10 +150,7 @@ class Matrix(object):
             # RETURN AN ITERATOR OF PAIRS (c, v), WHERE
             # c - COORDINATES INTO THE CUBE
             # v - VALUE AT GIVEN COORDINATES
-            def output():
-                for c in self._all_combos():
-                    yield c, self[c]
-            return output()
+            return ((c, self[c]) for c in self._all_combos())
         else:
             output = [[None, Matrix(new_dim)] for i in range(acc)]
             _groupby(self.cube, 0, offsets, 0, output, tuple(), [])
@@ -208,6 +206,8 @@ class Matrix(object):
     def __json__(self):
         return CNV.object2JSON(self.cube)
 
+
+Matrix.ZERO = Matrix(value=None)
 
 def _max(depth, cube):
     if depth == 0:

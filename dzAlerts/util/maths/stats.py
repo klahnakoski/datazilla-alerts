@@ -9,6 +9,12 @@
 #
 
 from __future__ import unicode_literals
+import numpy
+from scipy import stats
+import scipy
+import sys
+from dzAlerts.util.vendor import strangman
+
 from math import sqrt
 from ..cnv import CNV
 from ..collections import OR
@@ -18,6 +24,22 @@ from ..env.logs import Log
 
 DEBUG = True
 EPSILON = 0.000001
+ABS_EPSILON = sys.float_info.min*2  # *2 FOR SAFETY
+
+def chisquare(f_obs, f_exp):
+    sp_result = scipy.stats.chisquare(
+        numpy.array(f_obs),
+        f_exp=numpy.array(f_exp)
+    )
+
+    py_result = strangman.stats.chisquare(
+        f_obs,
+        f_exp
+    )
+
+    if not closeEnough(sp_result[0], py_result[0]) and closeEnough(sp_result[1], py_result[1]):
+        Log.error("problem with stats lib")
+    return py_result
 
 
 
@@ -57,7 +79,15 @@ def closeEnough(a, b):
     if a == None or b == None:
         return False
 
-    if abs(a - b) <= EPSILON * (abs(a) + abs(b) + 1):
+    if abs(a - b) < ABS_EPSILON:
+        return True
+
+    if abs(b) > abs(a):
+        err = abs((a - b) / b)
+    else:
+        err = abs((a - b) / a)
+
+    if err < EPSILON:
         return True
     return False
 
