@@ -9,9 +9,6 @@
 #
 
 from __future__ import unicode_literals
-import numpy
-from scipy import stats
-import scipy
 import sys
 from dzAlerts.util.vendor import strangman
 
@@ -23,22 +20,34 @@ from ..env.logs import Log
 
 
 DEBUG = True
+DEBUG_STRANGMAN = True
 EPSILON = 0.000001
 ABS_EPSILON = sys.float_info.min*2  # *2 FOR SAFETY
 
-def chisquare(f_obs, f_exp):
-    sp_result = scipy.stats.chisquare(
-        numpy.array(f_obs),
-        f_exp=numpy.array(f_exp)
-    )
 
+if DEBUG_STRANGMAN:
+    try:
+        import numpy
+        from scipy import stats
+        import scipy
+    except Exception, e:
+        DEBUG_STRANGMAN = False
+
+
+def chisquare(f_obs, f_exp):
     py_result = strangman.stats.chisquare(
         f_obs,
         f_exp
     )
 
-    if not closeEnough(sp_result[0], py_result[0]) and closeEnough(sp_result[1], py_result[1]):
-        Log.error("problem with stats lib")
+    if DEBUG_STRANGMAN:
+        sp_result = scipy.stats.chisquare(
+            numpy.array(f_obs),
+            f_exp=numpy.array(f_exp)
+        )
+        if not closeEnough(sp_result[0], py_result[0]) and closeEnough(sp_result[1], py_result[1]):
+            Log.error("problem with stats lib")
+
     return py_result
 
 

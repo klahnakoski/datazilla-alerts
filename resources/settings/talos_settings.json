@@ -28,7 +28,7 @@
 		"exception": {
 			"min_confidence": 0.999,
 			"window_size": 20,
-			"max_test_results_per_run": 1  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
+			"max_test_results_per_run": 10  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
 		},
 		"debug": true,
 		"mark_complete": "kyle_test_talos_sustained_median",

@@ -77,7 +77,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "edges": query.edges,
             "where": {"and": [
                 {"missing": {"field": settings.param.mark_complete}},
-                {"term": {"testrun.suite": "tp5o"}},
+                # {"term": {"testrun.suite": "tp5o"}},
                 # {"term": {"test_build.branch": "Fx Team"}},
                 {"exists": {"field": "result.test_name"}}
                 #FOR DEBUGGING SPECIFIC SERIES

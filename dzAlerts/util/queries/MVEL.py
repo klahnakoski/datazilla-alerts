@@ -162,14 +162,15 @@ class _MVEL(object):
     # function - TAKES RESULT OF expression AND RETURNS PART
     def Parts2Term(self, domain):
         fields = domain.dimension.fields
-        if isinstance(fields, dict):
-            # CONVERT UNORDERED FIELD DEFS
-            qb_fields, es_fields = zip(*[(k, fields[k]) for k in sorted(fields.keys())])
-        else:
-            qb_fields, es_fields = zip(*[(i, e) for i, e in enumerate(fields)])
 
         term = []
-        if len(split_field(self.fromData.name))==1 and fields:
+        if len(split_field(self.fromData.name)) == 1 and fields:
+            if isinstance(fields, dict):
+                # CONVERT UNORDERED FIELD DEFS
+                qb_fields, es_fields = zip(*[(k, fields[k]) for k in sorted(fields.keys())])
+            else:
+                qb_fields, es_fields = zip(*[(i, e) for i, e in enumerate(fields)])
+
             #NO LOOPS BECAUSE QUERY IS SHALLOW
             #DOMAIN IS FROM A DIMENSION, USE IT'S FIELD DEFS TO PULL
             if len(es_fields) == 1:

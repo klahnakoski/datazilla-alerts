@@ -303,10 +303,16 @@ class DBQuery(object):
 
 
 def _isolate(separator, list):
-    if len(list) > 1:
-        return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
-    else:
-        return list[0]
+    try:
+        if len(list) > 1:
+            return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
+        else:
+            return list[0]
+    except Exception, e:
+        Log.error("Programming problem: separator={{separator}}, list={{list}", {
+            "list": list,
+            "separator": separator
+        }, e)
 
 
 def esfilter2sqlwhere(db, esfilter):

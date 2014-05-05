@@ -28,7 +28,7 @@ json_decoder = json.JSONDecoder().decode
 # 1) WHEN USING cPython, WE HAVE NO COMPILER OPTIMIZATIONS: THE BEST STRATEGY IS TO
 #    CONVERT THE MEMORY STRUCTURE TO STANDARD TYPES AND SEND TO THE INSANELY FAST
 #    DEFAULT JSON ENCODER
-# 2) WHEN USING PYPY, WE USE CLEAR AND SIMPLE PROGRAMMING SO THE OPTIMIZER CAN DO
+# 2) WHEN USING PYPY, WE USE CLEAR-AND-SIMPLE PROGRAMMING SO THE OPTIMIZER CAN DO
 #    ITS JOB.  ALONG WITH THE UnicodeBuilder WE GET NEAR C SPEEDS
 
 
@@ -148,11 +148,11 @@ def _value2json(value, _buffer):
         append(_buffer, "\"")
         append(_buffer, unicode(value.total_seconds()))
         append(_buffer, "second\"")
-    elif hasattr(value, '__iter__'):
-        _iter2json(value, _buffer)
     elif hasattr(value, '__json__'):
         j = value.__json__()
         append(_buffer, j)
+    elif hasattr(value, '__iter__'):
+        _iter2json(value, _buffer)
     else:
         raise Exception(repr(value) + " is not JSON serializable")
 
