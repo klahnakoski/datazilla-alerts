@@ -21,7 +21,7 @@ from ..env.logs import Log
 
 DEBUG = True
 DEBUG_STRANGMAN = True
-EPSILON = 0.000001
+EPSILON = 0.000000001
 ABS_EPSILON = sys.float_info.min*2  # *2 FOR SAFETY
 
 

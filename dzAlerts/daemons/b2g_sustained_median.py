@@ -21,7 +21,7 @@ from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
-from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.struct import nvl, StructList, literal_field
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
@@ -64,7 +64,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            test_param = settings.param.test[r.B2G.Test.name]
+            test_param = settings.param.test[literal_field(r.B2G.Test.name)]
 
             if test_param == None:
                 return True
@@ -286,7 +286,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     #CHECK THE CURRENT ALERTS
     if not re_alert:
-        current_alerts = StructList()
+        current_alerts = StructList.EMPTY
     else:
         current_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
@@ -392,14 +392,14 @@ def main():
         with startup.SingleInstance(flavor_id=settings.args.filename):
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-            qb = ESQuery(ElasticSearch(settings.query["from"]))
-            qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
+            with ESQuery(ElasticSearch(settings.query["from"])) as qb:
+                qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
-            with DB(settings.alerts) as alerts_db:
-                alert_sustained_median(
-                    settings,
-                    qb,
-                    alerts_db
+                with DB(settings.alerts) as alerts_db:
+                    alert_sustained_median(
+                        settings,
+                        qb,
+                        alerts_db
                 )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)

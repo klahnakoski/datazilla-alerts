@@ -279,8 +279,11 @@ def _where_terms(master, where, schema):
     if isinstance(where, dict):
         if where.term:
             #MAP TERM
-            output = _map_term_using_schema(master, where, schema)
-            return output
+            try:
+                output = _map_term_using_schema(master, where, schema)
+                return output
+            except Exception, e:
+                Log.error("programmer problem?", e)
         elif where.terms:
             #MAP TERM
             output = StructList()

@@ -72,6 +72,16 @@ INSERT INTO reasons VALUES (
 	NULL,
 	NULL
 );;
+
+INSERT INTO reasons VALUES (
+	'talos_alert_sustained_median',
+	concat('{{page_url}} has continued to perform worse since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL,
+	NULL
+);;
+
 INSERT INTO reasons VALUES (
 	'alert_regression',
 	concat('{{page_url}} has regressed since {{revision}}'),

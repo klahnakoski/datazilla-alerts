@@ -607,7 +607,7 @@ class StructList(list):
             return StructList([oper(v) for v in _get(self, "list") if v != None])
 
 
-StructList.EMPTY = StructList
+StructList.EMPTY = StructList()
 
 
 def wrap(v):

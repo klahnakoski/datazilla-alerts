@@ -32,7 +32,7 @@
 		},
 		"debug": true,
 		"mark_complete": "kyle_test_talos_sustained_median",
-		"combo_limit": 100  //SO WE DO NOT DO TOO MUCH WORK EACH TIME
+		"combo_limit": 10  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {
 		"from": {
@@ -86,7 +86,7 @@
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "results/logs/alert.log",
+				"filename": "results/logs/talos_alert.log",
 				"maxBytes": 10000000,
 				"backupCount": 100,
 				"encoding": "utf8"

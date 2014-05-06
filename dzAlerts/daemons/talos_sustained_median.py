@@ -14,6 +14,7 @@ from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.collections import MIN, MAX, AND, OR
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
@@ -21,7 +22,7 @@ from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.struct import nvl, StructList, literal_field
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
@@ -64,10 +65,24 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            if r.diff > 0 and OR(AND(r.Talos.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
+            test_param = settings.param.test[literal_field(r.Talos.Test.name)]
+
+            if test_param == None:
                 return True
-            if r.diff < 0 and OR(AND(r.Talos.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
+
+            if test_param.better == "higher":
+                diff = -r.diff
+            else:
+                diff = r.diff
+
+            if unicode(test_param.min_regression.strip()[-1]) == "%":
+                min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
+            else:
+                min_diff = Math.abs(float(test_param.min_regression))
+
+            if diff > min_diff:
                 return True
+
         return False
 
     with Timer("pull combinations"):
@@ -76,10 +91,12 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                {"missing": {"field": settings.param.mark_complete}},
-                # {"term": {"testrun.suite": "tp5o"}},
-                # {"term": {"test_build.branch": "Fx Team"}},
-                {"exists": {"field": "result.test_name"}}
+                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                {"exists": {"field": "result.test_name"}},
+                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
+                # {"term": {"testrun.suite": "cart"}},
+                # {"term": {"result.test_name": "1-customize-enter.error.TART"}},
+                # {"term": {"test_machine.osversion": "OS X 10.8"}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
