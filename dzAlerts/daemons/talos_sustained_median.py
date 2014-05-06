@@ -193,6 +193,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
+                        # SO WE CAN SHOW A DATAZILLA WINDOW
+                        "name": "push_date_max",
+                        "value": lambda r: r.push_date,
+                        "sort": "push_date",
+                        "aggregate": windows.Max,
+                        "range": {"min": 0, "max": settings.param.sustained_median.window_size}
+                    }, {
                         "name": "past_revision",
                         "value": lambda r, i, rows: rows[i-1].Talos.Revision,
                         "sort": "push_date"

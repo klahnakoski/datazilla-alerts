@@ -33,6 +33,11 @@ def datetime(value):
     return CNV.datetime2string(value, "%Y-%m-%d %H:%M:%S")
 
 
+def unix(value):
+    from .cnv import CNV
+
+    return str(CNV.datetime2unix(datetime(value)))
+
 def upper(value):
     return value.upper()
 

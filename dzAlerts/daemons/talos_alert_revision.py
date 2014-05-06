@@ -38,29 +38,26 @@ SUBJECT = [
         "separator": ", "
     }
     ]
+
 TEMPLATE = [
     """
     <div>
     	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-talos/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
-    [<a href="https://github.com/mozilla-talos/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
-
-    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
+        <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision}}">{{revision}}</a></span>
+        [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
 
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
-            <td>{{example.Talos.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.Talos.Branch}}&device={{example.Talos.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.Talos.Revision.gaia}}&gecko_rev={{example.Talos.Revision.gecko}}&plot=median\">Datazilla!</a></td>
-            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Talos.Revision.gaia}}">DIFF</a></td>
+            <td><a href="https://datazilla.mozilla.org/?product={{example.Talos.Product}}&repository={{example.Talos.Branch}}&start={{example.push_date_min|unix}}&stop={{example.push_date_max|unix}}&test={{example.Talos.Test.suite}}&graph={{example.Talos.Test.name}}&graph_search={{example.Talos.Revision}}\">Datazilla!</a></td>
+            <td><a href="">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
             <td>{{example.future_stats.mean|round(digits=4)}}</td>
@@ -75,7 +72,7 @@ TEMPLATE = [
 # assumes there is an outside agent corrupting our test results
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
-def b2g_alert_revision(settings):
+def talos_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
     with DB(settings.alerts) as db:
@@ -98,7 +95,7 @@ def b2g_alert_revision(settings):
             "from": "alerts",
             "select": "*",
             "where": {"and": [
-                {"term": {"reason": b2g_sustained_median.REASON}},
+                {"term": {"reason": talos_sustained_median.REASON}},
                 {"not": {"term": {"status": "obsolete"}}},
                 {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
             ]}
@@ -125,7 +122,7 @@ def b2g_alert_revision(settings):
         for revision in set(existing_sustained_alerts.revision):
         #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
             total_tests = esq.query({
-                "from": "b2g_alerts",
+                "from": "talos_alerts",
                 "select": {"name": "count", "aggregate": "count"},
                 "where": {"terms": {"Talos.Revision": revision}}
             })
