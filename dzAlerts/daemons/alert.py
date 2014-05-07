@@ -168,13 +168,6 @@ if __name__ == '__main__':
                 settings=settings,
                 db=db
             )
-
-            email_send(
-                db=db,
-                emailer=Emailer(settings.email),
-                debug=nvl(settings.debug, False)
-            )
-
     except Exception, e:
         Log.warning("Failure to run alerts", cause=e)
     finally:

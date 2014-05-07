@@ -279,8 +279,6 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
-        break
-
     if debug:
         Log.note("Get Current Alerts")
 
