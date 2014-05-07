@@ -23,9 +23,8 @@ def datetime(value):
     from .cnv import CNV
 
     if isinstance(value, (date, builtin_datetime)):
-        CNV.datetime2string(value, "%Y-%m-%d %H:%M:%S")
-
-    if value < 10000000000:
+        pass
+    elif value < 10000000000:
         value = CNV.unix2datetime(value)
     else:
         value = CNV.milli2datetime(value)
@@ -36,10 +35,20 @@ def datetime(value):
 def unix(value):
     from .cnv import CNV
 
-    return str(CNV.datetime2unix(datetime(value)))
+    if isinstance(value, (date, builtin_datetime)):
+        pass
+    elif value < 10000000000:
+        value = CNV.unix2datetime(value)
+    else:
+        value = CNV.milli2datetime(value)
+
+    return str(CNV.datetime2unix(value))
 
 def upper(value):
     return value.upper()
+
+def lower(value):
+    return value.lower()
 
 
 def newline(value):
@@ -48,6 +57,8 @@ def newline(value):
     """
     return "\n" + toString(value).lstrip("\n")
 
+def replace(value, find, replace):
+    return value.replace(find, replace)
 
 def quote(value):
     return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -88,6 +99,9 @@ def round(value, decimal=None, digits=None):
 
     return __builtin__.round(value, decimal)
 
+def percent(value, decimal=None, digits=None):
+    per = round(value*100, decimal, digits)
+    return str(per)+"%"
 
 def between(value, prefix, suffix):
     value = toString(value)

@@ -15,6 +15,7 @@ import json
 import re
 import time
 from . import jsons
+from urllib import urlencode
 from .collections.multiset import Multiset
 from .env.profiles import Profiler
 from .jsons import json_encoder, replace, ESCAPE
@@ -189,6 +190,10 @@ class CNV:
     @staticmethod
     def string2quote(value):
         return "\""+ESCAPE.sub(replace, value)+"\""
+
+    @staticmethod
+    def value2url(value):
+        return urlencode(value)
 
     @staticmethod
     def quote2string(value):

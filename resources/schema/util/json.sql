@@ -57,7 +57,6 @@ BEGIN
 	END IF;
 END;;
 
-
 SELECT json(" [\"results\": {}, junk]", "results") result, "{}" expected from dual;;
 SELECT json(" [\"results\": {\"hi\":20}, junk]", "results") result, "{\"hi\":20}" expected from dual;;
 SELECT json(" \"results\": {\"hi\":20}, junk]", "results") result, "{\"hi\":20}" expected  from dual;;

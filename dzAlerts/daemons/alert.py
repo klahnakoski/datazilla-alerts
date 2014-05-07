@@ -10,7 +10,9 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from math import log
-from dzAlerts.daemons import b2g_alert_revision
+from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision
+from dzAlerts.daemons.email_send import email_send
+from dzAlerts.daemons.talos_alert_revision import TEMPLATE, SUBJECT,  REASON
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries import Q
@@ -20,6 +22,7 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
+from dzAlerts.util.env.emailer import Emailer
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>This is for testing only.</h3><br>"
@@ -38,7 +41,7 @@ RESEND_AFTER = timedelta(days=7)
 LOOK_BACK = timedelta(days=30)
 MAX_EMAIL_LENGTH = 15000
 EPSILON = 0.0001
-SEND_REASONS = [b2g_alert_revision.REASON]
+SEND_REASONS = [b2g_alert_revision.REASON, talos_alert_revision.REASON]
 
 
 def send_alerts(settings, db):
@@ -47,6 +50,15 @@ def send_alerts(settings, db):
     """
     debug = settings.param.debug
     db.debug = debug
+
+    #TODO: REMOVE, LEAVE IN DB
+    if db.debug:
+        db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+            "template": CNV.object2JSON(TEMPLATE),
+            "subject": CNV.object2JSON(SUBJECT),
+            "reason": REASON
+        })
+        db.flush()
 
     try:
         new_alerts = db.query("""
@@ -99,7 +111,10 @@ def send_alerts(settings, db):
                 alert.confidence = 0.999999
 
             alert.details = CNV.JSON2object(alert.details)
-            alert.revision = CNV.JSON2object(alert.revision)
+            try:
+                alert.revision = CNV.JSON2object(alert.revision)
+            except Exception, e:
+                pass
             alert.score = str(-log(1.0-Math.bayesian_add(alert.severity, alert.confidence), 10))  #SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
             example = alert.details.example
@@ -153,6 +168,13 @@ if __name__ == '__main__':
                 settings=settings,
                 db=db
             )
+
+            email_send(
+                db=db,
+                emailer=Emailer(settings.email),
+                debug=nvl(settings.debug, False)
+            )
+
     except Exception, e:
         Log.warning("Failure to run alerts", cause=e)
     finally:
