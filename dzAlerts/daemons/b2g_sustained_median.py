@@ -27,6 +27,7 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
+from dzAlerts.util.times.timer import Timer
 
 
 SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
@@ -84,23 +85,27 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         return False
 
-    new_test_points = qb.query({
-        "from": TDAD,
-        "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
-        "edges": query.edges,
-        "where": {"and": [
-            True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
-            {"exists": {"field": "result.test_name"}},
-            {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
-            #FOR DEBUGGING SPECIFIC SERIES
-            # {"term": {"test_machine.type": "hamachi"}},
-            # {"term": {"test_machine.platform": "Gonk"}},
-            # {"term": {"test_machine.os": "Firefox OS"}},
-            # {"term": {"test_build.branch": "master"}},
-            # {"term": {"testrun.suite": "contacts"}},
-            # {"term": {"result.test_name": "cold_load_time"}}
-        ]}
-    })
+    with Timer("pull combinations"):
+        temp = Query({
+            "from": TDAD,
+            "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
+            "edges": query.edges,
+            "where": {"and": [
+                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                {"exists": {"field": "result.test_name"}},
+                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
+                #FOR DEBUGGING SPECIFIC SERIES
+                # {"term": {"test_machine.type": "hamachi"}},
+                # {"term": {"test_machine.platform": "Gonk"}},
+                # {"term": {"test_machine.os": "Firefox OS"}},
+                # {"term": {"test_build.branch": "master"}},
+                # {"term": {"testrun.suite": "contacts"}},
+                # {"term": {"result.test_name": "cold_load_time"}}
+            ]},
+            "limit": nvl(settings.param.combo_limit, 1000)
+        }, qb)
+
+        new_test_points = qb.query(temp)
 
     #BRING IN ALL NEEDED DATA
     if debug:
@@ -111,7 +116,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     # all_min_date = Null
     all_touched = set()
-    re_alert = set()
+    evaled_tests = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, test_points in Q.groupby(new_test_points, query.edges):
         if not test_points.min_push_date:
@@ -185,6 +190,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
+                        # SO WE CAN SHOW A DATAZILLA WINDOW
+                        "name": "push_date_max",
+                        "value": lambda r: r.push_date,
+                        "sort": "push_date",
+                        "aggregate": windows.Max,
+                        "range": {"min": 0, "max": settings.param.sustained_median.window_size}
+                    }, {
                         "name": "past_revision",
                         "value": lambda r, i, rows: rows[i - 1].B2G.Revision,
                         "sort": "push_date"
@@ -241,7 +253,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.run({
+            evaled_tests.update(Q.run({
                 "from": test_results,
                 "select": ["test_run_id", "B2G.Test"],
                 "where": {"term": {"ignored": False}}
@@ -283,7 +295,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         Log.note("Get Current Alerts")
 
     #CHECK THE CURRENT ALERTS
-    if not re_alert:
+    if not evaled_tests:
         current_alerts = StructList.EMPTY
     else:
         current_alerts = DBQuery(alerts_db).query({
@@ -299,10 +311,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"or": [
-                    {"terms": {"tdad_id": re_alert}},
-                    {"range": {"create_time": {"gte": OLDEST_TS}}}
-                ]},
+                {"terms": {"tdad_id": evaled_tests}},
                 {"term": {"reason": REASON}}
             ]}
         })
@@ -398,7 +407,7 @@ def main():
                         settings,
                         qb,
                         alerts_db
-                )
+                    )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
     finally:

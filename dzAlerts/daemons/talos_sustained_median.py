@@ -120,18 +120,16 @@ def alert_sustained_median(settings, qb, alerts_db):
     # all_min_date = Null
     all_touched = set()
     evaled_tests = set()
-    touched_groups = []
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, test_points in Q.groupby(new_test_points, query.edges):
         if not test_points.min_push_date:
             continue
         try:
-            touched_groups.append(g)
             if settings.args.restart:
                 first_sample = OLDEST_TS
             else:
                 first_sample = MAX(MIN(test_points.min_push_date), OLDEST_TS)
-                # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
+            # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
                 "from": {
@@ -300,7 +298,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     #CHECK THE CURRENT ALERTS
     if not evaled_tests:
-        current_alerts = StructList()
+        current_alerts = StructList.EMPTY
     else:
         # THIS IS QUITE TOUCHY, IT DEPENDS ON THE JSON SERIALIZATION OF THE
         # GROUP (g) TO BE COMPLETE IN THE details COLUMN OF THE ALERTS DB
