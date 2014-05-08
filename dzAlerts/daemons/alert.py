@@ -85,7 +85,7 @@ def send_alerts(settings, db):
                 a.create_time > {{min_time}}
             ORDER BY
                 math.bayesian_add(a.severity, a.confidence) DESC,
-                json.number(left(details, 65000), "diff") DESC
+                json.number(left(details, 65000), "diff_percent") DESC
             LIMIT
                 10
         """, {
