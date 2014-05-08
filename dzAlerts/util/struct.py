@@ -187,6 +187,19 @@ class Struct(dict):
         d = _get(self, "__dict__")
         return ((k, wrap(v)) for k, v in d.items())
 
+    def all_items(self):
+        """
+        GET ALL KEY-VALUES OF LEAF NODES IN Struct
+        """
+        d = _get(self, "__dict__")
+        output = []
+        for k, v in d.items():
+            if isinstance(v, dict):
+                _all_items(output, k, v)
+            else:
+                output.append((k, v))
+        return output
+
     def iteritems(self):
         #LOW LEVEL ITERATION, NO WRAPPING
         d = _get(self, "__dict__")
@@ -236,10 +249,18 @@ class Struct(dict):
 
     def setdefault(self, k, d=None):
         if self[k] == None:
-            self[k]=d
+            self[k] = d
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL
 requested = set()
+
+
+def _all_items(output, key, d):
+    for k, v in d:
+        if isinstance(v, dict):
+            _all_items(output, key+"."+k, v)
+        else:
+            output.append((key+"."+k, v))
 
 
 def _str(value, depth):

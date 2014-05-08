@@ -22,7 +22,7 @@ from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field
+from dzAlerts.util.struct import nvl, StructList, literal_field, unwrap
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
@@ -93,7 +93,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": {"and": [
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
-                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
+                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}}
                 # {"term": {"testrun.suite": "cart"}},
                 # {"term": {"result.test_name": "1-customize-enter.error.TART"}},
                 # {"term": {"test_machine.osversion": "OS X 10.8"}}
@@ -119,17 +119,19 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     # all_min_date = Null
     all_touched = set()
-    re_alert = set()
+    evaled_tests = set()
+    touched_groups = []
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, test_points in Q.groupby(new_test_points, query.edges):
         if not test_points.min_push_date:
             continue
         try:
+            touched_groups.append(g)
             if settings.args.restart:
                 first_sample = OLDEST_TS
             else:
                 first_sample = MAX(MIN(test_points.min_push_date), OLDEST_TS)
-            # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
+                # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
                 "from": {
@@ -176,7 +178,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             #APPLY WINDOW FUNCTIONS
             stats = Q.run({
-                "from":{
+                "from": {
                     "from": test_results,
                     "where": {"exists": {"field": "value"}}
                 },
@@ -201,7 +203,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "range": {"min": 0, "max": settings.param.sustained_median.window_size}
                     }, {
                         "name": "past_revision",
-                        "value": lambda r, i, rows: rows[i-1].Talos.Revision,
+                        "value": lambda r, i, rows: rows[i - 1].Talos.Revision,
                         "sort": "push_date"
                     }, {
                         "name": "past_stats",
@@ -256,7 +258,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             all_touched.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.run({
+            evaled_tests.update(Q.run({
                 "from": test_results,
                 "select": ["test_run_id", "Talos.Test"],
                 "where": {"term": {"ignored": False}}
@@ -297,9 +299,23 @@ def alert_sustained_median(settings, qb, alerts_db):
         Log.note("Get Current Alerts")
 
     #CHECK THE CURRENT ALERTS
-    if not re_alert:
+    if not evaled_tests:
         current_alerts = StructList()
     else:
+        # THIS IS QUITE TOUCHY, IT DEPENDS ON THE JSON SERIALIZATION OF THE
+        # GROUP (g) TO BE COMPLETE IN THE details COLUMN OF THE ALERTS DB
+        # ANY EXTRA COLUMNS WILL CAUSE A MISMATCH
+        # WE MUST DO THIS SO WE ONLY OBSOLETE THE ALERTS WE CHOULD HAVE
+        # COVERED (BOTH IN TIME AND IN GROUPS)
+        # or_list = []
+        # for g in touched_groups:
+        #     g = unwrap(g)
+        #     output = Struct()
+        #     for key, val in g.items():
+        #         if key.startswith("Talos."):
+        #             output[key[6::]] = val
+        #     or_list.append({"instr": {"details": output}})
+
         current_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
@@ -313,10 +329,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"or": [
-                    {"terms": {"tdad_id": re_alert}},
-                    {"range": {"create_time": {"gte": OLDEST_TS}}}
-                ]},
+                {"terms": {"tdad_id": evaled_tests}},
                 {"term": {"reason": REASON}}
             ]}
         })
@@ -412,7 +425,7 @@ def main():
                         settings,
                         qb,
                         alerts_db
-                )
+                    )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
     finally:
