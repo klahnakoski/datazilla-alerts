@@ -119,5 +119,25 @@ def _normalize(esfilter):
                 esfilter["or"] = output
             continue
 
+        if esfilter.terms:
+            for k, v in esfilter.terms.items():
+                if len(v) > 0:
+                    esfilter.isNormal = True
+                    return esfilter
+            return FALSE_FILTER
+
+        if esfilter["not"] != None:
+            _sub = esfilter["not"]
+            sub = _normalize(_sub)
+            if sub is FALSE_FILTER:
+                return TRUE_FILTER
+            elif sub is TRUE_FILTER:
+                return FALSE_FILTER
+            elif sub is not _sub:
+                sub.isNormal = None
+                return wrap({"not": sub, "isNormal": True})
+            else:
+                sub.isNormal = None
+
     esfilter.isNormal = True
     return esfilter

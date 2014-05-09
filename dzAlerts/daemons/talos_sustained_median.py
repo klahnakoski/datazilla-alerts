@@ -65,10 +65,13 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            test_param = settings.param.test[literal_field(r.Talos.Test.name)]
+            test_param = nvl(settings.param.test[literal_field(r.Talos.Test.name)], settings.param.suite[literal_field(r.Talos.Test.suite)])
 
             if test_param == None:
                 return True
+
+            if test_param.disable:
+                return False
 
             if test_param.better == "higher":
                 diff = -r.diff
@@ -86,6 +89,9 @@ def alert_sustained_median(settings, qb, alerts_db):
         return False
 
     with Timer("pull combinations"):
+        disabled_suites = [s for s, p in settings.param.suite.items() if p.disable]
+        disabled_tests = [t for t, p in settings.param.test.items() if p.disable]
+
         temp = Query({
             "from": TDAD,
             "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
@@ -93,7 +99,9 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": {"and": [
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
-                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}}
+                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
+                {"not": {"terms": {"Talos.Test.suite": disabled_suites}}},
+                {"not": {"terms": {"Talos.Test.name": disabled_tests}}}
                 # {"term": {"testrun.suite": "cart"}},
                 # {"term": {"result.test_name": "1-customize-enter.error.TART"}},
                 # {"term": {"test_machine.osversion": "OS X 10.8"}}

@@ -100,12 +100,10 @@ def send_alerts(settings, db):
                 Log.note("Nothing important to email")
             return
 
-        #poor souls that signed up for emails
-        listeners = db.query("SELECT email FROM listeners")
-        listeners = [x["email"] for x in listeners]
-        listeners = ";".join(listeners)
-
         for alert in new_alerts:
+            #poor souls that signed up for emails
+            listeners = ";".join(db.query("SELECT email FROM listeners WHERE reason={{reason}}", {"reason": alert.reason}).email)
+
             body = [HEADER]
             if alert.confidence >= 1:
                 alert.confidence = 0.999999
