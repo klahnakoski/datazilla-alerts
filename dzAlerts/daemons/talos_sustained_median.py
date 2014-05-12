@@ -75,13 +75,18 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             if test_param.better == "higher":
                 diff = -r.diff
-            else:
+            elif test_param.better == "lower":
                 diff = r.diff
-
-            if unicode(test_param.min_regression.strip()[-1]) == "%":
-                min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
             else:
-                min_diff = Math.abs(float(test_param.min_regression))
+                diff = abs(r.diff)  # DEFAULT = ANY DIRECTION IS BAD
+
+            if test_param.min_regression:
+                if unicode(test_param.min_regression.strip()[-1]) == "%":
+                    min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
+                else:
+                    min_diff = Math.abs(float(test_param.min_regression))
+            else:
+                min_diff = Math.abs(r.past_stats.mean * 0.01)
 
             if diff > min_diff:
                 return True
