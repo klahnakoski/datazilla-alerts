@@ -25,7 +25,8 @@ from dzAlerts.util.struct import nvl
 from dzAlerts.util.env.emailer import Emailer
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
-HEADER = "<h3>This is for testing only.</h3><br>"
+HEADER = "<h3>Performance Regression Alert</h3>"
+FOOTER = "<hr><a style='font-size:70%' href='https://wiki.mozilla.org/FirefoxOS/Performance/Investigating_Alerts'>Understanding this alert</a>"
 #TBPL link: https://tbpl.mozilla.org/?rev=c3598b276048
 #TBPL test results:  https://tbpl.mozilla.org/?tree=Mozilla-Inbound&rev=c9429cf294af
 #HG: https://hg.mozilla.org/mozilla-central/rev/330feedee4f1
@@ -124,7 +125,7 @@ def send_alerts(settings, db):
 
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
-            body = "".join(body)
+            body = "".join(body)+FOOTER
 
             if debug:
                 Log.note("EMAIL: {{email}}", {"email": body})

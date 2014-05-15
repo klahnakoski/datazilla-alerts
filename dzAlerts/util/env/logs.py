@@ -353,12 +353,19 @@ class Except(Exception):
             output += "\n" + indent(format_trace(self.trace))
 
         if self.cause:
-            output += "\ncaused by\n\t" + "\nand caused by\n\t".join([c.__str__() for c in self.cause])
+            cause_strings = []
+            for c in self.cause:
+                try:
+                    cause_strings.append(c.__str__())
+                except Exception, e:
+                    pass
+
+            output += "\ncaused by\n\t" + "\nand caused by\n\t".join(cause_strings)
 
         return output + "\n"
 
     def __json__(self):
-        return json_encoder.encode(Struct(
+        return json_encoder(Struct(
             type = self.type,
             template = self.template,
             params = self.params,

@@ -43,6 +43,7 @@ class ElasticSearch(object):
     def __init__(self, settings=None):
         """
         settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
+        settings.timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         """
 
         if settings is None:
@@ -250,15 +251,16 @@ class ElasticSearch(object):
         try:
             for r in records:
                 id = r.get("id", None)
+                if id == None:
+                    id = Random.hex(40)
+
                 if "json" in r:
                     json = r["json"]
                 elif "value" in r:
                     json = CNV.object2JSON(r["value"])
                 else:
+                    json = None
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")
-
-                if id == None:
-                    id = Random.hex(40)
 
                 lines.append('{"index":{"_id": ' + CNV.object2JSON(id) + '}}')
                 lines.append(json)
@@ -267,9 +269,10 @@ class ElasticSearch(object):
                 return
 
             try:
-                data_bytes = ("\n".join(lines) + "\n").encode("utf8")
+                data_bytes = "\n".join(lines) + "\n"
+                data_bytes = data_bytes.encode("utf8")
             except Exception, e:
-                Log.error("can not make request body", e)
+                Log.error("can not make request body from\n{{lines|indent}}", {"lines": lines}, e)
 
             response = self._post(
                 self.path + "/_bulk",
@@ -291,7 +294,7 @@ class ElasticSearch(object):
         except Exception, e:
             if e.message.startswith("sequence item "):
                 Log.error("problem with {{data}}", {"data": repr(lines[int(e.message[14:16].strip())])}, e)
-            Log.error("problem", e)
+            Log.error("problem sending to ES", e)
 
 
     # RECORDS MUST HAVE id AND json AS A STRING OR
