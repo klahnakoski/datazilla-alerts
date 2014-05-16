@@ -33,6 +33,7 @@ SEVERITY = 0.7
 MECURIAL_PATH = {
     "Firefox": "mozilla-central",
     "Try": "try",
+    "B2G-Inbound": "integration/b2g-inbound",
     "Mozilla-Aurora": "releases/mozilla-aurora",
     "Mozilla-Beta": "releases/mozilla-beta",
     "Mozilla-Release": "releases/mozilla-release",
