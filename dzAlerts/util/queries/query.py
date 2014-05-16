@@ -310,8 +310,12 @@ def _where_terms(master, where, schema):
                         continue
                 output.append({"terms": {k: v}})
             return {"and": output}
-        elif where["and"] or where["or"]:
-            return {k: [unwrap(_where_terms(master, vv, schema)) for vv in v] for k, v in where.items()}
+        elif where["or"]:
+            return {"or": [unwrap(_where_terms(master, vv, schema)) for vv in where["or"]]}
+        elif where["and"]:
+            return {"and": [unwrap(_where_terms(master, vv, schema)) for vv in where["and"]]}
+        elif where["not"]:
+            return {"not": unwrap(_where_terms(master, where["not"], schema))}
     return where
 
 
