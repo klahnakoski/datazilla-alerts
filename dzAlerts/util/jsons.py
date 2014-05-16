@@ -298,7 +298,7 @@ def pretty_json(value):
                     value = unicode(value.decode("latin1"))
                     Log.warning("Should not have latin1 encoded strings: {{value}}", {"value": value}, e)
             try:
-                return quote(v)
+                return quote(value)
             except Exception, e:
                 from .env.logs import Log
 

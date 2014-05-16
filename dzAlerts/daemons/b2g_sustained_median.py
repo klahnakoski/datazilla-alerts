@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from dzAlerts.daemons.util import significant_difference
 
-from dzAlerts.util.collections import MIN, MAX, AND, OR
+from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
@@ -21,6 +21,7 @@ from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
+from dzAlerts.util.queries.query import Query
 from dzAlerts.util.struct import nvl, StructList, literal_field
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
