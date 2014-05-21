@@ -301,9 +301,11 @@ def _where_terms(master, where, schema):
                         continue
                     if isinstance(fields, list) and len(fields) == 1 and MVEL.isKeyword(fields[0]):
                         if domain.getPartByKey(v) is domain.NULL:
-                            output.append({"missing": {"field": fields[0]}})
-                        else:
-                            output.append({"term": {fields[0]: v}})
+                            Log.error("why does this happen?")
+                        # if domain.getPartByKey(v) is domain.NULL:
+                        #     output.append({"missing": {"field": fields[0]}})
+                        # else:
+                        output.append({"terms": {fields[0]: v}})
                         continue
                     if domain.partitions:
                         output.append({"or": [domain.getPartByKey(vv).esfilter for vv in v]})

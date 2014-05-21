@@ -96,6 +96,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     with Timer("pull combinations"):
         disabled_suites = [s for s, p in settings.param.suite.items() if p.disable]
         disabled_tests = [t for t, p in settings.param.test.items() if p.disable]
+        disabled_branches = [t for t, p in settings.param.branch.items() if p.disable]
 
         temp = Query({
             "from": TDAD,
@@ -106,6 +107,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"exists": {"field": "result.test_name"}},
                 {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
                 {"not": {"terms": {"Talos.Test.suite": disabled_suites}}},
+                {"not": {"terms": {"Talos.Branch": disabled_branches}}},
                 {"not": {"terms": {"Talos.Test.name": disabled_tests}}}
                 # {"term": {"testrun.suite": "cart"}},
                 # {"term": {"result.test_name": "1-customize-enter.error.TART"}},

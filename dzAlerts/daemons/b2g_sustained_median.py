@@ -100,8 +100,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                 # {"term": {"test_machine.platform": "Gonk"}},
                 # {"term": {"test_machine.os": "Firefox OS"}},
                 # {"term": {"test_build.branch": "master"}},
-                # {"term": {"testrun.suite": "contacts"}},
-                # {"term": {"result.test_name": "cold_load_time"}}
+                # {"term": {"testrun.suite": "system_uss"}},
+                # {"term": {"result.test_name": "sms_memory"}}
             ]},
             "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
