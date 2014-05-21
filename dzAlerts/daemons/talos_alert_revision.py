@@ -91,11 +91,12 @@ TEMPLATE = [
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Branch</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Branch</td><td>Platform</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
             <td>{{example.Talos.Product}} {{example.Talos.Branch}}</td>
+            <td>{{example.Talos.OS.name}} {{example.Talos.OS.version}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
             <td><a href="https://datazilla.mozilla.org/?product={{example.Talos.Product}}&repository={{example.datazilla.url.branch}}&start={{example.push_date_min|unix}}&stop={{example.datazilla.url.stop|unix}}&os={{example.Talos.OS.name}}&os_version={{example.Talos.OS.version}}&test={{example.Talos.Test.suite}}&graph={{example.Talos.Test.name}}&graph_search={{example.Talos.Revision}}&project=talos&x86={{example.datazilla.url.x86}}&x86_64={{example.datazilla.url.x86_64}}">Datazilla!</a></td>
