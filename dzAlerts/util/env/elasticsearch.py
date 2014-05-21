@@ -43,6 +43,7 @@ class ElasticSearch(object):
     def __init__(self, settings=None):
         """
         settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
+        settings.timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         """
 
         if settings is None:
@@ -100,7 +101,7 @@ class ElasticSearch(object):
                 })
                 schema.settings.index.number_of_replicas = health.number_of_nodes-1
 
-        DUMMY.post(
+        DUMMY._post(
             settings.host + ":" + unicode(settings.port) + "/" + settings.index,
             data=CNV.object2JSON(schema).encode("utf8"),
             headers={"Content-Type": "application/json"}
@@ -250,24 +251,32 @@ class ElasticSearch(object):
         try:
             for r in records:
                 id = r.get("id", None)
+                if id == None:
+                    id = Random.hex(40)
+
                 if "json" in r:
                     json = r["json"]
                 elif "value" in r:
                     json = CNV.object2JSON(r["value"])
                 else:
+                    json = None
                     Log.error("Expecting every record given to have \"value\" or \"json\" property")
-
-                if id == None:
-                    id = Random.hex(40)
 
                 lines.append('{"index":{"_id": ' + CNV.object2JSON(id) + '}}')
                 lines.append(json)
 
             if not lines:
                 return
-            response = self.post(
+
+            try:
+                data_bytes = "\n".join(lines) + "\n"
+                data_bytes = data_bytes.encode("utf8")
+            except Exception, e:
+                Log.error("can not make request body from\n{{lines|indent}}", {"lines": lines}, e)
+
+            response = self._post(
                 self.path + "/_bulk",
-                data=("\n".join(lines) + "\n").encode("utf8"),
+                data=data_bytes,
                 headers={"Content-Type": "text"},
                 timeout=self.settings.timeout
             )
@@ -285,7 +294,7 @@ class ElasticSearch(object):
         except Exception, e:
             if e.message.startswith("sequence item "):
                 Log.error("problem with {{data}}", {"data": repr(lines[int(e.message[14:16].strip())])}, e)
-            Log.error("problem", e)
+            Log.error("problem sending to ES", e)
 
 
     # RECORDS MUST HAVE id AND json AS A STRING OR
@@ -324,7 +333,7 @@ class ElasticSearch(object):
                 else:
                     show_query = query
                 Log.note("Query:\n{{query|indent}}", {"query": show_query})
-            return self.post(
+            return self._post(
                 self.path + "/_search",
                 data=CNV.object2JSON(query).encode("utf8"),
                 timeout=self.settings.timeout
@@ -338,7 +347,7 @@ class ElasticSearch(object):
     def threaded_queue(self, size=None, period=None):
         return ThreadedQueue(self, size=size, period=period)
 
-    def post(self, *args, **kwargs):
+    def _post(self, *args, **kwargs):
         if "data" in kwargs and not isinstance(kwargs["data"], str):
             Log.error("data must be utf8 encoded string")
 

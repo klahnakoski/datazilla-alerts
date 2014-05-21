@@ -187,6 +187,19 @@ class Struct(dict):
         d = _get(self, "__dict__")
         return ((k, wrap(v)) for k, v in d.items())
 
+    def all_items(self):
+        """
+        GET ALL KEY-VALUES OF LEAF NODES IN Struct
+        """
+        d = _get(self, "__dict__")
+        output = []
+        for k, v in d.items():
+            if isinstance(v, dict):
+                _all_items(output, k, v)
+            else:
+                output.append((k, v))
+        return output
+
     def iteritems(self):
         #LOW LEVEL ITERATION, NO WRAPPING
         d = _get(self, "__dict__")
@@ -236,10 +249,18 @@ class Struct(dict):
 
     def setdefault(self, k, d=None):
         if self[k] == None:
-            self[k]=d
+            self[k] = d
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL
 requested = set()
+
+
+def _all_items(output, key, d):
+    for k, v in d:
+        if isinstance(v, dict):
+            _all_items(output, key+"."+k, v)
+        else:
+            output.append((key+"."+k, v))
 
 
 def _str(value, depth):
@@ -462,6 +483,8 @@ class StructList(list):
     ENCAPSULATES HANDING OF Nulls BY wrapING ALL MEMBERS AS NEEDED
     ENCAPSULATES FLAT SLICES ([::]) FOR USE IN WINDOW FUNCTIONS
     """
+    EMPTY = None
+
     def __init__(self, vals=None):
         """ USE THE vals, NOT A COPY """
         # list.__init__(self)
@@ -502,8 +525,22 @@ class StructList(list):
                 output = _get(self, key)
                 return output
         except Exception, e:
-            pass
-        return StructList([v.get(key, None) for v in _get(self, "list")])
+            if key[0:2] == "__":  # SYSTEM LEVEL ATTRIBUTES CAN NOT BE USED FOR SELECT
+                raise e
+        return StructList.select(self, key)
+
+    def select(self, key):
+        output = []
+        for v in _get(self, "list"):
+            try:
+                output.append(v.__getattribute__(key))
+            except Exception, e:
+                try:
+                    output.append(v.__getitem__(key))
+                except Exception, f:
+                    output.append(None)
+
+        return StructList(output)
 
     def __iter__(self):
         return (wrap(v) for v in _get(self, "list"))
@@ -591,17 +628,23 @@ class StructList(list):
             return StructList([oper(v) for v in _get(self, "list") if v != None])
 
 
+StructList.EMPTY = StructList()
+
+
 def wrap(v):
+    if v is None:
+        return Null
+
     type = v.__class__
 
     if type is Struct:
+        return v
+    elif type is StructList:
         return v
     elif type is dict:
         m = Struct()
         object.__setattr__(m, "__dict__", v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
-    elif type is StructList:
-        return v
     elif type is list:
         if DEBUG:
             for sv in v:
@@ -619,8 +662,6 @@ def wrap(v):
         return StructList(v)
     elif type is GeneratorType:
         return (wrap(vv) for vv in v)
-    elif v is None:
-        return Null
     else:
         return v
 

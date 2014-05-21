@@ -90,7 +90,11 @@ def _normalize_select(select, schema=None):
             s = schema[select]
             if s:
                 return s.getSelect()
-        return Struct(name=select, value=select, aggregate="none")
+        return Struct(
+            name=select.rstrip("."),  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
+            value=select,
+            aggregate="none"
+        )
     else:
         if not select.name:
             select = select.copy()
@@ -275,8 +279,11 @@ def _where_terms(master, where, schema):
     if isinstance(where, dict):
         if where.term:
             #MAP TERM
-            output = _map_term_using_schema(master, where, schema)
-            return output
+            try:
+                output = _map_term_using_schema(master, where, schema)
+                return output
+            except Exception, e:
+                Log.error("programmer problem?", e)
         elif where.terms:
             #MAP TERM
             output = StructList()
@@ -303,8 +310,12 @@ def _where_terms(master, where, schema):
                         continue
                 output.append({"terms": {k: v}})
             return {"and": output}
-        elif where["and"] or where["or"]:
-            return {k: [unwrap(_where_terms(master, vv, schema)) for vv in v] for k, v in where.items()}
+        elif where["or"]:
+            return {"or": [unwrap(_where_terms(master, vv, schema)) for vv in where["or"]]}
+        elif where["and"]:
+            return {"and": [unwrap(_where_terms(master, vv, schema)) for vv in where["and"]]}
+        elif where["not"]:
+            return {"not": unwrap(_where_terms(master, where["not"], schema))}
     return where
 
 

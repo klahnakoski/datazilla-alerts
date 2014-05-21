@@ -14,6 +14,7 @@ from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.collections import MIN, MAX, AND, OR
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
@@ -21,7 +22,7 @@ from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.struct import nvl, StructList, literal_field, unwrap
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
@@ -33,7 +34,9 @@ from dzAlerts.util.times.timer import Timer
 SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
 # MIN_CONFIDENCE = 0.9999
 REASON = "talos_alert_sustained_median"     # name of the reason in alert_reason
+NOW = datetime.utcnow()
 MAX_AGE = timedelta(days=90)
+OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
@@ -62,21 +65,51 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            if r.diff > 0 and OR(AND(r.Talos.Test[k] == v for k, v in t.items()) for t in settings.param.lower_is_better):
+            test_param = nvl(settings.param.test[literal_field(r.Talos.Test.name)], settings.param.suite[literal_field(r.Talos.Test.suite)])
+
+            if test_param == None:
                 return True
-            if r.diff < 0 and OR(AND(r.Talos.Test[k] == v for k, v in t.items()) for t in settings.param.higher_is_better):
+
+            if test_param.disable:
+                return False
+
+            if test_param.better == "higher":
+                diff = -r.diff
+            elif test_param.better == "lower":
+                diff = r.diff
+            else:
+                diff = abs(r.diff)  # DEFAULT = ANY DIRECTION IS BAD
+
+            if test_param.min_regression:
+                if unicode(test_param.min_regression.strip()[-1]) == "%":
+                    min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
+                else:
+                    min_diff = Math.abs(float(test_param.min_regression))
+            else:
+                min_diff = Math.abs(r.past_stats.mean * 0.01)
+
+            if diff > min_diff:
                 return True
+
         return False
 
     with Timer("pull combinations"):
+        disabled_suites = [s for s, p in settings.param.suite.items() if p.disable]
+        disabled_tests = [t for t, p in settings.param.test.items() if p.disable]
+
         temp = Query({
             "from": TDAD,
             "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                {"missing": {"field": settings.param.mark_complete}},
-                {"term": {"testrun.suite": "tp5o"}},
-                {"exists": {"field": "result.test_name"}}
+                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                {"exists": {"field": "result.test_name"}},
+                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
+                {"not": {"terms": {"Talos.Test.suite": disabled_suites}}},
+                {"not": {"terms": {"Talos.Test.name": disabled_tests}}}
+                # {"term": {"testrun.suite": "cart"}},
+                # {"term": {"result.test_name": "1-customize-enter.error.TART"}},
+                # {"term": {"test_machine.osversion": "OS X 10.8"}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
@@ -84,7 +117,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                 # {"term": {"test_build.branch": "master"}},
                 # {"term": {"testrun.suite": "communications/ftu"}},
                 # {"term": {"result.test_name": "startup_time"}}
-            ]}
+            ]},
+            "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
 
         new_test_points = qb.query(temp)
@@ -98,13 +132,16 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     # all_min_date = Null
     all_touched = set()
-    re_alert = set()
+    evaled_tests = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
     for g, test_points in Q.groupby(new_test_points, query.edges):
         if not test_points.min_push_date:
             continue
         try:
-            first_sample = MAX(MIN(test_points.min_push_date), CNV.datetime2milli(datetime.utcnow() - MAX_AGE))
+            if settings.args.restart:
+                first_sample = OLDEST_TS
+            else:
+                first_sample = MAX(MIN(test_points.min_push_date), OLDEST_TS)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
@@ -117,7 +154,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                     ]},
                     "sort": {"field": PUSH_DATE, "sort": -1},
                     "limit": settings.param.sustained_median.window_size * 2
-                }})
+                }
+            })
+            if len(first_in_window) > settings.param.sustained_median.window_size * 2:
+                do_all = False
+            else:
+                do_all = True
 
             min_date = MIN(first_sample, first_in_window.min_date)
 
@@ -147,12 +189,16 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             #APPLY WINDOW FUNCTIONS
             stats = Q.run({
-                "from":{
+                "from": {
                     "from": test_results,
                     "where": {"exists": {"field": "value"}}
                 },
                 "window": [
                     {
+                        # WE DO NOT WANT TO CONSIDER THE POINTS BEFORE FULL WINDOW SIZE
+                        "name": "ignored",
+                        "value": lambda r, i: False if do_all or i > settings.param.sustained_median.window_size else True
+                    }, {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_min",
                         "value": lambda r: r.push_date,
@@ -160,8 +206,15 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "aggregate": windows.Min,
                         "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
                     }, {
+                        # SO WE CAN SHOW A DATAZILLA WINDOW
+                        "name": "push_date_max",
+                        "value": lambda r: r.push_date,
+                        "sort": "push_date",
+                        "aggregate": windows.Max,
+                        "range": {"min": 0, "max": settings.param.sustained_median.window_size}
+                    }, {
                         "name": "past_revision",
-                        "value": lambda r, i, rows: rows[i-1].Talos.Revision,
+                        "value": lambda r, i, rows: rows[i - 1].Talos.Revision,
                         "sort": "push_date"
                     }, {
                         "name": "past_stats",
@@ -188,7 +241,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: r.future_stats.mean - r.past_stats.mean
                     }, {
                         "name": "diff_percent",
-                        "value": lambda r: (r.future_stats.mean - r.past_stats.mean)/r.past_stats.mean
+                        "value": lambda r: (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }, {
                         "name": "is_diff",
                         "value": is_bad
@@ -216,16 +269,16 @@ def alert_sustained_median(settings, qb, alerts_db):
             all_touched.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            re_alert.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
-
-            #FOR DEBUGGING
-            # Q.select(stats[0:400:], ["test_build.gaia_revision","push_date", "is_diff", "result.confidence"])
+            evaled_tests.update(Q.run({
+                "from": test_results,
+                "select": ["test_run_id", "Talos.Test"],
+                "where": {"term": {"ignored": False}}
+            }))
 
             File("test_values.txt").write(CNV.list2tab(Q.select(stats, [
                 {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
                 "value",
-                {"name": "gaia", "value": "Talos.Revision.gaia"},
-                {"name": "gecko", "value": "Talos.Revision.gecko"},
+                {"name": "revision", "value": "Talos.Revision"},
                 {"name": "confidence", "value": "result.confidence"},
                 "pass"
             ])))
@@ -233,6 +286,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
             for v in new_exceptions:
+                if v.ignored:
+                    continue
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
@@ -251,15 +306,27 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
-        # break  # DEBUGGING ONLY
-
     if debug:
         Log.note("Get Current Alerts")
 
     #CHECK THE CURRENT ALERTS
-    if not re_alert:
-        current_alerts = StructList()
+    if not evaled_tests:
+        current_alerts = StructList.EMPTY
     else:
+        # THIS IS QUITE TOUCHY, IT DEPENDS ON THE JSON SERIALIZATION OF THE
+        # GROUP (g) TO BE COMPLETE IN THE details COLUMN OF THE ALERTS DB
+        # ANY EXTRA COLUMNS WILL CAUSE A MISMATCH
+        # WE MUST DO THIS SO WE ONLY OBSOLETE THE ALERTS WE CHOULD HAVE
+        # COVERED (BOTH IN TIME AND IN GROUPS)
+        # or_list = []
+        # for g in touched_groups:
+        #     g = unwrap(g)
+        #     output = Struct()
+        #     for key, val in g.items():
+        #         if key.startswith("Talos."):
+        #             output[key[6::]] = val
+        #     or_list.append({"instr": {"details": output}})
+
         current_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
@@ -273,10 +340,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "solution"
             ],
             "where": {"and": [
-                {"or": [
-                    {"terms": {"tdad_id": re_alert}},
-                    {"range": {"create_time": {"gte": CNV.datetime2milli(datetime.utcnow() - MAX_AGE)}}}
-                ]},
+                {"terms": {"tdad_id": evaled_tests}},
                 {"term": {"reason": REASON}}
             ]}
         })
@@ -286,7 +350,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     new_alerts = found_alerts - current_alerts
     changed_alerts = current_alerts & found_alerts
-    obsolete_alerts = current_alerts - found_alerts
+    obsolete_alerts = Q.filter(current_alerts - found_alerts, {"not": {"term": {"status": "obsolete"}}})
 
     if debug:
         Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
@@ -298,7 +362,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     if new_alerts:
         for a in new_alerts:
             a.id = SQL("util.newid()")
-            a.last_updated = datetime.utcnow()
+            a.last_updated = NOW
         try:
             alerts_db.insert_list("alerts", new_alerts)
         except Exception, e:
@@ -308,7 +372,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         if len(nvl(curr.solution, "").strip()) != 0:
             continue  # DO NOT TOUCH SOLVED ALERTS
 
-        a = found_alerts[(curr.tdad_id,)]
+        a = found_alerts[(curr.tdad_id, )]
 
         if a == None:
             Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
@@ -316,17 +380,23 @@ def alert_sustained_median(settings, qb, alerts_db):
         if significant_difference(curr.severity, a.severity) or \
                 significant_difference(curr.confidence, a.confidence) or \
                         curr.reason != a.reason:
-            curr.last_updated = datetime.utcnow()
+            curr.last_updated = NOW
             alerts_db.update("alerts", {"id": curr.id}, a)
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     if obsolete_alerts:
         alerts_db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
-            "where": esfilter2sqlwhere(alerts_db, {"terms": {"id": Q.select(obsolete_alerts, "id")}})
+            "where": esfilter2sqlwhere(
+                alerts_db,
+                {"and": [
+                    {"terms": {"id": obsolete_alerts.id}},
+                    {"not": {"term": {"status": "obsolete"}}}
+                ]}
+            )
         })
 
     alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
-        "now": datetime.utcnow(),
+        "now": NOW,
         "where": esfilter2sqlwhere(alerts_db, {"term": {"code": REASON}})
     })
 
@@ -346,23 +416,27 @@ def alert_sustained_median(settings, qb, alerts_db):
         })
 
 
-
-
 def main():
-    settings = startup.read_settings()
+    settings = startup.read_settings(defs=[{
+        "name": ["--restart", "--reset", "--redo"],
+        "help": "use this to recalc alerts",
+        "action": "store_true",
+        "dest": "restart"
+    }])
     Log.start(settings.debug)
     try:
-        Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
+        with startup.SingleInstance(flavor_id=settings.args.filename):
+            Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-        qb = ESQuery(ElasticSearch(settings.query["from"]))
-        qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
+            with ESQuery(ElasticSearch(settings.query["from"])) as qb:
+                qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
-        with DB(settings.alerts) as alerts_db:
-            alert_sustained_median(
-                settings,
-                qb,
-                alerts_db
-            )
+                with DB(settings.alerts) as alerts_db:
+                    alert_sustained_median(
+                        settings,
+                        qb,
+                        alerts_db
+                    )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
     finally:

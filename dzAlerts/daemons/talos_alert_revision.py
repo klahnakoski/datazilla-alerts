@@ -10,7 +10,7 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
-from dzAlerts.daemons import b2g_sustained_median
+from dzAlerts.daemons import talos_sustained_median
 from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
@@ -24,52 +24,82 @@ from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList
 
 
-REASON = "b2g_alert_revision"   # name of the reason in alert_reason
+REASON = "talos_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = timedelta(days=90)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
-# What needs to be in a notifications email?
-#      * Link to datazilla graph centered on event that triggered notification.  Ideally, highlight the regression range datapoints.
-#      * Gaia git revision before and after event.  Preferably as a github compare URL.
-#      * Gecko hg revision before and after event.  Preferably as a pushlog URL.
-#      * Also nice to have Gecko git revisions before and after event.  Some people prefer git for gecko, but they seem the minority.
-#      * Firmware version before and after event; reported in datazilla as fields starting with "Firmware".
-#      * Device type; hamachi vs inari vs tarako, etc
-#      * b2gperf version (not currently reported in datazilla)
-#      * Summary statistics for the regression; mean, median, stdev before and after event
-#
+# FROM tcp://s4n4.qa.phx1.mozilla.com:3306/pushlog_hgmozilla_1/branches
+MECURIAL_PATH = {
+    "Firefox": "mozilla-central",
+    "Try": "try",
+    "B2G-Inbound": "integration/b2g-inbound",
+    "Mozilla-Aurora": "releases/mozilla-aurora",
+    "Mozilla-Beta": "releases/mozilla-beta",
+    "Mozilla-Release": "releases/mozilla-release",
+    "Mozilla-Esr10": "releases/mozilla-esr10",
+    "Accessibility": "projects/accessibility",
+    "Addon-SDK": "projects/addon-sdk",
+    "Build-System": "projects/build-system",
+    "Devtools": "projects/devtools",
+    "Fx-Team": "integration/fx-team",
+    "Ionmonkey": "projects/ionmonkey",
+    "JägerMonkey": "projects/jaegermonkey",
+    "Profiling": "projects/profiling",
+    "Services-Central": "services/services-central",
+    "UX": "projects/ux",
+    "Alder": "projects/alder",
+    "Ash": "projects/ash",
+    "Birch": "projects/birch",
+    "Cedar": "projects/cedar",
+    "Elm": "projects/elm",
+    "Holly": "projects/holly",
+    "Larch": "projects/larch",
+    "Maple": "projects/maple",
+    "Oak": "projects/oak",
+    "Pine": "projects/pine",
+    "Electrolysis": "projects/electrolysis",
+    "Graphics": "projects/graphics",
+    "Places": "projects/places",
+    "Mozilla-Inbound": "integration/mozilla-inbound",
+}
+
+TBPL_PATH = {
+    "B2G-Inbound": "B2g-Inbound"
+}
+
+
 SUBJECT = [
-    "[ALERT][B2G] {{details.example.B2G.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} in ",
+    "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}} in ",
     {
         "from": "details.tests",
         "template": "{{test.suite}}",
         "separator": ", "
     }
     ]
+
 TEMPLATE = [
     """
     <div>
     	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
-    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
-
-    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
-
+        <span style="font-size: 120%; display:inline-block">
+        [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch}}/rev/{{revision}}">{{revision}}</a>]
+        </span>
+        [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch|lower}}/rev/{{details.example.past_revision}}">Previous</a>]
+        [<a href="https://tbpl.mozilla.org/?tree={{details.example.tbpl.url.branch}}&rev={{revision}}">TBPL</a>]
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Branch</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
-            <td>{{example.B2G.Device|upper}}</td>
+            <td>{{example.Talos.Product}} {{example.Talos.Branch}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
-            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
+            <td><a href="https://datazilla.mozilla.org/?product={{example.Talos.Product}}&repository={{example.datazilla.url.branch}}&start={{example.push_date_min|unix}}&stop={{example.datazilla.url.stop|unix}}&os={{example.Talos.OS.name}}&os_version={{example.Talos.OS.version}}&test={{example.Talos.Test.suite}}&graph={{example.Talos.Test.name}}&graph_search={{example.Talos.Revision}}&project=talos&x86={{example.datazilla.url.x86}}&x86_64={{example.datazilla.url.x86_64}}">Datazilla!</a></td>
+            <td><a href="">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
             <td>{{example.future_stats.mean|round(digits=4)}}</td>
@@ -84,13 +114,13 @@ TEMPLATE = [
 # assumes there is an outside agent corrupting our test results
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
-def b2g_alert_revision(settings):
+def talos_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
     with DB(settings.alerts) as db:
         with ESQuery(ElasticSearch(settings.query["from"])) as esq:
-            dbq = DBQuery(db)
 
+            dbq = DBQuery(db)
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             #TODO: REMOVE, LEAVE IN DB
@@ -107,13 +137,13 @@ def b2g_alert_revision(settings):
                 "from": "alerts",
                 "select": "*",
                 "where": {"and": [
-                    {"term": {"reason": b2g_sustained_median.REASON}},
+                    {"term": {"reason": talos_sustained_median.REASON}},
                     {"not": {"term": {"status": "obsolete"}}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })
 
-            tests = Q.index(existing_sustained_alerts, ["revision", "details.B2G.Test"])
+            tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 
             #EXISTING REVISION-LEVEL ALERTS
             old_alerts = dbq.query({
@@ -121,8 +151,11 @@ def b2g_alert_revision(settings):
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": REASON}},
-                    {"or":[
+                    {"or": [
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+
+                        {"term": {"reason": talos_sustained_median.REASON}},
+                        {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]}
@@ -134,26 +167,37 @@ def b2g_alert_revision(settings):
             for revision in set(existing_sustained_alerts.revision):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
                 total_tests = esq.query({
-                    "from": "b2g_alerts",
+                    "from": "talos",
                     "select": {"name": "count", "aggregate": "count"},
-                    "where": {"terms": {"B2G.Revision": revision}}
+                    "where": {"and":[
+                        {"terms": {"Talos.Revision": revision}}
+                    ]}
                 })
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
-                for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
-                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()
+                for g, exceptions in Q.groupby(total_exceptions, ["details.Talos.Test"]):
+                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
+                    example = worst_in_test.details
+                    # ADD SOME DATAZILLA SPECIFIC URL PARAMETERS
+                    branch = example.Talos.Branch.replace("-Non-PGO", "")
+                    example.tbpl.url.branch = TBPL_PATH.get(branch, branch)
+                    example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
+                    example.datazilla.url.branch = example.Talos.Branch #+ ("" if worst_in_test.Talos.Branch.pgo else "-Non-PGO")
+                    example.datazilla.url.x86 = "true" if example.Talos.Platform == "x86" else "false"
+                    example.datazilla.url.x86_64 = "true" if example.Talos.Platform == "x86_64" else "false"
+                    example.datazilla.url.stop = nvl(example.push_date_max, (2*example.push_date) - example.push_date_min)
 
                     num_except = len(exceptions)
                     if num_except == 0:
                         continue
 
                     part = {
-                        "test": g.details.B2G.Test,
+                        "test": g.details.Talos.Test,
                         "num_exceptions": num_except,
                         "num_tests": total_tests,
                         "confidence": worst_in_test.confidence,
-                        "example": worst_in_test.details
+                        "example": example
                     }
                     parts.append(part)
 
@@ -203,7 +247,7 @@ def b2g_alert_revision(settings):
                     {{where}}
             """, {
                 "where": esfilter2sqlwhere(db, {"and": [
-                    {"term": {"p.reason": b2g_sustained_median.REASON}},
+                    {"term": {"p.reason": talos_sustained_median.REASON}},
                     {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                     {"missing": "h.parent"}
                 ]}),
@@ -232,7 +276,7 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
-        b2g_alert_revision(settings)
+        talos_alert_revision(settings)
     finally:
         Log.stop()
 

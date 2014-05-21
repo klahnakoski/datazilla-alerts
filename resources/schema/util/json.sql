@@ -57,7 +57,6 @@ BEGIN
 	END IF;
 END;;
 
-
 SELECT json(" [\"results\": {}, junk]", "results") result, "{}" expected from dual;;
 SELECT json(" [\"results\": {\"hi\":20}, junk]", "results") result, "{\"hi\":20}" expected from dual;;
 SELECT json(" \"results\": {\"hi\":20}, junk]", "results") result, "{\"hi\":20}" expected  from dual;;
@@ -71,7 +70,7 @@ SELECT json(" \"results\": {\"some thing\":[324,987], {\"other\":\"99\\\"}}, jum
 -- FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS string;;
 CREATE FUNCTION string (
-	value		VARCHAR(65000) character set latin1,
+	value		longtext character set utf8,
 	tag			VARCHAR(40)
 ) RETURNS varchar(65000) CHARSET latin1
     NO SQL
@@ -93,7 +92,7 @@ END;;
 -- FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS number;;
 CREATE FUNCTION number (
-	value		VARCHAR(65000) character set latin1,
+	value		longtext character set utf8,
 	tag			VARCHAR(40)
 ) RETURNS varchar(65000) CHARSET latin1
     NO SQL
