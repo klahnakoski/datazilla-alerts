@@ -288,6 +288,8 @@ def _where_terms(master, where, schema):
             #MAP TERM
             output = StructList()
             for k, v in where.terms.items():
+                if not isinstance(v, list):
+                    Log.error("terms filter expects list of values")
                 if schema.edges[k]:
                     domain = schema.edges[k].getDomain()
                     fields = domain.dimension.fields

@@ -96,7 +96,7 @@ TEMPLATE = [
         "from": "details.tests",
         "template": """<tr>
             <td>{{example.Talos.Product}} {{example.Talos.Branch}}</td>
-            <td>{{example.Talos.OS.name}} {{example.Talos.OS.version}}</td>
+            <td>{{example.Talos.OS.name}} ({{example.Talos.OS.version}})</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
             <td><a href="https://datazilla.mozilla.org/?product={{example.Talos.Product}}&repository={{example.datazilla.url.branch}}&start={{example.push_date_min|unix}}&stop={{example.datazilla.url.stop|unix}}&os={{example.Talos.OS.name}}&os_version={{example.Talos.OS.version}}&test={{example.Talos.Test.suite}}&graph={{example.Talos.Test.name}}&graph_search={{example.Talos.Revision}}&project=talos&x86={{example.datazilla.url.x86}}&x86_64={{example.datazilla.url.x86_64}}">Datazilla!</a></td>
@@ -171,7 +171,7 @@ def talos_alert_revision(settings):
                     "from": "talos",
                     "select": {"name": "count", "aggregate": "count"},
                     "where": {"and":[
-                        {"terms": {"Talos.Revision": revision}}
+                        {"term": {"Talos.Revision": revision}}
                     ]}
                 })
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
