@@ -311,10 +311,16 @@ def _all_default(d, default):
 
 
 def _getdefault(obj, key):
+    """
+    TRY BOTH ATTRIBUTE AND ITEM ACCESS, OR RETURN Null
+    """
     try:
-        return obj[key]
+        return obj.__getattribute__(key)
     except Exception, e:
-        return NullType(obj, key)
+        try:
+            return obj[key]
+        except Exception, f:
+            return NullType(obj, key)
 
 
 def _assign(obj, path, value, force=True):

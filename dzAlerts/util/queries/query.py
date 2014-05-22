@@ -290,8 +290,13 @@ def _where_terms(master, where, schema):
             for k, v in where.terms.items():
                 if not isinstance(v, list):
                     Log.error("terms filter expects list of values")
-                if schema.edges[k]:
-                    domain = schema.edges[k].getDomain()
+                edge = schema.edges[k]
+                if edge:
+                    if isinstance(edge, basestring):
+                        #DIRECT FIELD REFERENCE
+                        return {"terms": {edge: v}}
+
+                    domain = edge.getDomain()
                     fields = domain.dimension.fields
                     if isinstance(fields, dict):
                         for local_field, es_field in fields.items():

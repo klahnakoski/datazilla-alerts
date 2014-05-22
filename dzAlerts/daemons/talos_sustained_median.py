@@ -103,9 +103,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
-                {"not": {"terms": {"Talos.Test.suite": disabled_suites}}},
+                {"not": {"terms": {"Talos.Test.fields.suite": disabled_suites}}},
                 {"not": {"terms": {"Talos.Branch": disabled_branches}}},
-                {"not": {"terms": {"Talos.Test.name": disabled_tests}}}
+                {"not": {"terms": {"Talos.Test.fields.name": disabled_tests}}}
                 # {"term": {"testrun.suite": "cart"}},
                 # {"term": {"result.test_name": "1-customize-enter.error.TART"}},
                 # {"term": {"test_machine.osversion": "OS X 10.8"}}
