@@ -136,7 +136,7 @@ def b2g_alert_revision(settings):
                 total_tests = esq.query({
                     "from": "b2g_alerts",
                     "select": {"name": "count", "aggregate": "count"},
-                    "where": {"terms": {"B2G.Revision": revision}}
+                    "where": {"term": {"B2G.Revision": revision}}
                 })
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
