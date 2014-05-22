@@ -67,9 +67,6 @@ def alert_sustained_median(settings, qb, alerts_db):
         if settings.param.sustained_median.trigger < r.result.confidence:
             test_param = nvl(settings.param.test[literal_field(r.Talos.Test.name)], settings.param.suite[literal_field(r.Talos.Test.suite)])
 
-            if test_param == None:
-                return True
-
             if test_param.disable:
                 return False
 

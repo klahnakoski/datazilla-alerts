@@ -696,7 +696,7 @@ def nvl(*args):
     #pick the first none-null value
     for a in args:
         if a != None:
-            return a
+            return wrap(a)
     return Null
 
 def zip(keys, values):

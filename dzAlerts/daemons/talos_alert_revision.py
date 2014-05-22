@@ -16,6 +16,7 @@ from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
@@ -187,7 +188,7 @@ def talos_alert_revision(settings):
                     example.datazilla.url.branch = example.Talos.Branch #+ ("" if worst_in_test.Talos.Branch.pgo else "-Non-PGO")
                     example.datazilla.url.x86 = "true" if example.Talos.Platform == "x86" else "false"
                     example.datazilla.url.x86_64 = "true" if example.Talos.Platform == "x86_64" else "false"
-                    example.datazilla.url.stop = nvl(example.push_date_max, (2*example.push_date) - example.push_date_min)
+                    example.datazilla.url.stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min)
 
                     num_except = len(exceptions)
                     if num_except == 0:

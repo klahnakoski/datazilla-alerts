@@ -123,3 +123,14 @@ class Math(object):
         return int(math.ceil(value))
 
 
+    @staticmethod
+    def max(*values):
+        output=None
+        for v in values:
+            if v==None:
+                continue
+            elif output == None or v > output:
+                output = v
+            else:
+                pass
+        return output
