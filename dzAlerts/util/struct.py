@@ -296,7 +296,7 @@ def set_default(primary, secondary, tertiary=None):
     if tertiary is None:
         return a
     if a == None:
-        return tertiary
+        return wrap(tertiary)
 
     return wrap(_all_default(unwrap(a), unwrap(tertiary)))
 

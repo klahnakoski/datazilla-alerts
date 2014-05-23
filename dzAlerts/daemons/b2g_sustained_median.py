@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from dzAlerts.daemons.util import significant_difference
+from dzAlerts.daemons.util.is_bad import is_bad
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -64,29 +65,11 @@ def alert_sustained_median(settings, qb, alerts_db):
     debug = nvl(settings.param.debug, DEBUG)
     query = settings.query
 
-    def is_bad(r):
-        if settings.param.sustained_median.trigger < r.result.confidence:
-            test_param = settings.param.test[literal_field(r.B2G.Test.name)]
-
-            if test_param == None:
-                return True
-
-            if test_param.better == "higher":
-                diff = -r.diff
-            else:
-                diff = r.diff
-
-            if unicode(test_param.min_regression.strip()[-1]) == "%":
-                min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
-            else:
-                min_diff = Math.abs(float(test_param.min_regression))
-
-            if diff > min_diff:
-                return True
-
-        return False
-
     with Timer("pull combinations"):
+        disabled_suites = [s for s, p in settings.param.suite.items() if p.disable]
+        disabled_tests = [t for t, p in settings.param.test.items() if p.disable]
+        disabled_branches = [t for t, p in settings.param.branch.items() if p.disable]
+
         temp = Query({
             "from": TDAD,
             "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
@@ -95,6 +78,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
+                {"not": {"terms": {"Talos.Test.fields.suite": disabled_suites}}},
+                {"not": {"terms": {"Talos.Branch": disabled_branches}}},
+                {"not": {"terms": {"Talos.Test.fields.name": disabled_tests}}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
@@ -229,7 +215,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }, {
                         "name": "is_diff",
-                        "value": is_bad
+                        "value": lambda r: is_bad(settings, r)
                     }, {
                         #USE THIS TO FILL CONFIDENCE HOLES
                         #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
@@ -299,6 +285,20 @@ def alert_sustained_median(settings, qb, alerts_db):
     if not evaled_tests:
         current_alerts = StructList.EMPTY
     else:
+        # THIS IS QUITE TOUCHY, IT DEPENDS ON THE JSON SERIALIZATION OF THE
+        # GROUP (g) TO BE COMPLETE IN THE details COLUMN OF THE ALERTS DB
+        # ANY EXTRA COLUMNS WILL CAUSE A MISMATCH
+        # WE MUST DO THIS SO WE ONLY OBSOLETE THE ALERTS WE CHOULD HAVE
+        # COVERED (BOTH IN TIME AND IN GROUPS)
+        # or_list = []
+        # for g in touched_groups:
+        #     g = unwrap(g)
+        #     output = Struct()
+        #     for key, val in g.items():
+        #         if key.startswith("Talos."):
+        #             output[key[6::]] = val
+        #     or_list.append({"instr": {"details": output}})
+
         current_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
