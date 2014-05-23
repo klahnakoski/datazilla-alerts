@@ -123,6 +123,7 @@ def b2g_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"or":[
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                        {"term": {"reason": b2g_sustained_median.REASON}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]}
@@ -131,18 +132,27 @@ def b2g_alert_revision(settings):
 
             #SUMMARIZE
             known_alerts = StructList()
-            for revision in set(existing_sustained_alerts.revision):
+
+            total_tests = esq.query({
+                "from": "b2g_alerts",
+                "select": {"name": "count", "aggregate": "count"},
+                "edges": [
+                    "B2G.Revision"
+                ],
+                "where": {"and": [
+                    {"terms": {"B2G.Revision": list(set(existing_sustained_alerts.revision))}}
+                ]}
+            })
+
+            # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
+            for revision, total_test_count in Q.groupby(total_tests, ["B2G.Revision"]):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                total_tests = esq.query({
-                    "from": "b2g_alerts",
-                    "select": {"name": "count", "aggregate": "count"},
-                    "where": {"term": {"B2G.Revision": revision}}
-                })
+                revision = revision["B2G\.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
-                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()
+                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
 
                     num_except = len(exceptions)
                     if num_except == 0:
@@ -151,7 +161,7 @@ def b2g_alert_revision(settings):
                     part = {
                         "test": g.details.B2G.Test,
                         "num_exceptions": num_except,
-                        "num_tests": total_tests,
+                        "num_tests": total_test_count,
                         "confidence": worst_in_test.confidence,
                         "example": worst_in_test.details
                     }
@@ -168,7 +178,7 @@ def b2g_alert_revision(settings):
                     "tdad_id": revision,
                     "details": {
                         "revision": revision,
-                        "total_tests": total_tests,
+                        "total_tests": total_test_count,
                         "total_exceptions": len(total_exceptions),
                         "tests": parts,
                         "example": worst_in_revision

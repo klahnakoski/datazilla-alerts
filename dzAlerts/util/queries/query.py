@@ -291,7 +291,9 @@ def _where_terms(master, where, schema):
                 if not isinstance(v, list):
                     Log.error("terms filter expects list of values")
                 edge = schema.edges[k]
-                if edge:
+                if not edge:
+                    output.append({"terms": {k: v}})
+                else:
                     if isinstance(edge, basestring):
                         #DIRECT FIELD REFERENCE
                         return {"terms": {edge: v}}
@@ -299,23 +301,19 @@ def _where_terms(master, where, schema):
                     domain = edge.getDomain()
                     fields = domain.dimension.fields
                     if isinstance(fields, dict):
-                        for local_field, es_field in fields.items():
-                            vv = v[local_field]
-                            if vv == None:
-                                output.append({"missing": {"field": es_field}})
-                            else:
-                                output.append({"term": {es_field: vv}})
-                        continue
-                    if isinstance(fields, list) and len(fields) == 1 and MVEL.isKeyword(fields[0]):
-                        # if domain.getPartByKey(v) is domain.NULL:
-                        #     output.append({"missing": {"field": fields[0]}})
-                        # else:
+                        or_agg = []
+                        for vv in v:
+                            and_agg = []
+                            for local_field, es_field in fields.items():
+                                vvv = vv[local_field]
+                                if vvv != None:
+                                    and_agg.append({"term": {es_field: vvv}})
+                            or_agg.append({"and": and_agg})
+                        output.append({"or": or_agg})
+                    elif isinstance(fields, list) and len(fields) == 1 and MVEL.isKeyword(fields[0]):
                         output.append({"terms": {fields[0]: v}})
-                        continue
-                    if domain.partitions:
+                    elif domain.partitions:
                         output.append({"or": [domain.getPartByKey(vv).esfilter for vv in v]})
-                        continue
-                output.append({"terms": {k: v}})
             return {"and": output}
         elif where["or"]:
             return {"or": [unwrap(_where_terms(master, vv, schema)) for vv in where["or"]]}

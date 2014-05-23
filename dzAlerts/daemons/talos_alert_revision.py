@@ -148,7 +148,6 @@ def talos_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"or": [
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-
                         {"term": {"reason": talos_sustained_median.REASON}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
@@ -159,15 +158,22 @@ def talos_alert_revision(settings):
 
             #SUMMARIZE
             known_alerts = StructList()
-            for revision in set(existing_sustained_alerts.revision):
+
+            total_tests = esq.query({
+                "from": "talos",
+                "select": {"name": "count", "aggregate": "count"},
+                "edges": [
+                    {"name": "revision", "value": "Talos.Revision"}
+                ],
+                "where": {"and": [
+                    {"terms": {"Talos.Revision": set(existing_sustained_alerts.revision)}}
+                ]}
+            })
+
+            # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
+            for revision, total_test_count in Q.groupby(total_tests, ["Talos.Revision"]):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                total_tests = esq.query({
-                    "from": "talos",
-                    "select": {"name": "count", "aggregate": "count"},
-                    "where": {"and":[
-                        {"term": {"Talos.Revision": revision}}
-                    ]}
-                })
+                revision = revision["Talos\.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
@@ -190,7 +196,7 @@ def talos_alert_revision(settings):
                     part = {
                         "test": g.details.Talos.Test,
                         "num_exceptions": num_except,
-                        "num_tests": total_tests,
+                        "num_tests": total_test_count,
                         "confidence": worst_in_test.confidence,
                         "example": example
                     }
@@ -207,7 +213,7 @@ def talos_alert_revision(settings):
                     "tdad_id": revision,
                     "details": {
                         "revision": revision,
-                        "total_tests": total_tests,
+                        "total_tests": total_test_count,
                         "total_exceptions": len(total_exceptions),
                         "tests": parts,
                         "example": worst_in_revision

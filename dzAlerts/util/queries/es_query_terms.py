@@ -43,7 +43,6 @@ def es_terms(es, mvel, query):
     esQuery = buildESQuery(query)
     packed_term = compileEdges2Term(mvel, query.edges, wrap([]))
     for s in select:
-
         esQuery.facets[s.name] = {
             "terms": {
                 "field": packed_term.field,
@@ -66,7 +65,7 @@ def es_terms(es, mvel, query):
     # NUMBER ALL EDGES FOR Qb INDEXING
     for f, e in enumerate(query.edges):
         e.index = f
-        if e.domain.type == "default":
+        if e.domain.type in ["uid", "default"]:
             # e.domain.partitions = Q.sort(e.domain.partitions, "value")
             for p, part in enumerate(e.domain.partitions):
                 part.dataIndex = p

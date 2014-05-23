@@ -191,7 +191,7 @@ class Cube(object):
             for k, v in output.items():
                 if v==None:
                     Log.error("problem")
-            return output
+            return wrap(output)
             # return {e.name: e.domain.getKey(e.domain.partitions[coord[i]]) for i, e in enumerate(self.edges) if coord[i] != -1}
 
         if isinstance(self.select, list):
