@@ -288,7 +288,7 @@ def _where_terms(master, where, schema):
             #MAP TERM
             output = StructList()
             for k, v in where.terms.items():
-                if not isinstance(v, list):
+                if not isinstance(v, (list, set)):
                     Log.error("terms filter expects list of values")
                 edge = schema.edges[k]
                 if not edge:

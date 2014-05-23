@@ -163,7 +163,7 @@ def talos_alert_revision(settings):
                 "from": "talos",
                 "select": {"name": "count", "aggregate": "count"},
                 "edges": [
-                    {"name": "revision", "value": "Talos.Revision"}
+                    "Talos.Revision"
                 ],
                 "where": {"and": [
                     {"terms": {"Talos.Revision": set(existing_sustained_alerts.revision)}}
