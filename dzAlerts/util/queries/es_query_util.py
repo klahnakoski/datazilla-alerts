@@ -48,7 +48,7 @@ def loadColumns(es, frum):
             return INDEX_CACHE[frum.name]
 
     # FILL frum WITH DEFAULTS FROM es.settings
-    struct.set_default(frum, secondary=es.settings)
+    struct.set_default(frum, es.settings)
 
     if not frum.host:
         Log.error("must have host defined")

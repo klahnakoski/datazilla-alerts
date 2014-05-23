@@ -316,20 +316,6 @@ def alert_sustained_median(settings, qb, alerts_db):
     if not evaled_tests:
         current_alerts = StructList.EMPTY
     else:
-        # THIS IS QUITE TOUCHY, IT DEPENDS ON THE JSON SERIALIZATION OF THE
-        # GROUP (g) TO BE COMPLETE IN THE details COLUMN OF THE ALERTS DB
-        # ANY EXTRA COLUMNS WILL CAUSE A MISMATCH
-        # WE MUST DO THIS SO WE ONLY OBSOLETE THE ALERTS WE CHOULD HAVE
-        # COVERED (BOTH IN TIME AND IN GROUPS)
-        # or_list = []
-        # for g in touched_groups:
-        #     g = unwrap(g)
-        #     output = Struct()
-        #     for key, val in g.items():
-        #         if key.startswith("Talos."):
-        #             output[key[6::]] = val
-        #     or_list.append({"instr": {"details": output}})
-
         current_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
