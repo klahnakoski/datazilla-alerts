@@ -10,7 +10,6 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from dzAlerts.daemons.util import significant_difference
-from dzAlerts.daemons.util.is_bad import is_bad
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -23,7 +22,7 @@ from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field
+from dzAlerts.util.struct import nvl, StructList, literal_field, set_default
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct
@@ -64,6 +63,37 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     debug = nvl(settings.param.debug, DEBUG)
     query = settings.query
+
+    def is_bad(r):
+        if settings.param.sustained_median.trigger < r.result.confidence:
+            test_param = set_default(
+                settings.param.suite[literal_field(r.B2G.Test.suite)],
+                settings.param.test[literal_field(r.B2G.Test.name)],
+                settings.param.default
+            )
+
+            if test_param.disable:
+                return False
+
+            if test_param.better == "higher":
+                diff = -r.diff
+            elif test_param.better == "lower":
+                diff = r.diff
+            else:
+                diff = abs(r.diff)  # DEFAULT = ANY DIRECTION IS BAD
+
+            if test_param.min_regression:
+                if unicode(test_param.min_regression.strip()[-1]) == "%":
+                    min_diff = Math.abs(r.past_stats.mean * float(test_param.min_regression.strip()[:-1]) / 100.0)
+                else:
+                    min_diff = Math.abs(float(test_param.min_regression))
+            else:
+                min_diff = Math.abs(r.past_stats.mean * 0.01)
+
+            if diff > min_diff:
+                return True
+
+        return False
 
     with Timer("pull combinations"):
         disabled_suites = [s for s, p in settings.param.suite.items() if p.disable]
@@ -215,7 +245,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }, {
                         "name": "is_diff",
-                        "value": lambda r: is_bad(settings, r)
+                        "value": is_bad
                     }, {
                         #USE THIS TO FILL CONFIDENCE HOLES
                         #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
@@ -285,20 +315,6 @@ def alert_sustained_median(settings, qb, alerts_db):
     if not evaled_tests:
         current_alerts = StructList.EMPTY
     else:
-        # THIS IS QUITE TOUCHY, IT DEPENDS ON THE JSON SERIALIZATION OF THE
-        # GROUP (g) TO BE COMPLETE IN THE details COLUMN OF THE ALERTS DB
-        # ANY EXTRA COLUMNS WILL CAUSE A MISMATCH
-        # WE MUST DO THIS SO WE ONLY OBSOLETE THE ALERTS WE CHOULD HAVE
-        # COVERED (BOTH IN TIME AND IN GROUPS)
-        # or_list = []
-        # for g in touched_groups:
-        #     g = unwrap(g)
-        #     output = Struct()
-        #     for key, val in g.items():
-        #         if key.startswith("Talos."):
-        #             output[key[6::]] = val
-        #     or_list.append({"instr": {"details": output}})
-
         current_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
