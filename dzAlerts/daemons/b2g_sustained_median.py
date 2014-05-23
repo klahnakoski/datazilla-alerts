@@ -108,9 +108,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
-                {"not": {"terms": {"Talos.Test.fields.suite": disabled_suites}}},
-                {"not": {"terms": {"Talos.Branch": disabled_branches}}},
-                {"not": {"terms": {"Talos.Test.fields.name": disabled_tests}}}
+                {"not": {"terms": {"B2G.Test.fields.suite": disabled_suites}}},
+                {"not": {"terms": {"B2G.Branch": disabled_branches}}},
+                {"not": {"terms": {"B2G.Test.fields.name": disabled_tests}}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
