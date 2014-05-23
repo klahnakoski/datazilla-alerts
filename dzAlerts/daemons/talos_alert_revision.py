@@ -70,19 +70,12 @@ TBPL_PATH = {
 }
 
 
-SUBJECT = [
-    "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}} in ",
-    {
-        "from": "details.tests",
-        "template": "{{test.suite}}",
-        "separator": ", "
-    }
-    ]
+SUBJECT = "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}}"
 
 TEMPLATE = [
     """
     <div>
-    	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
+        <div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
         <span style="font-size: 120%; display:inline-block">
         [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch}}/rev/{{revision}}">{{revision}}</a>]
         </span>
