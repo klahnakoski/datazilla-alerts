@@ -25,7 +25,7 @@ from dzAlerts.util.queries.query import Query
 from dzAlerts.util.struct import nvl, StructList, literal_field, unwrap
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
-from dzAlerts.util.struct import Struct
+from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.times.timer import Timer
@@ -65,7 +65,11 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     def is_bad(r):
         if settings.param.sustained_median.trigger < r.result.confidence:
-            test_param = nvl(settings.param.test[literal_field(r.Talos.Test.name)], settings.param.suite[literal_field(r.Talos.Test.suite)])
+            test_param = set_default(
+                settings.param.suite[literal_field(r.Talos.Test.suite)],
+                settings.param.test[literal_field(r.Talos.Test.name)],
+                settings.param.default
+            )
 
             if test_param.disable:
                 return False

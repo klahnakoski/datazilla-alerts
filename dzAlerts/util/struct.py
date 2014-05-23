@@ -291,8 +291,14 @@ def _setdefault(obj, key, value):
     return v
 
 
-def set_default(original, default):
-    return wrap(_all_default(unwrap(original), unwrap(default)))
+def set_default(primary, secondary, tertiary=None):
+    a = wrap(_all_default(unwrap(primary), unwrap(secondary)))
+    if tertiary is None:
+        return a
+    if a == None:
+        return tertiary
+
+    return wrap(_all_default(unwrap(a), unwrap(tertiary)))
 
 
 def _all_default(d, default):
