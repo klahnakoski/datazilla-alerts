@@ -11,12 +11,16 @@ from __future__ import unicode_literals
 
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.vendor.strangman.stats import lttest_ind
+from dzAlerts.util.struct import unwrap
 
 
 def welchs_ttest(a, b):
     """
     a AND b ARE SAMPLES
     """
-    t, prob = lttest_ind(a, b)
+    if len(a)< 2 or len(b)<2:
+        return {"confidence": 0, "diff": 0}
+
+    t, prob = lttest_ind(unwrap(a), unwrap(b))
     return Struct(confidence=1-prob, tstat=t)
 

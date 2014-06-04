@@ -65,7 +65,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     query = settings.query
 
     def is_bad(r):
-        if settings.param.sustained_median.trigger < r.ttest_result.confidence:
+        if settings.param.sustained_median.trigger < r.result.confidence:
             test_param = set_default(
                 settings.param.suite[literal_field(r.Talos.Test.suite)],
                 settings.param.test[literal_field(r.Talos.Test.name)],
@@ -180,6 +180,18 @@ def alert_sustained_median(settings, qb, alerts_db):
                     ]},
                 },
                 "sort": "push_date"
+            })
+
+            #REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
+            test_results = Q.run({
+                "from":test_results,
+                "window":[
+                    {
+                        "name": "redundant",
+                        "value": lambda r, i, rows: True if r.Talos.Revision == rows[i+1].Talos.Revision else None
+                    }
+                ],
+                "where": {"missing": {"field": "redundant"}}
             })
 
             Log.note("{{num}} test results found for {{group}} dating back no further than {{start_date}}", {
