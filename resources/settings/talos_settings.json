@@ -3,17 +3,43 @@
 		"filename": "dimension_talos.json"
 	},
 	"param": {
-		"test": {
-			"fps": {
-				"units": "frames/s",
-				"better": "higher",
-				"min_regression": "1%"
+		"branch":{
+			"Try":{
+				"disable": true
 			},
-			"cold_load_time": {
-				"units": "ms",
-				"better": "lower",
-				"min_regression": "1%"
+			"Try-Non-PGO":{
+				"disable": true
 			}
+
+		},
+		"suite":{
+			"dromaeo_css":{
+				"better": "higher",
+				"disable": true
+			},
+			"dromaeo_dom":{
+				"better": "higher",
+				"disable": true
+			},
+			"v8_7":{
+				"better": "higher"
+			},
+			"canvasmark":{
+				"better": "higher"
+			},
+			"tp5o":{
+				"units": "ms",
+				"better": "lower"
+			}
+		},
+		"test": {
+			"tablemutation.html":{
+			}
+		},
+		"default":{
+			"units":"unknown",
+			"better": "lower",
+			"min_regression": "5%"
 		},
 		"sustained": {
 			"trigger": 0.999, //WHEN THE WELCH'S T-TEST RETURNS POSITIVE RESULT
@@ -21,17 +47,17 @@
 			"window_size": 10
 		},
 		"sustained_median": {
-			"trigger": 0.999,
+			"trigger": 0.990,
 			"max_test_results_per_run": 1,
-			"window_size": 10
+			"window_size": 20
 		},
 		"exception": {
-			"min_confidence": 0.999,
+			"min_confidence": 0.995,
 			"window_size": 20,
-			"max_test_results_per_run": 10  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
+			"max_test_results_per_run": 1  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
 		},
 		"debug": true,
-		"mark_complete": "kyle_test_talos_sustained_median",
+		"mark_complete": "test_talos_sustained_median",
 		"combo_limit": 10  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {

@@ -19,6 +19,7 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
+from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
@@ -181,6 +182,18 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "sort": "push_date"
             })
 
+            #REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
+            test_results = Q.run({
+                "from":test_results,
+                "window":[
+                    {
+                        "name": "redundant",
+                        "value": lambda r, i, rows: True if r.Talos.Revision == rows[i+1].Talos.Revision else None
+                    }
+                ],
+                "where": {"missing": {"field": "redundant"}}
+            })
+
             Log.note("{{num}} test results found for {{group}} dating back no further than {{start_date}}", {
                 "num": len(test_results),
                 "group": g,
@@ -232,10 +245,17 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": 0, "max": settings.param.sustained_median.window_size}
                     }, {
+                        "name": "ttest_result",
+                        "value": lambda r, i, rows:  welchs_ttest(
+                            rows[-settings.param.sustained_median.window_size + i:i:].value,
+                            rows[ i:settings.param.sustained_median.window_size + i:].value
+                        ),
+                        "sort": "push_date"
+                    }, {
                         "name": "result",
                         "value": lambda r, i, rows: median_test(
                             rows[-settings.param.sustained_median.window_size + i:i:].value,
-                            rows[i:settings.param.sustained_median.window_size + i:].value,
+                            rows[ i:settings.param.sustained_median.window_size + i:].value,
                             interpolate=False
                         ),
                         "sort": "push_date"
@@ -266,7 +286,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             #PICK THE BEST SCORE FOR EACH is_diff==True REGION
             for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
-                    best = Q.sort(data, ["result.confidence", "diff"]).last()
+                    best = Q.sort(data, ["ttest_result.confidence", "diff"]).last()
                     best["pass"] = True
 
             all_touched.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
