@@ -18,6 +18,7 @@ from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.strings import expand_template
 from dzAlerts.util.struct import wrap, StructList
+from dzAlerts.util.thread.multithread import Multithread
 from dzAlerts.util.times.timer import Timer
 
 
@@ -57,35 +58,47 @@ def get_all_uuid(settings):
 
 def etl(settings):
     with Timer("get all uuid"):
-        uuids = get_all_uuid(settings)
+        all_tests = get_all_uuid(settings)
 
     es = ElasticSearch(settings.elasticsearch)
-    sink = es.threaded_queue(size=100)
 
     #FILTER EXISTING IDS
     with ESQuery(es) as esq:
         existing = set()
         try:
-            for g, metadata in Q.groupby(wrap(uuids), size=1000):
-                batch = esq.query({
-                    "from": settings.elasticsearch,
-                    "select": "metadata.uuid",
-                    "where": {"terms": {"metatdata.uuid": metadata.uuid}}
-                })
-                existing.update(batch)
+            batch = esq.query({
+                "from": settings.elasticsearch,
+                "select": "metadata.uuid",
+                "limit": 200000
+            })
+            existing.update(batch)
         except Exception, e:
-            Log.warning("can not access ES", e)
+            Log.note("Make new index {{name}}", {"name": settings.elasticsearch.index})
+            es.create_index(settings.elasticsearch, limit_replicas=True)
+
+    new_stuff = set(all_tests.uuid) - existing
+    Log.note("{{total}} tests: {{new}} new, {{old}} exist", {
+        "total": len(all_tests),
+        "new": len(new_stuff),
+        "old": len(existing)
+    })
 
     #PULL ANY NEW STUFF
-    for metadata in uuids:
-        if metadata.uuid in existing:
-            continue  # EXISTING STUFF IS SKIPPED
-        result = requests.get(expand_template(settings.uuid_url, {"uuid": metadata.uuid}))
-        data = wrap(result.json())
-        data.metadata = metadata
-        sink.add({"id": metadata.uuid, "value": data})
+    with es.threaded_queue(size=100) as sink:
+        def get_uuid(metadata):
+            try:
+                result = requests.get(expand_template(settings.uuid_url, {"uuid": metadata.uuid}))
+                data = wrap(result.json())
+                data.metadata = metadata
+                sink.add({"id": metadata.uuid, "value": data})
+            except Exception, e:
+                Log.warning("problem getting details", e)
 
-    sink.close()
+        with Multithread([get_uuid for i in range(10)], outbound=False, silent_queues=True) as multi:
+            for metadata in all_tests:
+                if metadata.uuid in existing:
+                    continue  # EXISTING STUFF IS SKIPPED
+                multi.inbound.add({"metadata": metadata})
 
 
 if __name__ == '__main__':

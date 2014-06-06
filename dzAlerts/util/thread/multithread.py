@@ -9,38 +9,34 @@
 #
 
 from __future__ import unicode_literals
-from dzAlerts.util.struct import nvl
 from ..env.logs import Log
 from ..thread.threads import Queue, Thread
 
-DEBUG = True
+DEBUG = False
 
 
 class Multithread(object):
     """
     SIMPLE SEMANTICS FOR SYMMETRIC MULTITHREADING
-
-    PASS A SET OF FUNCTIONS TO BE EXECUTED (ONE PER THREAD)
-    PASS AN (ITERATOR/LIST) OF PARAMETERS TO BE ISSUED TO NEXT AVAILABLE THREAD
-
-    SET outbound==False TO SIMPLY THROW AWAY RESULTS
+    PASS A SET OF functions TO BE EXECUTED (ONE PER THREAD)
+    SET outbound==False TO SIMPLY THROW AWAY RETURN VALUES, IF ANY
     """
-    def __init__(self, functions, outbound=None):
+
+    def __init__(self, functions, outbound=None, silent_queues=None):
         if outbound is None:
-            self.outbound = Queue()
+            self.outbound = Queue(silent=silent_queues)
         elif outbound is False:
             self.outbound = None
         else:
             self.outbound = outbound
 
-        self.inbound = Queue()
+        self.inbound = Queue(silent=silent_queues)
 
         #MAKE THREADS
         self.threads = []
         for t, f in enumerate(functions):
             thread = worker_thread("worker " + unicode(t), self.inbound, self.outbound, f)
             self.threads.append(thread)
-
 
     def __enter__(self):
         return self
@@ -75,12 +71,16 @@ class Multithread(object):
                 t.join()
 
 
-    #RETURN A GENERATOR THAT HAS len(parameters) RESULTS (ANY ORDER)
-    def execute(self, request):
-        #FILL QUEUE WITH WORK
-        self.inbound.extend(request)
+    def execute(self, requests):
+        """
+        RETURN A GENERATOR THAT HAS len(requests) RESULTS (ANY ORDER)
+        EXPECTING requests TO BE A list OF dicts, EACH dict IS USED AS kwargs TO GIVEN functions
+        """
 
-        num = len(request)
+        #FILL QUEUE WITH WORK
+        self.inbound.extend(requests)
+
+        num = len(requests)
 
         def output():
             for i in xrange(num):

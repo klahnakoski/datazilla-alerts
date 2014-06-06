@@ -1,0 +1,176 @@
+{
+	"settings": {
+		"index": {
+			"number_of_shards": 3,
+			"number_of_replicas": 2,
+			"store": {
+				"throttle.type": "merge",
+				"throttle.max_bytes_per_sec": "2mb"
+			}
+		}
+	},
+	"mappings": {
+		"results": {
+			"_all": {
+				"enabled": false
+			},
+			"_source": {
+				"compress": true
+			},
+			"properties": {
+				"metadata": {
+					"type":"object",
+					"properties": {
+						"app": {
+							"index":"not_analyzed",
+							"type": "string"
+						},
+						"test": {
+							"index":"not_analyzed",
+							"type": "string"
+						},
+						"device": {
+							"index":"not_analyzed",
+							"type": "string"
+						},
+						"uuid": {
+							"index":"not_analyzed",
+							"type": "string"
+						},
+						"date": {
+							"type": "long"
+						}
+					}
+				},
+				"checkerboard": {
+					"type": "double"
+				},
+				"frameDiff": {
+					"type": "string"
+				},
+				"actionLog": {
+					"type":"object",
+					"properties": {
+						"start": {
+							"type": "double"
+						},
+						"params": {
+							"properties": {
+								"duration": {
+									"type": "long"
+								},
+								"num_steps": {
+									"type": "long"
+								},
+								"start_y": {
+									"type": "long"
+								},
+								"num_times": {
+									"type": "long"
+								},
+								"start_x": {
+									"type": "long"
+								},
+								"y": {
+									"type": "long"
+								},
+								"end_x": {
+									"type": "long"
+								},
+								"x": {
+									"type": "long"
+								},
+								"end_y": {
+									"type": "long"
+								},
+								"duration_msec": {
+									"type": "long"
+								}
+							}
+						},
+						"type": {
+							"index":"not_analyzed",
+							"type": "string"
+						},
+						"end": {
+							"type": "double"
+						}
+					}
+				},
+				"fps": {
+					"type": "double"
+				},
+				"sourceRepo": {
+					"index":"not_analyzed",
+					"type": "string"
+				},
+				"label": {
+					"index":"not_analyzed",
+					"type": "string"
+				},
+				"revision": {
+					"index":"not_analyzed",
+					"type": "string"
+				},
+				"httpLog": {
+					"properties": {
+						"time": {
+							"type": "double"
+						},
+						"path": {
+							"index":"not_analyzed",
+							"type": "string"
+						},
+						"method": {
+							"index":"not_analyzed",
+							"type": "string"
+						}
+					}
+				},
+				"timetoresponse": {
+					"type": "double"
+				},
+				"framediffsums": {
+					"type": "long"
+				},
+				"metrics": {
+					"properties": {
+						"checkerboard": {
+							"type": "double"
+						},
+						"timetoresponse": {
+							"type": "double"
+						},
+						"overallentropy": {
+							"type": "double"
+						},
+						"fps": {
+							"type": "double"
+						},
+						"uniqueframes": {
+							"type": "long"
+						}
+					}
+				},
+				"framesobelentropies": {
+					"type": "double"
+				},
+				"uniqueframes": {
+					"type": "long"
+				},
+				"appdate": {
+					"type": "long"
+				},
+				"buildid": {
+					"index":"not_analyzed",
+					"type": "string"
+				},
+				"video": {
+					"index":"not_analyzed",
+					"type": "string"
+				}
+			}
+		}
+	}
+}
+
