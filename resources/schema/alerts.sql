@@ -3,11 +3,12 @@ USE alerts;
 DELIMITER ;;
 
 
+DROP TABLE IF EXISTS hierarchy;;
 DROP TABLE IF EXISTS alerts;;
+DROP TABLE IF EXISTS page_thresholds;;
 DROP TABLE IF EXISTS reasons;;
 DROP TABLE IF EXISTS stati;;
 DROP TABLE IF EXISTS listeners;;
-DROP TABLE IF EXISTS page_thresholds;;
 
 CREATE TABLE stati (
 	code VARCHAR(10) NOT NULL PRIMARY KEY

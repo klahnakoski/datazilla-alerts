@@ -184,15 +184,15 @@ def _normalize_where(where, schema=None):
     return where
 
 
-def _map_term_using_schema(master, where, schema):
+def _map_term_using_schema(master, path, term, schema_edges):
     """
     IF THE WHERE CLAUSE REFERS TO FIELDS IN THE SCHEMA, THEN EXPAND THEM
     """
     output = StructList()
-    for k, v in where.term.items():
-        dimension = schema.edges[k]
-        if dimension:
-            domain = schema.edges[k].getDomain()
+    for k, v in term.items():
+        dimension = schema_edges[k]
+        if isinstance(dimension, Dimension):
+            domain = dimension.getDomain()
             if dimension.fields:
                 if isinstance(dimension.fields, dict):
                     # EXPECTING A TUPLE
@@ -237,6 +237,11 @@ def _map_term_using_schema(master, where, schema):
                 continue
             else:
                 Log.error("not expected")
+        elif isinstance(v, dict):
+            sub = _map_term_using_schema(master, path + [k], v, schema_edges[k])
+            output.append(sub)
+            continue
+
         output.append({"term": {k: v}})
     return {"and": output}
 
@@ -280,7 +285,7 @@ def _where_terms(master, where, schema):
         if where.term:
             #MAP TERM
             try:
-                output = _map_term_using_schema(master, where, schema)
+                output = _map_term_using_schema(master, [], where.term, schema.edges)
                 return output
             except Exception, e:
                 Log.error("programmer problem?", e)

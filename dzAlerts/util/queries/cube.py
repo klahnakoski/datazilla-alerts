@@ -12,7 +12,7 @@ from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import MAX, OR
 from ..queries.query import _normalize_edge
-from ..struct import StructList, wrap
+from ..struct import StructList, wrap, Struct
 from ..env.logs import Log
 
 
@@ -187,11 +187,21 @@ class Cube(object):
         parts = [e.domain.partitions for e in self.edges]
         getKey = [e.domain.getKey for e in self.edges]
         def coord2term(coord):
-            output = {keys[i]: getKey[i](parts[i][coord[i]]) for i in range(len(edges))}
-            for k, v in output.items():
-                if v==None:
+            output = Struct()
+            for i in range(len(edges)):
+                value = getKey[i](parts[i][coord[i]])
+                if value == None:
                     Log.error("problem")
-            return wrap(output)
+                output[keys[i]] = value
+            return output
+            # NOT WORKING, HAS NO DEPTH
+            # output = {keys[i]: getKey[i](parts[i][coord[i]]) for i in range(len(edges))}
+            # for k, v in output.items():
+            #     if v==None:
+            #         Log.error("problem")
+            # return wrap(output)
+
+            #NOT WORKING, dict IS NOT FLEXIBLE
             # return {e.name: e.domain.getKey(e.domain.partitions[coord[i]]) for i, e in enumerate(self.edges) if coord[i] != -1}
 
         if isinstance(self.select, list):
