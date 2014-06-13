@@ -98,22 +98,16 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                # True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"not": {"terms": {"Talos.Test.fields.suite": disabled_suites}}},
                 {"not": {"terms": {"Talos.Branch": disabled_branches}}},
-                {"not": {"terms": {"Talos.Test.fields.name": disabled_tests}}},
-                {"term": {"result.test_name": "alipay.com"}},
-                {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                {"term": {"test_machine.platform": "x86_64"}}
+                {"not": {"terms": {"Talos.Test.fields.name": disabled_tests}}}
                 #FOR DEBUGGING SPECIFIC SERIES
-                # {"term": {"test_machine.type": "hamachi"}},
-                # {"term": {"test_machine.platform": "Gonk"}},
-                # {"term": {"test_machine.os": "Firefox OS"}},
-                # {"term": {"test_build.branch": "master"}},
-                # {"term": {"testrun.suite": "communications/ftu"}},
-                # {"term": {"result.test_name": "startup_time"}}
+                # {"term": {"result.test_name": "alipay.com"}},
+                # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
+                # {"term": {"test_machine.platform": "x86_64"}}
             ]},
             "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
@@ -210,8 +204,6 @@ def alert_sustained_median(settings, qb, alerts_db):
                 #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH CONFIDENCE
                 if rows[i - 1].is_diff and r.ttest_result.confidence > test_param.min_confidence:
                     r.is_diff = True
-                else:
-                    r.is_diff = False
                 return None
 
             #APPLY WINDOW FUNCTIONS
@@ -433,15 +425,17 @@ def alert_sustained_median(settings, qb, alerts_db):
         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
 
     for g, t in Q.groupby(all_touched, "Talos.Test"):
-        qb.update({
-            "set": {settings.param.mark_complete: "done"},
-            "where": {"and": [
-                {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                {"term": {"Talos.Test": g.Talos.Test}},
-                {"missing": {"field": settings.param.mark_complete}}
-            ]}
-        })
-
+        try:
+            qb.update({
+                "set": {settings.param.mark_complete: "done"},
+                "where": {"and": [
+                    {"terms": {"datazilla.test_run_id": t.test_run_id}},
+                    {"term": {"Talos.Test": g.Talos.Test}},
+                    {"missing": {"field": settings.param.mark_complete}}
+                ]}
+            })
+        except Exception, e:
+            Log.warning("Can not mark as done", e)
 
 def main():
     settings = startup.read_settings(defs=[{

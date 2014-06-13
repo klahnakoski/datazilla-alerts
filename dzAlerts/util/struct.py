@@ -767,7 +767,12 @@ def literal_field(field):
     """
     RETURN SAME WITH . ESCAPED
     """
-    return field.replace(".", "\.")
+    try:
+        return field.replace(".", "\.")
+    except Exception, e:
+        from dzAlerts.util.env.logs import Log
+
+        Log.error("bad literal", e)
 
 def cpython_split_field(field):
     """

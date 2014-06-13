@@ -182,27 +182,16 @@ class Cube(object):
 
         if len(stacked) + len(remainder) != len(self.edges):
             Log.error("can not find some edges to group by")
-
+        #CACHE SOME RESULTS
         keys = [e.name for e in self.edges]
-        parts = [e.domain.partitions for e in self.edges]
         getKey = [e.domain.getKey for e in self.edges]
+        lookup = [[getKey[i](p) for p in e.domain.partitions] for i, e in enumerate(self.edges)]
+
         def coord2term(coord):
             output = Struct()
-            for i in range(len(edges)):
-                value = getKey[i](parts[i][coord[i]])
-                if value == None:
-                    Log.error("problem")
-                output[keys[i]] = value
+            for i, c in enumerate(coord):
+                output[keys[i]] = lookup[i][c]
             return output
-            # NOT WORKING, HAS NO DEPTH
-            # output = {keys[i]: getKey[i](parts[i][coord[i]]) for i in range(len(edges))}
-            # for k, v in output.items():
-            #     if v==None:
-            #         Log.error("problem")
-            # return wrap(output)
-
-            #NOT WORKING, dict IS NOT FLEXIBLE
-            # return {e.name: e.domain.getKey(e.domain.partitions[coord[i]]) for i, e in enumerate(self.edges) if coord[i] != -1}
 
         if isinstance(self.select, list):
             selects = struct.listwrap(self.select)

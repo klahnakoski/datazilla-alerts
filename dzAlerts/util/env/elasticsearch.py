@@ -398,7 +398,7 @@ class ElasticSearch(object):
     def put(self, *args, **kwargs):
         try:
             kwargs = wrap(kwargs)
-            kwargs.setdefault("timeout", 30)
+            kwargs.setdefault("timeout", 60)
             response = requests.put(*args, **kwargs)
             if self.debug:
                 Log.note(response.content.decode("utf-8"))
@@ -408,7 +408,7 @@ class ElasticSearch(object):
 
     def delete(self, *args, **kwargs):
         try:
-            kwargs.setdefault("timeout", 30)
+            kwargs.setdefault("timeout", 60)
             response = requests.delete(*args, **kwargs)
             if self.debug:
                 Log.note(response.content.decode("utf-8"))
