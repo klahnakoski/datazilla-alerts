@@ -24,7 +24,7 @@ from .collections.multiset import Multiset
 from .env.profiles import Profiler
 from .env.logs import Log
 from .strings import expand_template
-from .struct import wrap
+from .struct import wrap, wrap_dot
 
 
 json_decoder = json.JSONDecoder().decode
@@ -64,7 +64,7 @@ class CNV:
                 value = wrap(json_decoder(json_string))
 
                 if paths:
-                    value = jsons.expand_dot(value)
+                    value = wrap_dot(value)
 
                 return value
 

@@ -255,29 +255,6 @@ def _scrub(value):
         return value
 
 
-def expand_dot(value):
-    """
-    JSON CAN HAVE ATTRIBUTE NAMES WITH DOTS
-    """
-    if value == None:
-        return None
-    elif isinstance(value, (basestring, int, float)):
-        return value
-    elif isinstance(value, dict):
-        output = Struct()
-        for k, v in value.iteritems():
-            output[k] = expand_dot(v)
-        return output
-    elif hasattr(value, '__iter__'):
-        output = []
-        for v in value:
-            v = expand_dot(v)
-            output.append(v)
-        return output
-    else:
-        return value
-
-
 ARRAY_ROW_LENGTH = 80
 ARRAY_ITEM_MAX_LENGTH = 30
 ARRAY_MAX_COLUMNS = 10

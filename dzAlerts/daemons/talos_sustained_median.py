@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from datetime import datetime, timedelta
 from dzAlerts.daemons.util import significant_difference
 
-from dzAlerts.util.collections import MIN, MAX, AND, OR
+from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
@@ -23,7 +23,7 @@ from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, unwrap
+from dzAlerts.util.struct import nvl, StructList, literal_field, wrap_dot
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
@@ -32,9 +32,6 @@ from dzAlerts.util.sql.db import DB
 from dzAlerts.util.times.timer import Timer
 
 
-SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
-# MIN_CONFIDENCE = 0.9999
-REASON = "talos_alert_sustained_median"     # name of the reason in alert_reason
 NOW = datetime.utcnow()
 MAX_AGE = timedelta(days=90)
 OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
@@ -57,8 +54,6 @@ def alert_sustained_median(settings, qb, alerts_db):
     find single points that deviate from the trend
     """
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
-    # TDAD = settings.perftest.schema + ".test_data_all_dimensions"
-    TDAD = settings.query["from"]
 
     debug = nvl(settings.param.debug, DEBUG)
     query = settings.query
@@ -94,16 +89,16 @@ def alert_sustained_median(settings, qb, alerts_db):
         disabled_branches = [t for t, p in settings.param.branch.items() if p.disable]
 
         temp = Query({
-            "from": TDAD,
+            "from": settings.query["from"],
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
-                {"not": {"terms": {"Talos.Test.fields.suite": disabled_suites}}},
-                {"not": {"terms": {"Talos.Branch": disabled_branches}}},
-                {"not": {"terms": {"Talos.Test.fields.name": disabled_tests}}}
+                {"not": {"terms": {settings.param.test_dimension+".fields.suite": disabled_suites}}},
+                {"not": {"terms": {settings.param.test_dimension+".fields.name": disabled_tests}}},
+                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"result.test_name": "alipay.com"}},
                 # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
@@ -130,8 +125,9 @@ def alert_sustained_median(settings, qb, alerts_db):
             continue
         try:
             test_param = set_default(
-                settings.param.suite[literal_field(g.Talos.Test.suite)],
-                settings.param.test[literal_field(g.Talos.Test.name)],
+                settings.param.test[literal_field(g[settings.param.test_dimension].name)],
+                settings.param.suite[literal_field(g[settings.param.test_dimension].suite)],
+                settings.param.branch[literal_field(g[settings.param.branch_dimension])],
                 settings.param.default
             )
 
@@ -143,7 +139,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
                 "from": {
-                    "from": TDAD,
+                    "from": settings.query["from"],
                     "select": test_param.sort,
                     "where": {"and": [
                         {"term": g},
@@ -163,7 +159,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             #LOAD TEST RESULTS FROM DATABASE
             test_results = qb.query({
                 "from": {
-                    "from": "talos",
+                    "from": settings.query["from"],
                     "select": [
                         test_param.sort,
                         test_param.select.datazilla,
@@ -176,7 +172,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         {"range": {test_param.sort.value: {"gte": min_date}}}
                     ]},
                 },
-                "sort": test_param.sort.value
+                "sort": test_param.sort.name
             })
 
             #REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
@@ -185,7 +181,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "window": [
                     {
                         "name": "redundant",
-                        "value": lambda r, i, rows: True if r.Talos.Revision == rows[i + 1].Talos.Revision else None
+                        "value": lambda r, i, rows: True if r[settings.param.revision_dimension] == rows[i + 1][settings.param.revision_dimension] else None
                     }
                 ],
                 "where": {"missing": {"field": "redundant"}}
@@ -293,12 +289,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["ttest_result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            all_touched.update(Q.select(test_results, ["test_run_id", "Talos.Test"]))
+            all_touched.update(Q.select(test_results, ["test_run_id", settings.param.test_dimension]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             evaled_tests.update(Q.run({
                 "from": test_results,
-                "select": ["test_run_id", "Talos.Test"],
+                "select": ["test_run_id", settings.param.test_dimension],
                 "where": {"term": {"ignored": False}}
             }))
 
@@ -307,7 +303,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "select": [
                     {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
                     "value",
-                    {"name": "revision", "value": "Talos.Revision"},
+                    {"name": "revision", "value": settings.param.revision_dimension},
                     {"name": "mtest_confidence", "value": "result.confidence"},
                     {"name": "ttest_confidence", "value": "ttest_result.confidence"},
                     "is_diff",
@@ -324,11 +320,11 @@ def alert_sustained_median(settings, qb, alerts_db):
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
-                    tdad_id={"test_run_id": v.test_run_id, "Talos": {"Test": v.Talos.Test}},
-                    reason=REASON,
-                    revision=v.Talos.Revision,
+                    tdad_id=wrap_dot({"test_run_id": v.test_run_id, settings.param.test_dimension: v[settings.param.test_dimension]}),
+                    reason=settings.param.reason,
+                    revision=v[settings.param.revision_dimension],
                     details=v,
-                    severity=SEVERITY,
+                    severity=settings.param.revision_dimension,
                     confidence=v.result.confidence
                 )
                 alerts.append(alert)
@@ -338,6 +334,8 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
+
+        break
 
     if debug:
         Log.note("Get Current Alerts")
@@ -360,7 +358,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             ],
             "where": {"and": [
                 {"terms": {"tdad_id": evaled_tests}},
-                {"term": {"reason": REASON}}
+                {"term": {"reason": settings.param.reason}}
             ]}
         })
 
@@ -416,7 +414,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
         "now": NOW,
-        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": REASON}})
+        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": settings.param.reason}})
     })
 
     alerts_db.flush()
@@ -424,13 +422,13 @@ def alert_sustained_median(settings, qb, alerts_db):
     if debug:
         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
 
-    for g, t in Q.groupby(all_touched, "Talos.Test"):
+    for g, t in Q.groupby(all_touched, settings.param.test_dimension):
         try:
             qb.update({
                 "set": {settings.param.mark_complete: "done"},
                 "where": {"and": [
                     {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                    {"term": {"Talos.Test": g.Talos.Test}},
+                    {"term": {settings.param.test_dimension: g[settings.param.test_dimension]}},
                     {"missing": {"field": settings.param.mark_complete}}
                 ]}
             })
@@ -447,6 +445,7 @@ def main():
     Log.start(settings.debug)
     try:
         with startup.SingleInstance(flavor_id=settings.args.filename):
+            #MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
             with ESQuery(ElasticSearch(settings.query["from"])) as qb:

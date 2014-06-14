@@ -19,21 +19,18 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
 from dzAlerts.daemons.util.median_test import median_test
+from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, set_default
+from dzAlerts.util.struct import nvl, StructList, literal_field, wrap_dot
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
-from dzAlerts.util.struct import Struct
+from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.times.timer import Timer
 
-
-SEVERITY = 0.8              # THERE ARE MANY FALSE POSITIVES (0.99 == positive indicator, 0.5==not an indicator, 0.01 == negative indicator)
-# MIN_CONFIDENCE = 0.9999
-REASON = "b2g_alert_sustained_median"     # name of the reason in alert_reason
 
 NOW = datetime.utcnow()
 MAX_AGE = timedelta(days=90)
@@ -57,21 +54,12 @@ def alert_sustained_median(settings, qb, alerts_db):
     find single points that deviate from the trend
     """
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
-    # TDAD = settings.perftest.schema + ".test_data_all_dimensions"
-    TDAD = settings.query["from"]
-    PUSH_DATE = "datazilla.date_loaded"
 
     debug = nvl(settings.param.debug, DEBUG)
     query = settings.query
 
-    def is_bad(r):
-        if settings.param.sustained_median.trigger < r.result.confidence:
-            test_param = set_default(
-                settings.param.suite[literal_field(r.B2G.Test.suite)],
-                settings.param.test[literal_field(r.B2G.Test.name)],
-                settings.param.default
-            )
-
+    def is_bad(r, test_param):
+        if test_param.min_confidence < r.result.confidence:
             if test_param.disable:
                 return False
 
@@ -101,16 +89,16 @@ def alert_sustained_median(settings, qb, alerts_db):
         disabled_branches = [t for t, p in settings.param.branch.items() if p.disable]
 
         temp = Query({
-            "from": TDAD,
-            "select": {"name": "min_push_date", "value": PUSH_DATE, "aggregate": "min"},
+            "from": settings.query["from"],
+            "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
-                {"range": {PUSH_DATE: {"gte": OLDEST_TS}}},
-                {"not": {"terms": {"B2G.Test.fields.suite": disabled_suites}}},
-                {"not": {"terms": {"B2G.Branch": disabled_branches}}},
-                {"not": {"terms": {"B2G.Test.fields.name": disabled_tests}}}
+                {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
+                {"not": {"terms": {settings.param.test_dimension+".fields.suite": disabled_suites}}},
+                {"not": {"terms": {settings.param.test_dimension+".fields.name": disabled_tests}}},
+                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
@@ -139,6 +127,13 @@ def alert_sustained_median(settings, qb, alerts_db):
         if not test_points.min_push_date:
             continue
         try:
+            test_param = set_default(
+                settings.param.test[literal_field(g[settings.param.test_dimension].name)],
+                settings.param.suite[literal_field(g[settings.param.test_dimension].suite)],
+                settings.param.branch[literal_field(g[settings.param.branch_dimension])],
+                settings.param.default
+            )
+
             if settings.args.restart:
                 first_sample = OLDEST_TS
             else:
@@ -147,17 +142,17 @@ def alert_sustained_median(settings, qb, alerts_db):
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
                 "from": {
-                    "from": TDAD,
-                    "select": {"name": "push_date", "value": PUSH_DATE},
+                    "from": settings.query["from"],
+                    "select": test_param.sort,
                     "where": {"and": [
                         {"term": g},
-                        {"range": {PUSH_DATE: {"lt": first_sample}}}
+                        {"range": {test_param.sort.value: {"lt": first_sample}}}
                     ]},
-                    "sort": {"field": PUSH_DATE, "sort": -1},
-                    "limit": settings.param.sustained_median.window_size * 2
+                    "sort": {"field": test_param.sort.value, "sort": -1},
+                    "limit": test_param.window_size * 2
                 }
             })
-            if len(first_in_window) > settings.param.sustained_median.window_size * 2:
+            if len(first_in_window) > test_param.window_size * 2:
                 do_all = False
             else:
                 do_all = True
@@ -167,16 +162,32 @@ def alert_sustained_median(settings, qb, alerts_db):
             #LOAD TEST RESULTS FROM DATABASE
             test_results = qb.query({
                 "from": {
-                    "from": "b2g_alerts",
-                    "select": [{"name": "push_date", "value": PUSH_DATE}] +
-                              query.select +
-                              query.edges,
+                    "from": settings.query["from"],
+                    "select": [
+                        test_param.sort,
+                        test_param.select.datazilla,
+                        test_param.select.repo,
+                        test_param.select.value
+                        ] +
+                        query.edges,
                     "where": {"and": [
                         {"term": g},
-                        {"range": {PUSH_DATE: {"gte": min_date}}}
+                        {"range": {test_param.sort.value: {"gte": min_date}}}
                     ]},
                 },
-                "sort": "push_date"
+                "sort": test_param.sort.name
+            })
+
+            #REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
+            test_results = Q.run({
+                "from": test_results,
+                "window": [
+                    {
+                        "name": "redundant",
+                        "value": lambda r, i, rows: True if r[settings.param.revision_dimension] == rows[i + 1][settings.param.revision_dimension] else None
+                    }
+                ],
+                "where": {"missing": {"field": "redundant"}}
             })
 
             Log.note("{{num}} test results found for {{group}} dating back no further than {{start_date}}", {
@@ -188,52 +199,66 @@ def alert_sustained_median(settings, qb, alerts_db):
             if debug:
                 Log.note("Find sustained_median exceptions")
 
+            def diff_by_association(r, i, rows):
+                #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH CONFIDENCE
+                if rows[i - 1].is_diff and r.ttest_result.confidence > test_param.min_confidence:
+                    r.is_diff = True
+                return None
+
             #APPLY WINDOW FUNCTIONS
             stats = Q.run({
                 "from": {
                     "from": test_results,
-                    "where": {"exists": {"field": "value"}}
+                    "where": {"exists": {"field": test_param.sort.name}},  # FOR THE RARE CASE WHEN THIS ATTRIBUTE IS MISSING
+                    "sort": test_param.sort.name
                 },
                 "window": [
                     {
                         # WE DO NOT WANT TO CONSIDER THE POINTS BEFORE FULL WINDOW SIZE
                         "name": "ignored",
-                        "value": lambda r, i: False if do_all or i > settings.param.sustained_median.window_size else True
+                        "value": lambda r, i: False if do_all or i > test_param.window_size else True
                     }, {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_min",
                         "value": lambda r: r.push_date,
                         "sort": "push_date",
                         "aggregate": windows.Min,
-                        "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
+                        "range": {"min": -test_param.window_size, "max": 0}
                     }, {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_max",
                         "value": lambda r: r.push_date,
                         "sort": "push_date",
                         "aggregate": windows.Max,
-                        "range": {"min": 0, "max": settings.param.sustained_median.window_size}
+                        "range": {"min": 0, "max": test_param.window_size}
                     }, {
                         "name": "past_revision",
-                        "value": lambda r, i, rows: rows[i - 1].B2G.Revision,
+                        "value": lambda r, i, rows: rows[i - 1][test_param.select.repo],
                         "sort": "push_date"
                     }, {
                         "name": "past_stats",
                         "value": lambda r: r.value,
                         "sort": "push_date",
                         "aggregate": windows.Stats(middle=0.60),
-                        "range": {"min": -settings.param.sustained_median.window_size, "max": 0}
+                        "range": {"min": -test_param.window_size, "max": 0}
                     }, {
                         "name": "future_stats",
                         "value": lambda r: r.value,
                         "sort": "push_date",
                         "aggregate": windows.Stats(middle=0.60),
-                        "range": {"min": 0, "max": settings.param.sustained_median.window_size}
+                        "range": {"min": 0, "max": test_param.window_size}
+                    }, {
+                        "name": "ttest_result",
+                        "value": lambda r, i, rows:  welchs_ttest(
+                            rows[-test_param.window_size + i:i:].value,
+                            rows[ i:test_param.window_size + i:].value
+                        ),
+                        "sort": "push_date"
                     }, {
                         "name": "result",
                         "value": lambda r, i, rows: median_test(
-                            rows[-settings.param.sustained_median.window_size + i:i:].value,
-                            rows[i:settings.param.sustained_median.window_size + i:].value,
+                            rows[-test_param.window_size + i:i:].value,
+                            rows[ i:test_param.window_size + i:].value,
                             interpolate=False
                         ),
                         "sort": "push_date"
@@ -245,45 +270,50 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }, {
                         "name": "is_diff",
-                        "value": is_bad
+                        "value": lambda r: is_bad(r, test_param)
                     }, {
                         #USE THIS TO FILL CONFIDENCE HOLES
                         #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
                         "name": "future_is_diff",
-                        "value": lambda r, i, rows: rows[i - 1].is_diff and r.result.confidence < rows[i - 1].result.confidence,
+                        "value": diff_by_association,
                         "sort": "push_date"
                     }, {
                         #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
                         "name": "past_is_diff",
-                        "value": lambda r, i, rows: rows[i - 1].is_diff and r.result.confidence < rows[i - 1].result.confidence,
+                        "value": diff_by_association,
                         "sort": {"value": "push_date", "sort": -1}
-                    },
+                    }
                 ]
             })
 
             #PICK THE BEST SCORE FOR EACH is_diff==True REGION
             for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
-                    best = Q.sort(data, ["result.confidence", "diff"]).last()
+                    best = Q.sort(data, ["ttest_result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            all_touched.update(Q.select(test_results, ["test_run_id", "B2G.Test"]))
+            all_touched.update(Q.select(test_results, ["test_run_id", settings.param.test_dimension]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             evaled_tests.update(Q.run({
                 "from": test_results,
-                "select": ["test_run_id", "B2G.Test"],
+                "select": ["test_run_id", settings.param.test_dimension],
                 "where": {"term": {"ignored": False}}
             }))
 
-            File("test_values.txt").write(CNV.list2tab(Q.select(stats, [
-                {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
-                "value",
-                {"name": "gaia", "value": "B2G.Revision.gaia"},
-                {"name": "gecko", "value": "B2G.Revision.gecko"},
-                {"name": "confidence", "value": "result.confidence"},
-                "pass"
-            ])))
+            File("test_values.txt").write(CNV.list2tab(Q.run({
+                "from": stats,
+                "select": [
+                    {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
+                    "value",
+                    {"name": "revision", "value": settings.param.revision_dimension},
+                    {"name": "mtest_confidence", "value": "result.confidence"},
+                    {"name": "ttest_confidence", "value": "ttest_result.confidence"},
+                    "is_diff",
+                    "pass"
+                ],
+                "sort": "push_date"
+            })))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
@@ -293,11 +323,11 @@ def alert_sustained_median(settings, qb, alerts_db):
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
-                    tdad_id={"test_run_id": v.test_run_id, "B2G": {"Test": v.B2G.Test}},
-                    reason=REASON,
-                    revision=v.B2G.Revision,
+                    tdad_id=wrap_dot({"test_run_id": v.test_run_id, settings.param.test_dimension: v[settings.param.test_dimension]}),
+                    reason=settings.param.reason,
+                    revision=v[settings.param.revision_dimension],
                     details=v,
-                    severity=SEVERITY,
+                    severity=settings.param.revision_dimension,
                     confidence=v.result.confidence
                 )
                 alerts.append(alert)
@@ -329,7 +359,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             ],
             "where": {"and": [
                 {"terms": {"tdad_id": evaled_tests}},
-                {"term": {"reason": REASON}}
+                {"term": {"reason": settings.param.reason}}
             ]}
         })
 
@@ -385,7 +415,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
         "now": NOW,
-        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": REASON}})
+        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": settings.param.reason}})
     })
 
     alerts_db.flush()
@@ -393,16 +423,18 @@ def alert_sustained_median(settings, qb, alerts_db):
     if debug:
         Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
 
-    for g, t in Q.groupby(all_touched, "B2G.Test"):
-        qb.update({
-            "set": {settings.param.mark_complete: "done"},
-            "where": {"and": [
-                {"terms": {"datazilla.test_run_id": t.test_run_id}},
-                {"term": {"B2G.Test": g.B2G.Test}},
-                {"missing": {"field": settings.param.mark_complete}}
-            ]}
-        })
-
+    for g, t in Q.groupby(all_touched, settings.param.test_dimension):
+        try:
+            qb.update({
+                "set": {settings.param.mark_complete: "done"},
+                "where": {"and": [
+                    {"terms": {"datazilla.test_run_id": t.test_run_id}},
+                    {"term": {settings.param.test_dimension: g[settings.param.test_dimension]}},
+                    {"missing": {"field": settings.param.mark_complete}}
+                ]}
+            })
+        except Exception, e:
+            Log.warning("Can not mark as done", e)
 
 def main():
     settings = startup.read_settings(defs=[{
@@ -414,6 +446,7 @@ def main():
     Log.start(settings.debug)
     try:
         with startup.SingleInstance(flavor_id=settings.args.filename):
+            #MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
             with ESQuery(ElasticSearch(settings.query["from"])) as qb:
