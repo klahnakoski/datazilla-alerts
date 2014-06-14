@@ -289,12 +289,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["ttest_result.confidence", "diff"]).last()
                     best["pass"] = True
 
-            all_touched.update(Q.select(test_results, ["test_run_id", settings.param.test_dimension]))
+            all_touched.update(Q.select(test_results, [test_param.select.datazilla.name, settings.param.test_dimension]))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             evaled_tests.update(Q.run({
                 "from": test_results,
-                "select": ["test_run_id", settings.param.test_dimension],
+                "select": [test_param.select.datazilla.name, settings.param.test_dimension],
                 "where": {"term": {"ignored": False}}
             }))
 
@@ -320,7 +320,10 @@ def alert_sustained_median(settings, qb, alerts_db):
                 alert = Struct(
                     status="new",
                     create_time=CNV.milli2datetime(v.push_date),
-                    tdad_id=wrap_dot({"test_run_id": v.test_run_id, settings.param.test_dimension: v[settings.param.test_dimension]}),
+                    tdad_id=wrap_dot({
+                        test_param.select.datazilla.name: v[test_param.select.datazilla.name],
+                        settings.param.test_dimension: v[settings.param.test_dimension]
+                    }),
                     reason=settings.param.reason,
                     revision=v[settings.param.revision_dimension],
                     details=v,
@@ -420,14 +423,17 @@ def alert_sustained_median(settings, qb, alerts_db):
     alerts_db.flush()
 
     if debug:
-        Log.note("Marking {{num}} test_run_id as 'done'", {"num": len(all_touched)})
+        Log.note("Marking {{num}} {{ids}} as 'done'", {
+            "num": len(all_touched),
+            "ids": settings.param.default.select.datazilla.name
+        })
 
     for g, t in Q.groupby(all_touched, settings.param.test_dimension):
         try:
             qb.update({
                 "set": {settings.param.mark_complete: "done"},
                 "where": {"and": [
-                    {"terms": {"datazilla.test_run_id": t.test_run_id}},
+                    {"terms": {test_param.select.datazilla.value: t[test_param.select.datazilla.name]}},
                     {"term": {settings.param.test_dimension: g[settings.param.test_dimension]}},
                     {"missing": {"field": settings.param.mark_complete}}
                 ]}
