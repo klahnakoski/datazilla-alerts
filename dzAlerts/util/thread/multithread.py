@@ -20,6 +20,7 @@ class Multithread(object):
     SIMPLE SEMANTICS FOR SYMMETRIC MULTITHREADING
     PASS A SET OF functions TO BE EXECUTED (ONE PER THREAD)
     SET outbound==False TO SIMPLY THROW AWAY RETURN VALUES, IF ANY
+    THE inbound QUEUE IS EXPECTING dicts, EACH dict IS USED AS kwargs TO GIVEN functions
     """
 
     def __init__(self, functions, outbound=None, silent_queues=None):

@@ -93,13 +93,14 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                # True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"not": {"terms": {settings.param.test_dimension+".fields.suite": disabled_suites}}},
                 {"not": {"terms": {settings.param.test_dimension+".fields.name": disabled_tests}}},
-                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}}
+                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}},
                 #FOR DEBUGGING SPECIFIC SERIES
+                {"term": {"testrun.suite": "dromaeo_css"}},
                 # {"term": {"result.test_name": "alipay.com"}},
                 # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
                 # {"term": {"test_machine.platform": "x86_64"}}
@@ -137,7 +138,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 first_sample = MAX(MIN(test_points.min_push_date), OLDEST_TS)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
-                "select": {"name": "min_date", "value": "push_date", "aggregate": "min"},
+                "select": {"name": "min_date", "value": test_param.sort.name, "aggregate": "min"},
                 "from": {
                     "from": settings.query["from"],
                     "select": test_param.sort,
@@ -217,31 +218,31 @@ def alert_sustained_median(settings, qb, alerts_db):
                     }, {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_min",
-                        "value": lambda r: r.push_date,
-                        "sort": "push_date",
+                        "value": lambda r: r[test_param.sort.name],
+                        "sort": test_param.sort.name,
                         "aggregate": windows.Min,
                         "range": {"min": -test_param.window_size, "max": 0}
                     }, {
                         # SO WE CAN SHOW A DATAZILLA WINDOW
                         "name": "push_date_max",
-                        "value": lambda r: r.push_date,
-                        "sort": "push_date",
+                        "value": lambda r: r[test_param.sort.name],
+                        "sort": test_param.sort.name,
                         "aggregate": windows.Max,
                         "range": {"min": 0, "max": test_param.window_size}
                     }, {
                         "name": "past_revision",
                         "value": lambda r, i, rows: rows[i - 1][test_param.select.repo],
-                        "sort": "push_date"
+                        "sort": test_param.sort.name
                     }, {
                         "name": "past_stats",
                         "value": lambda r: r.value,
-                        "sort": "push_date",
+                        "sort": test_param.sort.name,
                         "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": -test_param.window_size, "max": 0}
                     }, {
                         "name": "future_stats",
                         "value": lambda r: r.value,
-                        "sort": "push_date",
+                        "sort": test_param.sort.name,
                         "aggregate": windows.Stats(middle=0.60),
                         "range": {"min": 0, "max": test_param.window_size}
                     }, {
@@ -250,7 +251,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                             rows[-test_param.window_size + i:i:].value,
                             rows[ i:test_param.window_size + i:].value
                         ),
-                        "sort": "push_date"
+                        "sort": test_param.sort.name
                     }, {
                         "name": "result",
                         "value": lambda r, i, rows: median_test(
@@ -258,7 +259,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                             rows[ i:test_param.window_size + i:].value,
                             interpolate=False
                         ),
-                        "sort": "push_date"
+                        "sort": test_param.sort.name
                     }, {
                         "name": "diff",
                         "value": lambda r: r.future_stats.mean - r.past_stats.mean
@@ -273,12 +274,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                         #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
                         "name": "future_is_diff",
                         "value": diff_by_association,
-                        "sort": "push_date"
+                        "sort": test_param.sort.name
                     }, {
                         #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
                         "name": "past_is_diff",
                         "value": diff_by_association,
-                        "sort": {"value": "push_date", "sort": -1}
+                        "sort": {"value": test_param.sort.name, "sort": -1}
                     }
                 ]
             })
@@ -301,7 +302,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             File("test_values.txt").write(CNV.list2tab(Q.run({
                 "from": stats,
                 "select": [
-                    {"name": "push_date", "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x.push_date), "%d-%b-%Y %H:%M:%S")},
+                    {"name": test_param.sort.name, "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
                     "value",
                     {"name": "revision", "value": settings.param.revision_dimension},
                     {"name": "mtest_confidence", "value": "result.confidence"},
@@ -309,7 +310,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "is_diff",
                     "pass"
                 ],
-                "sort": "push_date"
+                "sort": test_param.sort.name
             })))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
@@ -319,7 +320,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     continue
                 alert = Struct(
                     status="new",
-                    create_time=CNV.milli2datetime(v.push_date),
+                    create_time=CNV.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
                         test_param.select.datazilla.name: v[test_param.select.datazilla.name],
                         settings.param.test_dimension: v[settings.param.test_dimension]
@@ -327,7 +328,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     reason=settings.param.reason,
                     revision=v[settings.param.revision_dimension],
                     details=v,
-                    severity=settings.param.revision_dimension,
+                    severity=settings.param.severity,
                     confidence=v.result.confidence
                 )
                 alerts.append(alert)
@@ -433,13 +434,15 @@ def alert_sustained_median(settings, qb, alerts_db):
             qb.update({
                 "set": {settings.param.mark_complete: "done"},
                 "where": {"and": [
-                    {"terms": {test_param.select.datazilla.value: t[test_param.select.datazilla.name]}},
+                    {"terms": {test_param.select.datazilla.value: Q.select(t, test_param.select.datazilla.name)}},
                     {"term": {settings.param.test_dimension: g[settings.param.test_dimension]}},
                     {"missing": {"field": settings.param.mark_complete}}
                 ]}
             })
         except Exception, e:
+
             Log.warning("Can not mark as done", e)
+
 
 def main():
     settings = startup.read_settings(defs=[{
