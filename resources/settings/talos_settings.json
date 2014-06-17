@@ -22,7 +22,7 @@
 			"units": "unknown",
 			"better": "lower",
 			"min_regression": "5%",
-			"min_confidence": 0.995,
+			"min_score": 2.5,
 			"window_size": 20
 		},
 		"branch": {
@@ -47,9 +47,13 @@
 		},
 		"suite": {
 			"dromaeo_css": {
+				"window_size": 30,
+				"min_regression": "10%",
 				"better": "higher"
 			},
 			"dromaeo_dom": {
+				"window_size": 30,
+				"min_regression": "10%",
 				"better": "higher"
 			},
 			"v8_7": {
