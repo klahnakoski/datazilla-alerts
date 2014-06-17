@@ -10,7 +10,6 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
-from dzAlerts.daemons import talos_sustained_median
 from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
