@@ -65,6 +65,15 @@
 			"tp5o": {
 				"units": "ms",
 				"better": "lower"
+			},
+			"tp4m": {
+				"units": "ms",
+				"select": {
+					"value": {
+						"name": "value",
+						"value": "result.stats.min"
+					}
+				}
 			}
 		},
 		"test": {
