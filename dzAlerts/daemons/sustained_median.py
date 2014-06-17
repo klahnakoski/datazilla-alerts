@@ -93,17 +93,17 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                # True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"not": {"terms": {settings.param.test_dimension+".fields.suite": disabled_suites}}},
                 {"not": {"terms": {settings.param.test_dimension+".fields.name": disabled_tests}}},
-                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}},
+                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}}
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"testrun.suite": "dromaeo_css"}},
-                {"term": {"result.test_name": "jquery.html.28"}},
-                {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                {"term": {"test_machine.platform": "x86"}}
+                # {"term": {"result.test_name": "jquery.html.28"}},
+                # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
+                # {"term": {"test_machine.platform": "x86"}}
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
                 # {"term": {"test_machine.os": "Firefox OS"}},
