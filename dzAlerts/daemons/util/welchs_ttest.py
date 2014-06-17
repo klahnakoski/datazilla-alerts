@@ -19,9 +19,13 @@ def welchs_ttest(a, b):
     """
     a AND b ARE SAMPLES
     """
-    if len(a)< 2 or len(b)<2:
+    if len(a) < 2 or len(b) < 2:
         return {"confidence": 0, "diff": 0}
 
     t, prob = lttest_ind(unwrap(a), unwrap(b))
-    return Struct(score=-log(prob, base=10), tstat=t)
+
+    if prob == 0.0:
+        return Struct(tstat=t, score=19)
+    else:
+        return Struct(tstat=t, score=-log(prob, 10))
 

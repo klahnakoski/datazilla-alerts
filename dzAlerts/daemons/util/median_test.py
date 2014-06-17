@@ -8,10 +8,11 @@
 #
 
 from __future__ import unicode_literals
-from math import log
+from math import log, exp
 import dzAlerts
 from dzAlerts.util import maths
 from dzAlerts.util.env.logs import Log
+from dzAlerts.util.struct import Struct
 
 
 def median_test(samples1, samples2, interpolate=True):
@@ -29,8 +30,14 @@ def median_test(samples1, samples2, interpolate=True):
         [above1, below1, above2, below2],
         f_exp=[float(len(samples1)) / 2, float(len(samples1)) / 2, float(len(samples2)) / 2, float(len(samples2)) / 2]
     )
-
-    return {"mstat": result[0], "score": -log(result[1], base=10)}
+    mstat, prob = result
+    try:
+        if prob == 0.0:
+            return Struct(mstat=mstat, score=8)
+        else:
+            return Struct(mstat=mstat, score=-log(prob, 10))
+    except Exception, e:
+        Log.error("problem with math", e)
 
 
 def count_partition(samples, cut_value, resolution=1.0):
