@@ -136,8 +136,8 @@ CREATE TABLE listeners (
 	email VARCHAR(200) NOT NULL,
 	foreign key (reason) references reasons(code)
 );;
-INSERT INTO listeners VALUES ('b2g_alert_sustained_median', 'klahnakoski@mozilla.com');;
-INSERT INTO listeners VALUES ('talos_alert_sustained_median', 'klahnakoski@mozilla.com');;
+INSERT INTO listeners VALUES ('b2g_alert_revision', 'klahnakoski@mozilla.com');;
+INSERT INTO listeners VALUES ('talos_alert_revision', 'klahnakoski@mozilla.com');;
 
 
 #ALTER TABLE test_data_all_dimensions ADD UNIQUE INDEX tdad_id(id)

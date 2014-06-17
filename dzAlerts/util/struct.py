@@ -684,6 +684,9 @@ def wrap(v):
 
 
 def wrap_dot(value):
+    return wrap(_wrap_dot(value))
+
+def _wrap_dot(value):
     """
     dict WITH DOTS IN KEYS IS INTERPRETED AS A PATH
     """
@@ -692,9 +695,35 @@ def wrap_dot(value):
     elif isinstance(value, (basestring, int, float)):
         return value
     elif isinstance(value, dict):
-        output = Struct()
-        for k, v in value.iteritems():
-            output[k] = wrap_dot(v)
+        output = {}
+        for key, value in value.iteritems():
+            value = _wrap_dot(value)
+
+            if key == "":
+                from .env.logs import Log
+
+                Log.error("key is empty string.  Probably a bad idea")
+            if isinstance(key, str):
+                key = key.decode("utf8")
+
+            d = output
+            if key.find(".") == -1:
+                if value is None:
+                    d.pop(key, None)
+                else:
+                    d[key] = value
+            else:
+                seq = split_field(key)
+                for k in seq[:-1]:
+                    e = d.get(k, None)
+                    if e is None:
+                        d[k] = {}
+                        e = d[k]
+                    d = e
+                if value == None:
+                    d.pop(seq[-1], None)
+                else:
+                    d[seq[-1]] = value
         return output
     elif hasattr(value, '__iter__'):
         output = []

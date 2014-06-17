@@ -47,12 +47,10 @@
 		},
 		"suite": {
 			"dromaeo_css": {
-				"better": "higher",
-				"disable": true
+				"better": "higher"
 			},
 			"dromaeo_dom": {
-				"better": "higher",
-				"disable": true
+				"better": "higher"
 			},
 			"v8_7": {
 				"better": "higher"

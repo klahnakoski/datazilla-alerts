@@ -12,7 +12,7 @@ from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import MAX, OR
 from ..queries.query import _normalize_edge
-from ..struct import StructList, wrap, Struct
+from ..struct import StructList, wrap, Struct, wrap_dot
 from ..env.logs import Log
 
 
@@ -188,9 +188,7 @@ class Cube(object):
         lookup = [[getKey[i](p) for p in e.domain.partitions] for i, e in enumerate(self.edges)]
 
         def coord2term(coord):
-            output = Struct()
-            for i, c in enumerate(coord):
-                output[keys[i]] = lookup[i][c]
+            output = wrap_dot({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
             return output
 
         if isinstance(self.select, list):

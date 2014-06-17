@@ -173,7 +173,7 @@ def talos_alert_revision(settings):
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             for revision, total_test_count in Q.groupby(total_tests, ["Talos.Revision"]):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                revision = revision["Talos\.Revision"]
+                revision = revision["Talos.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
