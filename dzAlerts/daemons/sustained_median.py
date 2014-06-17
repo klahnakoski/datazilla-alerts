@@ -59,7 +59,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     query = settings.query
 
     def is_bad(r, test_param):
-        if test_param.min_confidence < r.result.confidence:
+        if test_param.min_score < r.result.score:
             if test_param.disable:
                 return False
 
@@ -93,17 +93,17 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                # True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"exists": {"field": "result.test_name"}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"not": {"terms": {settings.param.test_dimension+".fields.suite": disabled_suites}}},
                 {"not": {"terms": {settings.param.test_dimension+".fields.name": disabled_tests}}},
-                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}}
+                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}},
                 #FOR DEBUGGING SPECIFIC SERIES
                 # {"term": {"testrun.suite": "dromaeo_css"}},
-                # {"term": {"result.test_name": "alipay.com"}},
-                # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                # {"term": {"test_machine.platform": "x86_64"}}
+                {"term": {"result.test_name": "jquery.html.28"}},
+                {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
+                {"term": {"test_machine.platform": "x86"}}
                 # {"term": {"test_machine.type": "hamachi"}},
                 # {"term": {"test_machine.platform": "Gonk"}},
                 # {"term": {"test_machine.os": "Firefox OS"}},
@@ -204,8 +204,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                 Log.note("Find sustained_median exceptions")
 
             def diff_by_association(r, i, rows):
-                #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH CONFIDENCE
-                if rows[i - 1].is_diff and r.ttest_result.confidence > test_param.min_confidence:
+                #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH SCORE
+                if rows[i - 1].is_diff and r.ttest_result.score > test_param.min_score:
                     r.is_diff = True
                 return None
 
@@ -276,13 +276,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "name": "is_diff",
                         "value": lambda r: is_bad(r, test_param)
                     }, {
-                        #USE THIS TO FILL CONFIDENCE HOLES
-                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
+                        #USE THIS TO FILL SCORE HOLES
+                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
                         "name": "future_is_diff",
                         "value": diff_by_association,
                         "sort": test_param.sort.name
                     }, {
-                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER CONFIDENCE
+                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
                         "name": "past_is_diff",
                         "value": diff_by_association,
                         "sort": {"value": test_param.sort.name, "sort": -1}
@@ -293,7 +293,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             #PICK THE BEST SCORE FOR EACH is_diff==True REGION
             for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
-                    best = Q.sort(data, ["ttest_result.confidence", "diff"]).last()
+                    best = Q.sort(data, ["ttest_result.score", "diff"]).last()
                     best["pass"] = True
 
             all_touched.update(Q.select(test_results, [test_param.select.datazilla.name, settings.param.test_dimension]))
@@ -311,8 +311,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"name": test_param.sort.name, "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
                     "value",
                     {"name": "revision", "value": settings.param.revision_dimension},
-                    {"name": "mtest_confidence", "value": "result.confidence"},
-                    {"name": "ttest_confidence", "value": "ttest_result.confidence"},
+                    {"name": "mtest_score", "value": "result.score"},
+                    {"name": "ttest_score", "value": "ttest_result.score"},
                     "is_diff",
                     "pass"
                 ],
@@ -335,7 +335,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     revision=v[settings.param.revision_dimension],
                     details=v,
                     severity=settings.param.severity,
-                    confidence=v.result.confidence
+                    confidence=v.result.score
                 )
                 alerts.append(alert)
 

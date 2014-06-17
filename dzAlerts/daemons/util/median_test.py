@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from math import log
 import dzAlerts
 from dzAlerts.util import maths
 from dzAlerts.util.env.logs import Log
@@ -29,7 +30,7 @@ def median_test(samples1, samples2, interpolate=True):
         f_exp=[float(len(samples1)) / 2, float(len(samples1)) / 2, float(len(samples2)) / 2, float(len(samples2)) / 2]
     )
 
-    return {"diff": result[0], "confidence": 1-result[1]}
+    return {"mstat": result[0], "score": -log(result[1], base=10)}
 
 
 def count_partition(samples, cut_value, resolution=1.0):

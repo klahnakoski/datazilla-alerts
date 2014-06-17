@@ -29,19 +29,19 @@
 			"Try": {
 				"disable": true
 			},
-			"Try-Non-PGO":{
+			"Try-Non-PGO": {
 				"disable": true
 			},
-			"Cedar":{
+			"Cedar": {
 				"disable": true
 			},
-			"Cedar-Non-PGO":{
+			"Cedar-Non-PGO": {
 				"disable": true
 			},
-			"Ash":{
+			"Ash": {
 				"disable": true
 			},
-			"Ash-Non-PGO":{
+			"Ash-Non-PGO": {
 				"disable": true
 			}
 		},

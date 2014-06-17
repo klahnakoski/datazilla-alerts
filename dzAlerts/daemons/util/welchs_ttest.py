@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from math import log
 
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.vendor.strangman.stats import lttest_ind
@@ -22,5 +23,5 @@ def welchs_ttest(a, b):
         return {"confidence": 0, "diff": 0}
 
     t, prob = lttest_ind(unwrap(a), unwrap(b))
-    return Struct(confidence=1-prob, tstat=t)
+    return Struct(score=-log(prob, base=10), tstat=t)
 
