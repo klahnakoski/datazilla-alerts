@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from math import log
+from dzAlerts.util.env.logs import Log
 
 from dzAlerts.util.struct import Struct
 from dzAlerts.util.vendor.strangman.stats import lttest_ind
@@ -19,13 +20,18 @@ def welchs_ttest(a, b):
     """
     a AND b ARE SAMPLES
     """
-    if len(a) < 2 or len(b) < 2:
+    try:
+        if len(a) < 2 or len(b) < 2:
+            return {"confidence": 0, "diff": 0}
+
+        t, prob = lttest_ind(unwrap(a), unwrap(b))
+
+        if prob == 0.0:
+            return Struct(tstat=t, score=19)
+        else:
+            return Struct(tstat=t, score=-log(prob, 10))
+    except ZeroDivisionError, f:
+        # WE CAN NOT KNOW WHAT WENT WRONG WITH THE LIBRARY
         return {"confidence": 0, "diff": 0}
-
-    t, prob = lttest_ind(unwrap(a), unwrap(b))
-
-    if prob == 0.0:
-        return Struct(tstat=t, score=19)
-    else:
-        return Struct(tstat=t, score=-log(prob, 10))
-
+    except Exception, e:
+        Log.error("programmer problem", e)

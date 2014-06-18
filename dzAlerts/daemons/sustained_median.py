@@ -23,7 +23,7 @@ from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, wrap_dot
+from dzAlerts.util.struct import nvl, StructList, literal_field, wrap_dot, listwrap
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
@@ -33,7 +33,7 @@ from dzAlerts.util.times.timer import Timer
 
 
 NOW = datetime.utcnow()
-MAX_AGE = timedelta(days=90)
+MAX_AGE = timedelta(days=365)
 OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
@@ -59,7 +59,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     query = settings.query
 
     def is_bad(r, test_param):
-        if test_param.min_score < r.result.score:
+        if test_param.min_mscore < r.result.score:
             if test_param.disable:
                 return False
 
@@ -84,9 +84,26 @@ def alert_sustained_median(settings, qb, alerts_db):
         return False
 
     with Timer("pull combinations"):
-        disabled_suites = [s for s, p in settings.param.suite.items() if p.disable]
-        disabled_tests = [t for t, p in settings.param.test.items() if p.disable]
-        disabled_branches = [t for t, p in settings.param.branch.items() if p.disable]
+        disabled = []
+        exists = []
+        for f in qb.edges[settings.param.test_dimension].fields:
+            if isinstance(f, basestring):
+                disabled.append(
+                    {"not": {"terms": {f: [s for s, p in settings.param.test.items() if p.disable]}}}
+                )
+                exists.append(
+                    {"exists": {"field": f}}
+                )
+            else:
+                k = f.name
+                disabled.append(
+                    {"not": {"terms": {settings.param.test_dimension + ".fields." + k: [s for s, p in settings.param[k].items() if p.disable]}}}
+                )
+                exists.append(
+                    {"exists": {"field": f.value}}
+                )
+        disabled.append({"not": {"terms": {settings.param.branch_dimension: [t for t, p in settings.param.branch.items() if p.disable]}}})
+
 
         temp = Query({
             "from": settings.query["from"],
@@ -94,12 +111,14 @@ def alert_sustained_median(settings, qb, alerts_db):
             "edges": query.edges,
             "where": {"and": [
                 True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
-                {"exists": {"field": "result.test_name"}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
-                {"not": {"terms": {settings.param.test_dimension+".fields.suite": disabled_suites}}},
-                {"not": {"terms": {settings.param.test_dimension+".fields.name": disabled_tests}}},
-                {"not": {"terms": {settings.param.branch_dimension: disabled_branches}}}
+                {"and": exists},
+                {"and": disabled},
                 #FOR DEBUGGING SPECIFIC SERIES
+
+                # {"term": {"metadata.test": "nytimes-load"}},
+                # {"term": {"metadata.device": "samsung-gn"}},
+                # {"term": {"metadata.app": "nightly"}},
                 # {"term": {"testrun.suite": "dromaeo_css"}},
                 # {"term": {"result.test_name": "jquery.html.28"}},
                 # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
@@ -131,12 +150,17 @@ def alert_sustained_median(settings, qb, alerts_db):
         if not test_points.min_push_date:
             continue
         try:
-            test_param = set_default(
-                settings.param.test[literal_field(g[settings.param.test_dimension].name)],
-                settings.param.suite[literal_field(g[settings.param.test_dimension].suite)],
-                settings.param.branch[literal_field(g[settings.param.branch_dimension])],
-                settings.param.default
-            )
+            # FIND SPECIFIC PARAMETERS FOR THIS SLICE
+            lookup = []
+            for f in qb.edges[settings.param.test_dimension].fields:
+                if isinstance(f, basestring):
+                    lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
+                else:
+                    for k, v in f:
+                        lookup.append(settings.param[k][literal_field(g[settings.param.test_dimension][k])])
+            lookup.append(settings.param.branch[literal_field(g[settings.param.branch_dimension])])
+            lookup.append(settings.param.default)
+            test_param = set_default(*lookup)
 
             if settings.args.restart:
                 first_sample = OLDEST_TS
@@ -150,6 +174,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "select": test_param.sort,
                     "where": {"and": [
                         {"term": g},
+                        {"exists": {"field": test_param.select.value.value}},
                         {"range": {test_param.sort.value: {"lt": first_sample}}}
                     ]},
                     "sort": {"field": test_param.sort.value, "sort": -1},
@@ -169,13 +194,14 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "from": settings.query["from"],
                     "select": [
                         test_param.sort,
-                        test_param.select.datazilla,
                         test_param.select.repo,
                         test_param.select.value
                         ] +
+                        listwrap(test_param.select.source_ref)+
                         query.edges,
                     "where": {"and": [
                         {"term": g},
+                        {"exists": {"field": test_param.select.value.value}},
                         {"range": {test_param.sort.value: {"gte": min_date}}}
                     ]},
                 },
@@ -205,7 +231,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             def diff_by_association(r, i, rows):
                 #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH SCORE
-                if rows[i - 1].is_diff and r.ttest_result.score > test_param.min_score:
+                if rows[i - 1].is_diff and r.ttest_result.score > test_param.min_mscore:
                     r.is_diff = True
                 return None
 
@@ -271,7 +297,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: r.future_stats.mean - r.past_stats.mean
                     }, {
                         "name": "diff_percent",
-                        "value": lambda r: (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
+                        "value": lambda r: 1 if r.past_stats.mean==0 else (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
                     }, {
                         "name": "is_diff",
                         "value": lambda r: is_bad(r, test_param)
@@ -294,14 +320,15 @@ def alert_sustained_median(settings, qb, alerts_db):
             for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
                     best = Q.sort(data, ["ttest_result.score", "diff"]).last()
-                    best["pass"] = True
+                    if best.ttest_result.score > test_param.min_tscore:
+                        best["pass"] = True
 
-            all_touched.update(Q.select(test_results, [test_param.select.datazilla.name, settings.param.test_dimension]))
+            all_touched.update(Q.select(test_results, listwrap(settings.param.test_dimension)+listwrap(test_param.select.source_ref).name))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             evaled_tests.update(Q.run({
                 "from": test_results,
-                "select": [test_param.select.datazilla.name, settings.param.test_dimension],
+                "select": listwrap(test_param.select.source_ref).name,
                 "where": {"term": {"ignored": False}}
             }))
 
@@ -328,8 +355,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     status="new",
                     create_time=CNV.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
-                        test_param.select.datazilla.name: v[test_param.select.datazilla.name],
-                        settings.param.test_dimension: v[settings.param.test_dimension]
+                        s.name: v[s.name] for s in listwrap(test_param.select.source_ref)
                     }),
                     reason=settings.param.reason,
                     revision=v[settings.param.revision_dimension],
@@ -403,7 +429,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
 
         if significant_difference(curr.severity, a.severity) or \
-                significant_difference(curr.confidence, a.confidence) or \
+                significant_difference(10**(-curr.confidence), a.confidence) or \
                         curr.reason != a.reason:
             curr.last_updated = NOW
             alerts_db.update("alerts", {"id": curr.id}, a)
@@ -430,7 +456,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     if debug:
         Log.note("Marking {{num}} {{ids}} as 'done'", {
             "num": len(all_touched),
-            "ids": settings.param.default.select.datazilla.name
+            "ids": listwrap(settings.param.default.select.source_ref).name
         })
 
     for g, t in Q.groupby(all_touched, settings.param.test_dimension):
@@ -438,7 +464,9 @@ def alert_sustained_median(settings, qb, alerts_db):
             qb.update({
                 "set": {settings.param.mark_complete: "done"},
                 "where": {"and": [
-                    {"terms": {test_param.select.datazilla.value: Q.select(t, test_param.select.datazilla.name)}},
+                    {"and": [
+                        {"terms": {s.value: Q.select(t, s.name)}} for s in listwrap(test_param.select.source_ref)
+                    ]},
                     {"term": {settings.param.test_dimension: g[settings.param.test_dimension]}},
                     {"missing": {"field": settings.param.mark_complete}}
                 ]}

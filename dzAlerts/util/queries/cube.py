@@ -28,7 +28,6 @@ class Cube(object):
         ALLOWED, USING THE select AND edges TO DESCRIBE THE data
         """
 
-
         self.is_value = False if isinstance(select, list) else True
         self.select = select
 
@@ -118,7 +117,7 @@ class Cube(object):
         if other == None:
             if self.edges:
                 return False
-            if self.value == None:
+            if self.is_value and self.value == None:
                 return True
             return False
         return self.value == other

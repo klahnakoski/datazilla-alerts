@@ -8,7 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from ..struct import wrap, StructList, unwrap
+from ..struct import wrap
 
 
 TRUE_FILTER = True
@@ -60,6 +60,9 @@ def _normalize(esfilter):
         if esfilter["and"]:
             output = []
             for a in esfilter["and"]:
+                if isinstance(a, (list, set)):
+                    from dzAlerts.util.env.logs import Log
+                    Log.error("and clause is not allowed a list inside a list")
                 a_ = normalize(a)
                 if a_ is not a:
                     isDiff = True

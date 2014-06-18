@@ -684,12 +684,12 @@ def wrap(v):
 
 
 def wrap_dot(value):
-    return wrap(_wrap_dot(value))
-
-def _wrap_dot(value):
     """
     dict WITH DOTS IN KEYS IS INTERPRETED AS A PATH
     """
+    return wrap(_wrap_dot(value))
+
+def _wrap_dot(value):
     if value == None:
         return None
     elif isinstance(value, (basestring, int, float)):

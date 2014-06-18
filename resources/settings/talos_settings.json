@@ -5,7 +5,7 @@
 	"param": {
 		"default": {
 			"select": {
-				"datazilla": {
+				"source_ref": {
 					"name": "test_run_id",
 					"value": "datazilla.test_run_id"
 				},

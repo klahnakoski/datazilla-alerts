@@ -49,11 +49,11 @@ class ESQuery(object):
         else:
             self.worker.join()
 
-    def query(self, query):
+    def query(self, _query):
         if not self.ready:
             Log.error("Must use with clause for any instance of ESQuery")
 
-        query = Query(query, schema=self)
+        query = Query(_query, schema=self)
 
         for s in listwrap(query.select):
             if not aggregates[s.aggregate]:
@@ -134,13 +134,14 @@ class ESQuery(object):
             scripts.append("ctx._source."+k+" = "+MVEL.value2MVEL(v)+";")
         script = "".join(scripts)
 
-        command = []
-        for id in results.hits.hits._id:
-            command.append({"update": {"_id": id}})
-            command.append({"script": script})
-        content = ("\n".join(CNV.object2JSON(c) for c in command)+"\n").encode('utf-8')
-        self.es._post(
-            self.es.path + "/_bulk",
-            data=content,
-            headers={"Content-Type": "application/json"}
-        )
+        if results.hits.hits:
+            command = []
+            for id in results.hits.hits._id:
+                command.append({"update": {"_id": id}})
+                command.append({"script": script})
+            content = ("\n".join(CNV.object2JSON(c) for c in command)+"\n").encode('utf-8')
+            self.es._post(
+                self.es.path + "/_bulk",
+                data=content,
+                headers={"Content-Type": "application/json"}
+            )

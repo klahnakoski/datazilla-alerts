@@ -129,12 +129,14 @@ def _normalize_edge(edge, schema=None):
 
 
 def _normalize_from(frum, schema=None):
+    frum = wrap(frum)
+
     if isinstance(frum, basestring):
         return Struct(name=frum)
-    elif isinstance(frum, dict) and frum["from"]:
+    elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
         return Query(frum, schema=schema)
     else:
-        return wrap(frum)
+        return frum
 
 
 def _normalize_domain(domain=None, schema=None):
@@ -302,8 +304,10 @@ def _where_terms(master, where, schema):
                     if isinstance(edge, basestring):
                         #DIRECT FIELD REFERENCE
                         return {"terms": {edge: v}}
-
-                    domain = edge.getDomain()
+                    try:
+                        domain = edge.getDomain()
+                    except Exception, e:
+                        Log.error("programmer error", e)
                     fields = domain.dimension.fields
                     if isinstance(fields, dict):
                         or_agg = []

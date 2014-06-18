@@ -39,7 +39,7 @@ def get_all_uuid(settings):
                         "device": device_name,
                         "test": testname,
                         "app": appname,
-                        "date": date,
+                        "date": int(date)*1000,
                         "num": len(datedata)
                     })
 
@@ -48,7 +48,7 @@ def get_all_uuid(settings):
                             "device": device_name,
                             "test": testname,
                             "app": appname,
-                            "date": date,
+                            "date": int(date)*1000,
                             "uuid": d["uuid"]
                         }
                         output.append(metadata)
@@ -86,13 +86,14 @@ def etl(settings):
     #PULL ANY NEW STUFF
     with es.threaded_queue(size=100) as sink:
         def get_uuid(metadata):
+            response = None
             try:
-                result = requests.get(expand_template(settings.uuid_url, {"uuid": metadata.uuid}))
-                data = wrap(result.json())
+                response = requests.get(expand_template(settings.uuid_url, {"uuid": metadata.uuid}))
+                data = wrap(response.json())
                 data.metadata = metadata
                 sink.add({"id": metadata.uuid, "value": data})
             except Exception, e:
-                Log.warning("problem getting details", e)
+                Log.warning("problem getting details from {{response}}", {"response": response}, e)
 
         with Multithread([get_uuid for i in range(10)], outbound=False, silent_queues=True) as multi:
             for metadata in all_tests:
