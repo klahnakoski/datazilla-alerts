@@ -115,7 +115,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"and": exists},
                 {"and": disabled},
                 #FOR DEBUGGING SPECIFIC SERIES
-
+                # {"term":{"metadata.test":"startup-abouthome-dirty"}}
                 # {"term": {"metadata.test": "nytimes-load"}},
                 # {"term": {"metadata.device": "samsung-gn"}},
                 # {"term": {"metadata.app": "nightly"}},
@@ -181,6 +181,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "limit": test_param.window_size * 2
                 }
             })
+
             if len(first_in_window) > test_param.window_size * 2:
                 do_all = False
             else:
@@ -189,7 +190,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             min_date = MIN(first_sample, first_in_window.min_date)
 
             #LOAD TEST RESULTS FROM DATABASE
-            test_results = qb.query({
+            all_test_results = qb.query({
                 "from": {
                     "from": settings.query["from"],
                     "select": [
@@ -201,26 +202,33 @@ def alert_sustained_median(settings, qb, alerts_db):
                         query.edges,
                     "where": {"and": [
                         {"term": g},
-                        {"exists": {"field": test_param.select.value.value}},
                         {"range": {test_param.sort.value: {"gte": min_date}}}
                     ]},
                 },
                 "sort": test_param.sort.name
             })
 
-            #REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
+            all_touched.update(Q.select(all_test_results, listwrap(settings.param.test_dimension)+listwrap(test_param.select.source_ref).name))
+
+            # REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
+            # REMOVE TESTS MISSING A VALUE
+            # THIS MAKES THE PAST WINDOW TOO SMALL, THEN FORCING A RECALC.
+            # THIS CONVERGES TO 'DONE' EVENTUALLY
             test_results = Q.run({
-                "from": test_results,
+                "from": all_test_results,
                 "window": [
                     {
                         "name": "redundant",
                         "value": lambda r, i, rows: True if r[settings.param.revision_dimension] == rows[i + 1][settings.param.revision_dimension] else None
                     }
                 ],
-                "where": {"missing": {"field": "redundant"}}
+                "where": {"and": [
+                    {"missing": {"field": "redundant"}},
+                    {"exists": {"field": test_param.select.value.name}}
+                ]}
             })
 
-            Log.note("{{num}} test results found for {{group}} dating back no further than {{start_date}}", {
+            Log.note("{{num}} unique test results found for {{group}} dating back no further than {{start_date}}", {
                 "num": len(test_results),
                 "group": g,
                 "start_date": CNV.milli2datetime(min_date)
@@ -322,8 +330,6 @@ def alert_sustained_median(settings, qb, alerts_db):
                     best = Q.sort(data, ["ttest_result.score", "diff"]).last()
                     if best.ttest_result.score > test_param.min_tscore:
                         best["pass"] = True
-
-            all_touched.update(Q.select(test_results, listwrap(settings.param.test_dimension)+listwrap(test_param.select.source_ref).name))
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             evaled_tests.update(Q.run({
