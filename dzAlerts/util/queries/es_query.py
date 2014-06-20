@@ -21,7 +21,7 @@ from ..queries.dimensions import Dimension
 from ..queries.query import Query, _normalize_where
 from ..env.logs import Log
 from ..queries.MVEL import _MVEL
-from ..struct import Struct, split_field, wrap, listwrap, StructList
+from ..struct import Struct, split_field, wrap, listwrap, StructList, nvl
 
 
 class ESQuery(object):
@@ -105,6 +105,43 @@ class ESQuery(object):
 
     def __getattr__(self, item):
         return self.edges[item]
+
+    def normalize_edges(self, edges):
+        output = StructList()
+        for e in listwrap(edges):
+            output.extend(self._normalize_edge(e))
+        return output
+
+    def _normalize_edge(self, edge):
+        """
+        RETURN A EDGE DEFINITION INTO A SIMPLE ARRAY OF PATH-LEAF
+        DEFINITIONS [ {"name":<pathA>, "value":<pathB>}, ... ]
+
+        USEFUL FOR DECLARING HIGH-LEVEL DIMENSIONS, AND RELIEVING LOW LEVEL PATH PAIRS
+        """
+        if isinstance(edge, basestring):
+            e = self[edge]
+            if e:
+                domain = e.getDomain()
+                fields = domain.dimension.fields
+                if isinstance(fields, list):
+                    return [{"name": (edge + "["+str(i)+"]"), "value": v} for i, v in enumerate(fields)]
+                elif isinstance(fields, dict):
+                    return [{"name": (edge + "." + k), "value": v} for k, v in fields.items()]
+                else:
+                    Log.error("do not know how to handle")
+
+            return [{
+                "name": edge,
+                "value": edge
+            }]
+        else:
+            return [{
+                "name": nvl(edge.name, edge.value),
+                "value": edge.value
+            }]
+
+
 
 
     def update(self, command):

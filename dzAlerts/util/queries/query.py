@@ -49,7 +49,7 @@ class Query(object):
             self.select2index[s.name] = i
         self.select = select
 
-        self.edges = [_normalize_edge(e, schema=schema) for e in struct.listwrap(query.edges)]
+        self.edges = _normalize_edges(query.edges, schema=schema)
         self.frum = _normalize_from(query["from"], schema=schema)
         self.where = _normalize_where(query.where, schema=schema)
 
@@ -102,6 +102,10 @@ def _normalize_select(select, schema=None):
 
         select.aggregate = nvl(select.aggregate, "none")
         return select
+
+
+def _normalize_edges(edges, schema=None):
+    return [_normalize_edge(e, schema=schema) for e in struct.listwrap(edges)]
 
 
 def _normalize_edge(edge, schema=None):

@@ -612,13 +612,14 @@ class StructList(list):
 
     def right(self, num=None):
         """
-        WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE RIGHT
+        WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE RIGHT [-num:]
         """
         if num == None:
             return StructList([_get(self, "list")[-1]])
         if num <= 0:
             return EmptyList
-        return StructList(_get(self, "list")[-num])
+
+        return StructList(_get(self, "list")[-num:])
 
     def leftBut(self, num):
         """
@@ -628,11 +629,12 @@ class StructList(list):
             return StructList([_get(self, "list")[:-1:]])
         if num <= 0:
             return EmptyList
+
         return StructList(_get(self, "list")[:-num:])
 
     def last(self):
         """
-        RETURN LAST ELEMENT IN StructList
+        RETURN LAST ELEMENT IN StructList [-1]
         """
         if _get(self, "list"):
             return wrap(_get(self, "list")[-1])

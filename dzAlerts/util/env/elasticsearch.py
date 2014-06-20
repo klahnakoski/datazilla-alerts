@@ -332,7 +332,7 @@ class ElasticSearch(object):
         query = wrap(query)
         try:
             if self.debug:
-                if len(query.facets.keys()) > 200:
+                if len(query.facets.keys()) > 20:
                     show_query = query.copy()
                     show_query.facets = {k: "..." for k in query.facets.keys()}
                 else:

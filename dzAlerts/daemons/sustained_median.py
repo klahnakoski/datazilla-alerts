@@ -33,7 +33,7 @@ from dzAlerts.util.times.timer import Timer
 
 
 NOW = datetime.utcnow()
-MAX_AGE = timedelta(days=365)
+MAX_AGE = timedelta(days=90)
 OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
@@ -57,6 +57,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     debug = nvl(settings.param.debug, DEBUG)
     query = settings.query
+
 
     def is_bad(r, test_param):
         if test_param.min_mscore < r.result.score:
@@ -84,26 +85,36 @@ def alert_sustained_median(settings, qb, alerts_db):
         return False
 
     with Timer("pull combinations"):
+        # THIS COMPLICATED CODE IS SIMPLY USING THE
+        # SETTINGS TO MAP branch, suite, test OVERRIDES
+        # TO THE default SETTINGS
+        fields = qb.edges[settings.param.test_dimension].fields
+        if isinstance(fields, dict):
+            fields = StructList([
+                {
+                    "name": "test" if k == 'name' else k,
+                    "value": v
+                } for k, v in fields.items()
+            ])
+        else:
+            fields = StructList([
+                {
+                    "name": "test" if isinstance(f, basestring) else f.name,
+                    "value": f if isinstance(f, basestring) else f.value
+                } for f in fields
+            ])
+
         disabled = []
         exists = []
-        for f in qb.edges[settings.param.test_dimension].fields:
-            if isinstance(f, basestring):
-                disabled.append(
-                    {"not": {"terms": {f: [s for s, p in settings.param.test.items() if p.disable]}}}
-                )
-                exists.append(
-                    {"exists": {"field": f}}
-                )
-            else:
-                k = f.name
-                disabled.append(
-                    {"not": {"terms": {settings.param.test_dimension + ".fields." + k: [s for s, p in settings.param[k].items() if p.disable]}}}
-                )
-                exists.append(
-                    {"exists": {"field": f.value}}
-                )
+        for f in fields:
+            k = f.name
+            disabled.append(
+                {"not": {"terms": {settings.param.test_dimension + ".fields." + k: [s for s, p in settings.param[k].items() if p.disable]}}}
+            )
+            exists.append(
+                {"exists": {"field": f.value}}
+            )
         disabled.append({"not": {"terms": {settings.param.branch_dimension: [t for t, p in settings.param.branch.items() if p.disable]}}})
-
 
         temp = Query({
             "from": settings.query["from"],
@@ -142,7 +153,6 @@ def alert_sustained_median(settings, qb, alerts_db):
             "groups": query.edges
         })
 
-    # all_min_date = Null
     all_touched = set()
     evaled_tests = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
@@ -161,6 +171,8 @@ def alert_sustained_median(settings, qb, alerts_db):
             lookup.append(settings.param.branch[literal_field(g[settings.param.branch_dimension])])
             lookup.append(settings.param.default)
             test_param = set_default(*lookup)
+
+            source_ref = qb.normalize_edges(test_param.select.source_ref)
 
             if settings.args.restart:
                 first_sample = OLDEST_TS
@@ -198,7 +210,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         test_param.select.repo,
                         test_param.select.value
                         ] +
-                        listwrap(test_param.select.source_ref)+
+                        [s for s in source_ref if not s.name.startswith("Talos.Test")]+  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
                         query.edges,
                     "where": {"and": [
                         {"term": g},
@@ -208,7 +220,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "sort": test_param.sort.name
             })
 
-            all_touched.update(Q.select(all_test_results, listwrap(settings.param.test_dimension)+listwrap(test_param.select.source_ref).name))
+            all_touched.update(Q.select(all_test_results, source_ref.name))
 
             # REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
             # REMOVE TESTS MISSING A VALUE
@@ -334,7 +346,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
             evaled_tests.update(Q.run({
                 "from": test_results,
-                "select": listwrap(test_param.select.source_ref).name,
+                "select": source_ref.name,
                 "where": {"term": {"ignored": False}}
             }))
 
@@ -361,7 +373,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     status="new",
                     create_time=CNV.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
-                        s.name: v[s.name] for s in listwrap(test_param.select.source_ref)
+                        s.name: v[s.name] for s in source_ref
                     }),
                     reason=settings.param.reason,
                     revision=v[settings.param.revision_dimension],
@@ -377,6 +389,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
+        break
     if debug:
         Log.note("Get Current Alerts")
 
@@ -465,15 +478,15 @@ def alert_sustained_median(settings, qb, alerts_db):
             "ids": listwrap(settings.param.default.select.source_ref).name
         })
 
-    for g, t in Q.groupby(all_touched, settings.param.test_dimension):
+    for g, t in Q.groupby(all_touched, source_ref.leftBut(1).name):
         try:
             qb.update({
                 "set": {settings.param.mark_complete: "done"},
                 "where": {"and": [
                     {"and": [
-                        {"terms": {s.value: Q.select(t, s.name)}} for s in listwrap(test_param.select.source_ref)
+                        {"terms": {source_ref.last().value: Q.select(t, source_ref.last().name)}}
                     ]},
-                    {"term": {settings.param.test_dimension: g[settings.param.test_dimension]}},
+                    {"term": g},
                     {"missing": {"field": settings.param.mark_complete}}
                 ]}
             })
