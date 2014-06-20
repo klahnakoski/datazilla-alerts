@@ -124,8 +124,12 @@ class ESQuery(object):
             if e:
                 domain = e.getDomain()
                 fields = domain.dimension.fields
+
                 if isinstance(fields, list):
-                    return [{"name": (edge + "["+str(i)+"]"), "value": v} for i, v in enumerate(fields)]
+                    if len(fields) == 1:
+                        return [{"value": fields[0]}]
+                    else:
+                        return [{"name": (edge + "["+str(i)+"]"), "value": v} for i, v in enumerate(fields)]
                 elif isinstance(fields, dict):
                     return [{"name": (edge + "." + k), "value": v} for k, v in fields.items()]
                 else:

@@ -88,33 +88,23 @@ def alert_sustained_median(settings, qb, alerts_db):
         # THIS COMPLICATED CODE IS SIMPLY USING THE
         # SETTINGS TO MAP branch, suite, test OVERRIDES
         # TO THE default SETTINGS
-        fields = qb.edges[settings.param.test_dimension].fields
-        if isinstance(fields, dict):
-            fields = StructList([
-                {
-                    "name": "test" if k == 'name' else k,
-                    "value": v
-                } for k, v in fields.items()
-            ])
-        else:
-            fields = StructList([
-                {
-                    "name": "test" if isinstance(f, basestring) else f.name,
-                    "value": f if isinstance(f, basestring) else f.value
-                } for f in fields
-            ])
+        fields = qb.normalize_edges(settings.param.test_dimension)
 
         disabled = []
         exists = []
         for f in fields:
-            k = f.name
+            k = nvl(f.name, "test")
+
             disabled.append(
-                {"not": {"terms": {settings.param.test_dimension + ".fields." + k: [s for s, p in settings.param[k].items() if p.disable]}}}
+                {"not": {"terms": {f.value: [s for s, p in settings.param[k].items() if p.disable]}}}
             )
             exists.append(
                 {"exists": {"field": f.value}}
             )
-        disabled.append({"not": {"terms": {settings.param.branch_dimension: [t for t, p in settings.param.branch.items() if p.disable]}}})
+        disabled.append({"not": {"terms": {qb.normalize_edges(settings.param.branch_dimension)[0].value: [t for t, p in settings.param.branch.items() if p.disable]}}})
+
+        source_ref = qb.normalize_edges(settings.param.source_ref)
+
 
         temp = Query({
             "from": settings.query["from"],
@@ -171,8 +161,6 @@ def alert_sustained_median(settings, qb, alerts_db):
             lookup.append(settings.param.branch[literal_field(g[settings.param.branch_dimension])])
             lookup.append(settings.param.default)
             test_param = set_default(*lookup)
-
-            source_ref = qb.normalize_edges(test_param.select.source_ref)
 
             if settings.args.restart:
                 first_sample = OLDEST_TS
@@ -389,7 +377,6 @@ def alert_sustained_median(settings, qb, alerts_db):
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
-        break
     if debug:
         Log.note("Get Current Alerts")
 
@@ -475,7 +462,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     if debug:
         Log.note("Marking {{num}} {{ids}} as 'done'", {
             "num": len(all_touched),
-            "ids": listwrap(settings.param.default.select.source_ref).name
+            "ids": source_ref.name
         })
 
     for g, t in Q.groupby(all_touched, source_ref.leftBut(1).name):
