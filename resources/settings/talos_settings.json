@@ -67,7 +67,7 @@
 				"select": {
 					"value": {
 						"name": "value",
-						"value": "result.stats.min"
+						"value": "result.stats.last"
 					}
 				}
 			}
