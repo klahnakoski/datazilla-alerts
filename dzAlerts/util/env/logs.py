@@ -14,12 +14,13 @@ from datetime import datetime
 import sys
 
 from .. import struct
-from ..env import profiles
 from ..jsons import json_encoder
 from ..thread import threads
-from ..struct import listwrap, nvl, Struct, wrap
+from ..struct import nvl, Struct
+from ..structs.wraps import listwrap, wrap
 from ..strings import indent, expand_template
 from ..thread.threads import Thread
+
 
 
 DEBUG_LOGGING = False
@@ -136,7 +137,7 @@ class Log(object):
         """
         raise an exception with a trace for the cause too
         """
-        if params and isinstance(struct.listwrap(params)[0], BaseException):
+        if params and isinstance(listwrap(params)[0], BaseException):
             cause = params
             params = None
 
@@ -164,7 +165,7 @@ class Log(object):
         """
         SEND TO STDERR
         """
-        if params and isinstance(struct.listwrap(params)[0], BaseException):
+        if params and isinstance(listwrap(params)[0], BaseException):
             cause = params
             params = None
 
@@ -230,6 +231,8 @@ class Log(object):
             cls.cprofiler.enable()
 
         if settings.profile:
+            from ..env import profiles
+
             if isinstance(settings.profile, bool):
                 settings.profile = {"enabled": True, "filename": "profile.tab"}
 
@@ -239,6 +242,8 @@ class Log(object):
 
     @classmethod
     def stop(cls):
+        from dzAlerts.util.env import profiles
+
         if cls.cprofiler and hasattr(cls, "settings"):
             write_profile(cls.settings.cprofile, cls.cprofiler)
 

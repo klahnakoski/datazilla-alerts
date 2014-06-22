@@ -18,7 +18,8 @@ from ..thread.threads import ThreadedQueue
 from ..maths import Math
 from ..cnv import CNV
 from ..env.logs import Log
-from ..struct import nvl, Null, wrap, unwrap
+from ..struct import nvl, Null
+from ..structs.wraps import wrap, unwrap
 from ..struct import Struct, StructList
 
 
@@ -332,7 +333,7 @@ class ElasticSearch(object):
         query = wrap(query)
         try:
             if self.debug:
-                if len(query.facets.keys()) > 200:
+                if len(query.facets.keys()) > 20:
                     show_query = query.copy()
                     show_query.facets = {k: "..." for k in query.facets.keys()}
                 else:

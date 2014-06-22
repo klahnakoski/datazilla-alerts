@@ -10,7 +10,7 @@
 
 from __future__ import unicode_literals
 import sys
-from dzAlerts.util.vendor import strangman
+from ..vendor import strangman
 
 from math import sqrt
 from ..cnv import CNV

@@ -5,10 +5,6 @@
 	"param": {
 		"default": {
 			"select": {
-				"source_ref": {
-					"name": "test_run_id",
-					"value": "datazilla.test_run_id"
-				},
 				"repo": "Talos.Revision",
 				"value": {
 					"name": "value",
@@ -103,6 +99,10 @@
 		"test_dimension": "Talos.Test",
 		"revision_dimension": "Talos.Revision",
 		"branch_dimension": "Talos.Branch",
+		"source_ref": [
+			"Talos.Test",
+			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
+		],
 		"debug": true,
 		"mark_complete": "talos_sustained_median",
 		"combo_limit": 20  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)

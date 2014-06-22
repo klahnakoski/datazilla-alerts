@@ -23,12 +23,13 @@ from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, wrap_dot, listwrap
+from dzAlerts.util.struct import nvl, StructList, literal_field, split_field
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
+from dzAlerts.util.structs.wraps import wrap_dot
 from dzAlerts.util.times.timer import Timer
 
 
@@ -94,6 +95,8 @@ def alert_sustained_median(settings, qb, alerts_db):
         exists = []
         for f in fields:
             k = nvl(f.name, "test")
+            k = split_field(k)[-1]
+            k = "test" if k=="name" else k
 
             disabled.append(
                 {"not": {"terms": {f.value: [s for s, p in settings.param[k].items() if p.disable]}}}
@@ -146,8 +149,8 @@ def alert_sustained_median(settings, qb, alerts_db):
     all_touched = set()
     evaled_tests = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
-    for g, test_points in Q.groupby(new_test_points, query.edges):
-        if not test_points.min_push_date:
+    for g, min_push_date in Q.groupby(new_test_points, query.edges):
+        if not min_push_date:
             continue
         try:
             # FIND SPECIFIC PARAMETERS FOR THIS SLICE
@@ -165,7 +168,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             if settings.args.restart:
                 first_sample = OLDEST_TS
             else:
-                first_sample = MAX(MIN(test_points.min_push_date), OLDEST_TS)
+                first_sample = MAX(MIN(min_push_date), OLDEST_TS)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": test_param.sort.name, "aggregate": "min"},
@@ -198,7 +201,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         test_param.select.repo,
                         test_param.select.value
                         ] +
-                        [s for s in source_ref if not s.name.startswith("Talos.Test")]+  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
+                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")]+  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
                         query.edges,
                     "where": {"and": [
                         {"term": g},

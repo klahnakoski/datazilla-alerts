@@ -5,10 +5,6 @@
 	"param": {
 		"default": {
 			"select": {
-				"source_ref": {
-					"name": "uuid",
-					"value": "metadata.uuid"
-				},
 				"repo": "Eideticker.Revision",
 				"value": {
 					"name": "value",
@@ -63,6 +59,10 @@
 		"test_dimension": "Eideticker.Test",
 		"revision_dimension": "Eideticker.Revision",
 		"branch_dimension": "Eideticker.Branch",
+		"source_ref": {
+			"name": "uuid",
+			"value": "metadata.uuid"
+		},
 		"debug": true,
 		"mark_complete": "kyle_test_eideticker_sustained_median",
 		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)

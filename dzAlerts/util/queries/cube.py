@@ -12,7 +12,8 @@ from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import MAX, OR
 from ..queries.query import _normalize_edge
-from ..struct import StructList, wrap, Struct, wrap_dot
+from ..struct import StructList
+from ..structs.wraps import wrap, wrap_dot, listwrap
 from ..env.logs import Log
 
 
@@ -104,9 +105,6 @@ class Cube(object):
             Log.error("can not get value of multi-valued cubes")
         return self.data[self.select.name].cube
 
-    def __float__(self):
-        return self.value
-
     def __lt__(self, other):
         return self.value < other
 
@@ -156,10 +154,10 @@ class Cube(object):
         return self.data[item]
 
     def get_columns(self):
-        return self.edges + struct.listwrap(self.select)
+        return self.edges + listwrap(self.select)
 
     def _select(self, select):
-        selects = struct.listwrap(select)
+        selects = listwrap(select)
         is_aggregate = OR(s.aggregate != None and s.aggregate != "none" for s in selects)
         if is_aggregate:
             values = {s.name: Matrix(value=self.data[s.value].aggregate(s.aggregate)) for s in selects}
@@ -191,7 +189,7 @@ class Cube(object):
             return output
 
         if isinstance(self.select, list):
-            selects = struct.listwrap(self.select)
+            selects = listwrap(self.select)
             index, v = zip(*self.data[selects[0].name].groupby(selector))
 
             coord = wrap([coord2term(c) for c in index])
@@ -202,6 +200,15 @@ class Cube(object):
                 values.append(v)
 
             output = zip(coord, [Cube(self.select, remainder, {s.name: v[i] for i, s in enumerate(selects)}) for v in zip(*values)])
+        elif not remainder:
+            # v IS A VALUE, NO NEED TO WRAP IT IN A Cube
+            output = (
+                (
+                    coord2term(coord),
+                    v
+                )
+                for coord, v in self.data[self.select.name].groupby(selector)
+            )
         else:
             output = (
                 (
@@ -218,4 +225,16 @@ class Cube(object):
             return str(self.data)
         else:
             return str(self.data)
+
+    def __int__(self):
+        if self.is_value:
+            return int(self.value)
+        else:
+            return int(self.data)
+
+    def __float__(self):
+        if self.is_value:
+            return float(self.value)
+        else:
+            return float(self.data)
 

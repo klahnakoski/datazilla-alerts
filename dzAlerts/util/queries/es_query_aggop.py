@@ -27,7 +27,7 @@ def is_aggop(query):
 
 
 def es_aggop(es, mvel, query):
-    select = struct.listwrap(query.select)
+    select = listwrap(query.select)
     esQuery = buildESQuery(query)
 
     isSimple = AND(aggregates[s.aggregate] == "count" for s in select)
@@ -70,7 +70,7 @@ def es_countop(es, mvel, query):
     """
     RETURN SINGLE COUNT
     """
-    select = struct.listwrap(query.select)
+    select = listwrap(query.select)
     esQuery = buildESQuery(query)
     for s in select:
 

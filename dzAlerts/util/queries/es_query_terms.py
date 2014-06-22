@@ -12,16 +12,17 @@ from __future__ import unicode_literals
 from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import AND
-from dzAlerts.util.queries import Q
+from ..queries import Q
 from ..queries import es_query_util
 from ..queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
 from ..queries.filters import simplify
 from ..queries.cube import Cube
-from ..struct import wrap, nvl, StructList
+from ..struct import nvl, StructList
+from ..structs.wraps import wrap, listwrap
 
 
 def is_terms(query):
-    select = struct.listwrap(query.select)
+    select = listwrap(query.select)
 
     isSimple = not query.select or AND(aggregates[s.aggregate] in ("none", "count") for s in select)
     if isSimple:
@@ -39,7 +40,7 @@ def es_terms(es, mvel, query):
     if len(query.edges) == 2:
         return _es_terms2(es, mvel, query)
 
-    select = struct.listwrap(query.select)
+    select = listwrap(query.select)
     esQuery = buildESQuery(query)
     packed_term = compileEdges2Term(mvel, query.edges, wrap([]))
     for s in select:
@@ -103,7 +104,7 @@ def _es_terms2(es, mvel, query):
     q1.edges = query.edges[0:1:]
     values1 = es_terms(es, mvel, q1).edges[0].domain.partitions.value
 
-    select = struct.listwrap(query.select)
+    select = listwrap(query.select)
     esQuery = buildESQuery(query)
     for s in select:
         for i, v in enumerate(values1):
