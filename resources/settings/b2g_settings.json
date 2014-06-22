@@ -3,10 +3,59 @@
 		"filename": "dimension_b2g.json"
 	},
 	"param": {
+		"default": {
+			"select": {
+				"repo": "B2G.Revision",
+				"value": {
+					"name": "value",
+					"value": "result.stats.median"
+				}
+			},
+			"sort": {
+				"name": "push_date",
+				"value": "datazilla.date_loaded"
+			},
+			"units": "unknown",
+			"better": "lower",
+			"min_regression": "2%",
+			"min_score": 2.5,
+			"window_size": 20
+		},
+		"branch": {
+			"Try": {
+				"disable": true
+			}
+
+		},
+		"suite": {
+			"vsize": {
+				"disable": true,
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"system_vsize": {
+				"disable": true,
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"system_uss": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			}
+		},
+
 		"test": {
 			"fps": {
 				"units": "frames/s",
 				"better": "higher",
+				"min_regression": "1%"
+			},
+			"email_memory": {
+				"units": "MiB",
+				"better": "lower",
 				"min_regression": "1%"
 			},
 			"cold_load_time": {
@@ -19,29 +68,35 @@
 				"better": "lower",
 				"min_regression": "1%"
 			},
+			"communications/dialer_memory": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
 			"startup_time": {
 				"units": "ms",
 				"better": "lower",
 				"min_regression": "1%"
+			},
+			"settings_memory": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
 			}
+
 		},
-		"sustained": {
-			"trigger": 0.999, //WHEN THE WELCH'S T-TEST RETURNS POSITIVE RESULT
-			"max_test_results_per_run": 1,
-			"window_size": 10
-		},
-		"sustained_median": {
-			"trigger": 0.999,
-			"max_test_results_per_run": 1,
-			"window_size": 10
-		},
-		"exception": {
-			"min_confidence": 0.999,
-			"window_size": 20,
-			"max_test_results_per_run": 1  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
-		},
+		"reason": "b2g_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
+		"severity": 0.8,
+		"test_dimension":"B2G.Test",
+		"revision_dimension":"B2G.Revision",
+		"branch_dimension": "B2G.Branch",
+		"source_ref": [
+			"B2G.Test",
+			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
+		],
 		"debug": true,
-		"mark_complete": "kyle_test_b2g_sustained_median"
+		"mark_complete": "b2g_sustained_median",
+		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {
 		"from": {
@@ -52,25 +107,13 @@
 			"type": "results",
 			"debug": true
 		},
-		"select": [
-			{
-				"name": "test_run_id",
-				"value": "datazilla.test_run_id"
-			},
-			"B2G.Revision",
-			{
-				"name": "value",
-				"value": "result.stats.median"
-			}
-		],
 		"edges": [
 			"B2G.Branch",
 			"B2G.Test",
 			"B2G.Platform",
 			"B2G.OS",
 			"B2G.Device"
-		],
-		"sort": "datazilla.date_loaded"
+		]
 	},
 	"alerts": {
 		"host": "localhost",
@@ -95,7 +138,7 @@
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "results/logs/alert.log",
+				"filename": "results/logs/b2g_alert.log",
 				"maxBytes": 10000000,
 				"backupCount": 100,
 				"encoding": "utf8"

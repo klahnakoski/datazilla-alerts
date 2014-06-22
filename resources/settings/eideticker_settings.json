@@ -64,7 +64,7 @@
 			"value": "metadata.uuid"
 		},
 		"debug": true,
-		"mark_complete": "kyle_test_eideticker_sustained_median",
+		"mark_complete": "eideticker_sustained_median",
 		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {
@@ -95,7 +95,7 @@
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "results/logs/eideticker_import.log",
+				"filename": "results/logs/eideticker_alert.log",
 				"maxBytes": 10000000,
 				"backupCount": 100,
 				"encoding": "utf8"
