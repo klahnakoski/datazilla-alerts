@@ -9,8 +9,9 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from math import log
 
-from dzAlerts.daemons.util import significant_difference
+from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -218,7 +219,7 @@ def talos_alert_revision(settings):
                         "example": worst_in_revision
                     },
                     "severity": SEVERITY,
-                    "confidence": worst_in_revision.result.confidence
+                    "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
                 })
 
             known_alerts = Q.unique_index(known_alerts, "revision")
@@ -260,7 +261,7 @@ def talos_alert_revision(settings):
                     continue  # DO NOT TOUCH SOLVED ALERTS
 
                 old_alert = old_alerts[known_alert]
-                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
+                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_score_difference(known_alert.confidence, old_alert.confidence):
                     known_alert.last_updated = NOW
                     db.update("alerts", {"id": old_alert.id}, known_alert)
 
@@ -268,7 +269,7 @@ def talos_alert_revision(settings):
             for old_alert in old_alerts - known_alerts:
                 if old_alert.status == 'obsolete':
                     continue
-                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW, "details":None})
+                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 
 
 def main():

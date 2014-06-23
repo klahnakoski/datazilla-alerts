@@ -394,6 +394,9 @@ class NullType(object):
     def __rsub__(self, other):
         return Null
 
+    def __neg__(self):
+        return Null
+
     def __mul__(self, other):
         return Null
 

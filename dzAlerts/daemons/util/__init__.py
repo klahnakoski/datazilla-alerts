@@ -29,3 +29,7 @@ def significant_difference(a, b):
         return True
     except Exception, e:
         Log.error("Problem", e)
+
+
+def significant_score_difference(a, b):
+    return abs(a - b) > 0.5

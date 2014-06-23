@@ -124,6 +124,7 @@ def b2g_alert_revision(settings):
                     {"or":[
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                         {"term": {"reason": b2g_sustained_median.REASON}},
+                        {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]}
@@ -184,7 +185,7 @@ def b2g_alert_revision(settings):
                         "example": worst_in_revision
                     },
                     "severity": SEVERITY,
-                    "confidence": worst_in_revision.result.confidence
+                    "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
                 })
 
             known_alerts = Q.unique_index(known_alerts, "revision")
