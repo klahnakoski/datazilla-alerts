@@ -47,7 +47,8 @@ On page {{page_url}}<br>
 Raw data:  {{details}}
 </div>"""
 
-DEBUG = True
+VERBOSE = True
+DEBUG = True  # SETTINGS CAN TURN OFF DEBUGGING
 
 
 def alert_sustained_median(settings, qb, alerts_db):
@@ -56,7 +57,8 @@ def alert_sustained_median(settings, qb, alerts_db):
     """
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
 
-    debug = nvl(settings.param.debug, DEBUG)
+    verbose = nvl(settings.param.verbose, VERBOSE)
+    debug = False if settings.param.debug is False else DEBUG  # SETTINGS CAN TURN OFF DEBUGGING
     query = settings.query
 
 
@@ -114,25 +116,33 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                # True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"and": exists},
                 {"and": disabled},
-                #FOR DEBUGGING SPECIFIC SERIES
-                # {"term":{"metadata.test":"startup-abouthome-dirty"}}
-                # {"term": {"metadata.test": "nytimes-load"}},
-                # {"term": {"metadata.device": "samsung-gn"}},
-                # {"term": {"metadata.app": "nightly"}},
-                # {"term": {"testrun.suite": "dromaeo_css"}},
-                # {"term": {"result.test_name": "jquery.html.28"}},
-                # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                # {"term": {"test_machine.platform": "x86"}}
-                # {"term": {"test_machine.type": "hamachi"}},
-                # {"term": {"test_machine.platform": "Gonk"}},
-                # {"term": {"test_machine.os": "Firefox OS"}},
-                # {"term": {"test_build.branch": "master"}},
-                # {"term": {"testrun.suite": "system_uss"}},
-                # {"term": {"result.test_name": "sms_memory"}}
+                {"or":[
+                    {"not": debug},
+                    {"and":[
+                        #FOR DEBUGGING SPECIFIC SERIES
+                        {"term": {"metadata.test": "b2g-messages-startup"}},
+           	            {"term": {"metadata.device": "tarako"}},
+           	            {"term": {"metadata.app": "b2g-nightly"}}
+                        # {"term":{"metadata.test":"startup-abouthome-dirty"}}
+                        # {"term": {"metadata.test": "nytimes-load"}},
+                        # {"term": {"metadata.device": "samsung-gn"}},
+                        # {"term": {"metadata.app": "nightly"}},
+                        # {"term": {"testrun.suite": "dromaeo_css"}},
+                        # {"term": {"result.test_name": "jquery.html.28"}},
+                        # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
+                        # {"term": {"test_machine.platform": "x86"}}
+                        # {"term": {"test_machine.type": "hamachi"}},
+                        # {"term": {"test_machine.platform": "Gonk"}},
+                        # {"term": {"test_machine.os": "Firefox OS"}},
+                        # {"term": {"test_build.branch": "master"}},
+                        # {"term": {"testrun.suite": "system_uss"}},
+                        # {"term": {"result.test_name": "sms_memory"}}
+                    ]}
+                ]}
             ]},
             "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
@@ -140,7 +150,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         new_test_points = qb.query(temp)
 
     #BRING IN ALL NEEDED DATA
-    if debug:
+    if verbose:
         Log.note("Pull all data for {{num}} groups:\n{{groups.name}}", {
             "num": len(new_test_points),
             "groups": query.edges
@@ -237,7 +247,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "start_date": CNV.milli2datetime(min_date)
             })
 
-            if debug:
+            if verbose:
                 Log.note("Find sustained_median exceptions")
 
             def diff_by_association(r, i, rows):
@@ -374,13 +384,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                 )
                 alerts.append(alert)
 
-            if debug:
+            if verbose:
                 Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
 
         except Exception, e:
             Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
 
-    if debug:
+    if verbose:
         Log.note("Get Current Alerts")
 
     #CHECK THE CURRENT ALERTS
@@ -412,7 +422,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     changed_alerts = current_alerts & found_alerts
     obsolete_alerts = Q.filter(current_alerts - found_alerts, {"not": {"term": {"status": "obsolete"}}})
 
-    if debug:
+    if verbose:
         Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
             "num_new": len(new_alerts),
             "num_change": len(changed_alerts),
@@ -462,7 +472,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     alerts_db.flush()
 
-    if debug:
+    if verbose:
         Log.note("Marking {{num}} {{ids}} as 'done'", {
             "num": len(all_touched),
             "ids": source_ref.name

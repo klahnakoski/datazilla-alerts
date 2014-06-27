@@ -9,6 +9,9 @@
 #
 
 from __future__ import unicode_literals
+from collections import Iterable
+from types import GeneratorType
+from dzAlerts.util.struct import nvl
 from ..env.logs import Log
 from ..thread.threads import Queue, Thread
 
@@ -20,10 +23,11 @@ class Multithread(object):
     SIMPLE SEMANTICS FOR SYMMETRIC MULTITHREADING
     PASS A SET OF functions TO BE EXECUTED (ONE PER THREAD)
     SET outbound==False TO SIMPLY THROW AWAY RETURN VALUES, IF ANY
+    threads - IF functions IS NOT AN ARRAY, THEN threads  IS USED TO MAKE AN ARRAY
     THE inbound QUEUE IS EXPECTING dicts, EACH dict IS USED AS kwargs TO GIVEN functions
     """
 
-    def __init__(self, functions, outbound=None, silent_queues=None):
+    def __init__(self, functions, threads=None, outbound=None, silent_queues=None):
         if outbound is None:
             self.outbound = Queue(silent=silent_queues)
         elif outbound is False:
@@ -34,10 +38,19 @@ class Multithread(object):
         self.inbound = Queue(silent=silent_queues)
 
         #MAKE THREADS
-        self.threads = []
-        for t, f in enumerate(functions):
-            thread = worker_thread("worker " + unicode(t), self.inbound, self.outbound, f)
-            self.threads.append(thread)
+        if isinstance(functions, Iterable):
+            if threads:
+                Log.error("do not know how to handle an array of functions AND a thread multiplier")
+            self.threads = []
+            for t, f in enumerate(functions):
+                thread = worker_thread("worker " + unicode(t), self.inbound, self.outbound, f)
+                self.threads.append(thread)
+        else:
+            #ASSUME functions IS A SINGLE FUNCTION
+            self.threads = []
+            for t in range(nvl(threads, 1)):
+                thread = worker_thread("worker " + unicode(t), self.inbound, self.outbound, functions)
+                self.threads.append(thread)
 
     def __enter__(self):
         return self
@@ -67,7 +80,8 @@ class Multithread(object):
             for t in self.threads:
                 t.keep_running = False
             self.inbound.close()
-            if self.outbound: self.outbound.close()
+            if self.outbound:
+                self.outbound.close()
             for t in self.threads:
                 t.join()
 
@@ -77,6 +91,8 @@ class Multithread(object):
         RETURN A GENERATOR THAT HAS len(requests) RESULTS (ANY ORDER)
         EXPECTING requests TO BE A list OF dicts, EACH dict IS USED AS kwargs TO GIVEN functions
         """
+        if not isinstance(requests,(list, tuple, GeneratorType)):
+            Log.error("Expecting requests to be a list or generator", offset=1)
 
         #FILL QUEUE WITH WORK
         self.inbound.extend(requests)
