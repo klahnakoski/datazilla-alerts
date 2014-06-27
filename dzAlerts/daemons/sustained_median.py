@@ -124,9 +124,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"not": debug},
                     {"and":[
                         #FOR DEBUGGING SPECIFIC SERIES
-                        {"term": {"metadata.test": "b2g-messages-startup"}},
-           	            {"term": {"metadata.device": "tarako"}},
-           	            {"term": {"metadata.app": "b2g-nightly"}}
+                        # {"term": {"metadata.test": "b2g-messages-startup"}},
+                        # {"term": {"metadata.device": "tarako"}},
+                        # {"term": {"metadata.app": "b2g-nightly"}}
                         # {"term":{"metadata.test":"startup-abouthome-dirty"}}
                         # {"term": {"metadata.test": "nytimes-load"}},
                         # {"term": {"metadata.device": "samsung-gn"}},

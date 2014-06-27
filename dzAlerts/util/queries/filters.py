@@ -56,7 +56,7 @@ def _normalize(esfilter):
     while isDiff:
         isDiff = False
 
-        if esfilter["and"]:
+        if esfilter["and"] != None:
             output = []
             for a in esfilter["and"]:
                 if isinstance(a, (list, set)):
@@ -88,7 +88,7 @@ def _normalize(esfilter):
                 esfilter = wrap({"and": output})
             continue
 
-        if esfilter["or"]:
+        if esfilter["or"] != None:
             output = []
             for a in esfilter["or"]:
                 a_ = _normalize(a)
