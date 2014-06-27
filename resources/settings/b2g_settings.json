@@ -94,7 +94,8 @@
 			"B2G.Test",
 			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
 		],
-		"debug": true,
+		"debug": false,
+		"verbose": true,
 		"mark_complete": "b2g_sustained_median",
 		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
