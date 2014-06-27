@@ -14,12 +14,13 @@ from datetime import datetime
 import sys
 
 from .. import struct
-from ..env import profiles
 from ..jsons import json_encoder
 from ..thread import threads
-from ..struct import listwrap, nvl, Struct, wrap, StructList
+from ..struct import nvl, Struct
+from ..structs.wraps import listwrap, wrap
 from ..strings import indent, expand_template
 from ..thread.threads import Thread
+
 
 
 DEBUG_LOGGING = False
@@ -36,6 +37,7 @@ class Log(object):
     main_log = None
     logging_multi = None
     profiler = None
+    cprofiler = None  # screws up with pypy, but better than nothing
     error_mode = False  # prevent error loops
 
     @classmethod
@@ -135,7 +137,7 @@ class Log(object):
         """
         raise an exception with a trace for the cause too
         """
-        if params and isinstance(struct.listwrap(params)[0], BaseException):
+        if params and isinstance(listwrap(params)[0], BaseException):
             cause = params
             params = None
 
@@ -163,7 +165,7 @@ class Log(object):
         """
         SEND TO STDERR
         """
-        if params and isinstance(struct.listwrap(params)[0], BaseException):
+        if params and isinstance(listwrap(params)[0], BaseException):
             cause = params
             params = None
 
@@ -220,16 +222,31 @@ class Log(object):
         for log in listwrap(settings.log):
             Log.add_log(Log.new_instance(log))
 
+        if settings.cprofile:
+            if isinstance(settings.cprofile, bool):
+                settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
+
+            import cProfile
+            cls.cprofiler = cProfile.Profile()
+            cls.cprofiler.enable()
+
         if settings.profile:
+            from ..env import profiles
+
             if isinstance(settings.profile, bool):
-                settings.profile = {"enabled":True, "filename":"profile.tab"}
+                settings.profile = {"enabled": True, "filename": "profile.tab"}
 
             if settings.profile.enabled:
-                profiles.ON=True
+                profiles.ON = True
 
 
     @classmethod
     def stop(cls):
+        from dzAlerts.util.env import profiles
+
+        if cls.cprofiler and hasattr(cls, "settings"):
+            write_profile(cls.settings.cprofile, cls.cprofiler)
+
         if profiles.ON and hasattr(cls, "settings"):
             profiles.write(cls.settings.profile)
         cls.main_log.stop()
@@ -341,12 +358,19 @@ class Except(Exception):
             output += "\n" + indent(format_trace(self.trace))
 
         if self.cause:
-            output += "\ncaused by\n\t" + "\nand caused by\n\t".join([c.__str__() for c in self.cause])
+            cause_strings = []
+            for c in self.cause:
+                try:
+                    cause_strings.append(c.__str__())
+                except Exception, e:
+                    pass
+
+            output += "\ncaused by\n\t" + "\nand caused by\n\t".join(cause_strings)
 
         return output + "\n"
 
     def __json__(self):
-        return json_encoder.encode(Struct(
+        return json_encoder(Struct(
             type = self.type,
             template = self.template,
             params = self.params,
@@ -465,12 +489,12 @@ class Log_usingMulti(BaseLog):
                 pass
 
 
-def write_profile(profile_settings, profiler):
+def write_profile(profile_settings, cprofiler):
     from ..cnv import CNV
     from .files import File
     import pstats
 
-    p = pstats.Stats(profiler)
+    p = pstats.Stats(cprofiler)
     stats = [{
             "num_calls": d[1],
             "self_time": d[2],

@@ -18,7 +18,8 @@ from .. import struct
 from ..jsons import json_scrub
 from ..maths import Math
 from ..strings import expand_template
-from ..struct import nvl, wrap
+from ..struct import nvl
+from ..structs.wraps import wrap, listwrap
 from ..cnv import CNV
 from ..env.logs import Log, Except
 from ..queries import Q
@@ -436,7 +437,7 @@ class DB(object):
     # candidate_key IS LIST OF COLUMNS THAT CAN BE USED AS UID (USUALLY PRIMARY KEY)
     # ONLY INSERT IF THE candidate_key DOES NOT EXIST YET
     def insert_new(self, table_name, candidate_key, new_record):
-        candidate_key = struct.listwrap(candidate_key)
+        candidate_key = listwrap(candidate_key)
 
         condition = " AND\n".join([self.quote_column(k) + "=" + self.quote_value(new_record[k]) if new_record[k] != None else self.quote_column(k) + " IS Null" for k in candidate_key])
         command = "INSERT INTO " + self.quote_column(table_name) + " (" + \
@@ -690,11 +691,6 @@ class Transaction(object):
             self.db.commit()
 
 
-# FOR PUTTING JSON INTO DATABASE (sort_keys=True)
-# dicts CAN BE USED AS KEYS
-def json_encode(value):
-    return unicode(json_encoder.encode(json_scrub(value)))
-
 json_encoder = json.JSONEncoder(
     skipkeys=False,
     ensure_ascii=False,  # DIFF FROM DEFAULTS
@@ -704,6 +700,14 @@ json_encoder = json.JSONEncoder(
     separators=None,
     encoding='utf-8',
     default=None,
-    sort_keys=True
+    sort_keys=True   # <-- SEE?!  sort_keys==True
 )
+
+
+def json_encode(value):
+    """
+    FOR PUTTING JSON INTO DATABASE (sort_keys=True)
+    dicts CAN BE USED AS KEYS
+    """
+    return unicode(json_encoder.encode(json_scrub(value)))
 

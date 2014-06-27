@@ -4,6 +4,7 @@
 from __future__ import unicode_literals
 import random
 import string
+from dzAlerts.util.struct import nvl
 
 
 SIMPLE_ALPHABET = string.ascii_letters + string.digits
@@ -27,9 +28,28 @@ class Random(object):
         return random.randrange(*args)
 
     @staticmethod
+    def float(*args):
+        if args:
+            return random.random()*args[0]
+        else:
+            return random.random()
+
+    @staticmethod
     def sample(data, count):
         num = len(data)
         return [data[Random.int(num)] for i in range(count)]
+
+    @staticmethod
+    def combination(data):
+        output = []
+        data = list(data)
+        num = len(data)
+        for i in range(num):
+            n = Random.int(num-i)
+            output.append(data[n])
+            del data[n]
+        return output
+
 
     @staticmethod
     def bytes(count):

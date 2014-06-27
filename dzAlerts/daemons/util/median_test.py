@@ -8,11 +8,11 @@
 #
 
 from __future__ import unicode_literals
-import numpy
-from scipy import stats
-import scipy
-
+from math import log, exp
 import dzAlerts
+from dzAlerts.util import maths
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.struct import Struct
 
 
 def median_test(samples1, samples2, interpolate=True):
@@ -26,11 +26,18 @@ def median_test(samples1, samples2, interpolate=True):
     above1, below1 = count_partition(samples1, median)
     above2, below2 = count_partition(samples2, median)
 
-    result = scipy.stats.chisquare(
-        numpy.array([above1, below1, above2, below2]),
-        f_exp=numpy.array([float(len(samples1)) / 2, float(len(samples1)) / 2, float(len(samples2)) / 2, float(len(samples2)) / 2])
+    result = maths.stats.chisquare(
+        [above1, below1, above2, below2],
+        f_exp=[float(len(samples1)) / 2, float(len(samples1)) / 2, float(len(samples2)) / 2, float(len(samples2)) / 2]
     )
-    return {"diff": result[0], "confidence": 1-result[1]}
+    mstat, prob = result
+    try:
+        if prob == 0.0:
+            return Struct(mstat=mstat, score=8)
+        else:
+            return Struct(mstat=mstat, score=-log(prob, 10))
+    except Exception, e:
+        Log.error("problem with math", e)
 
 
 def count_partition(samples, cut_value, resolution=1.0):

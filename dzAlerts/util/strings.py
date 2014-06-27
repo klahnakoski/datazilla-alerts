@@ -16,16 +16,15 @@ import re
 from . import struct
 import math
 import __builtin__
-from .struct import wrap
+from .structs.wraps import unwrap, wrap
 
 
 def datetime(value):
     from .cnv import CNV
 
     if isinstance(value, (date, builtin_datetime)):
-        CNV.datetime2string(value, "%Y-%m-%d %H:%M:%S")
-
-    if value < 10000000000:
+        pass
+    elif value < 10000000000:
         value = CNV.unix2datetime(value)
     else:
         value = CNV.milli2datetime(value)
@@ -33,8 +32,23 @@ def datetime(value):
     return CNV.datetime2string(value, "%Y-%m-%d %H:%M:%S")
 
 
+def unix(value):
+    from .cnv import CNV
+
+    if isinstance(value, (date, builtin_datetime)):
+        pass
+    elif value < 10000000000:
+        value = CNV.unix2datetime(value)
+    else:
+        value = CNV.milli2datetime(value)
+
+    return str(CNV.datetime2unix(value))
+
 def upper(value):
     return value.upper()
+
+def lower(value):
+    return value.lower()
 
 
 def newline(value):
@@ -43,9 +57,13 @@ def newline(value):
     """
     return "\n" + toString(value).lstrip("\n")
 
+def replace(value, find, replace):
+    return value.replace(find, replace)
 
-def quote(value):
-    return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+def json(value):
+    from .cnv import CNV
+
+    return CNV.object2JSON(value)
 
 
 def indent(value, prefix=u"\t", indent=None):
@@ -72,7 +90,7 @@ def outdent(value):
                 num = min(num, len(l) - len(l.lstrip()))
         return u"\n".join([l[num:] for l in lines])
     except Exception, e:
-        from ...env.logs import Log
+        from .env.logs import Log
 
         Log.error("can not outdent value", e)
 
@@ -83,6 +101,9 @@ def round(value, decimal=None, digits=None):
 
     return __builtin__.round(value, decimal)
 
+def percent(value, decimal=None, digits=None):
+    per = round(value*100, decimal, digits)
+    return str(per)+"%"
 
 def between(value, prefix, suffix):
     value = toString(value)
@@ -99,8 +120,14 @@ def between(value, prefix, suffix):
 
 
 def right(value, len):
-    if len <= 0: return u""
+    if len <= 0:
+        return u""
     return value[-len:]
+
+def left(value, len):
+    if len <= 0:
+        return u""
+    return value[0:len]
 
 
 def find_first(value, find_arr, start=0):
@@ -183,10 +210,10 @@ def _simple_expand(template, seq):
             except Exception, f:
                 from .env.logs import Log
 
-                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template}}", {
+                Log.warning("Can not expand " + "|".join(ops) + " in template: {{template|json}}", {
                     "template": template
                 }, e)
-        return "[template expansion error: ("+str(e.message)+")]"
+            return "[template expansion error: ("+str(e.message)+")]"
 
     return pattern.sub(replacer, template)
 
@@ -204,7 +231,12 @@ def toString(val):
         duration = val.total_seconds()
         return unicode(round(duration, 3))+" seconds"
 
-    return unicode(val)
+    try:
+        return unicode(val)
+    except Exception, e:
+        from .env.logs import Log
+
+        Log.error(str(type(val))+" type can not be converted to unicode", e)
 
 
 def edit_distance(s1, s2):

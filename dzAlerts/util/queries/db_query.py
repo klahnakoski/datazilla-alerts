@@ -16,7 +16,8 @@ from .query import Query
 from ..sql.db import int_list_packer, SQL, DB
 from ..env.logs import Log
 from ..strings import indent, expand_template
-from ..struct import nvl, wrap, listwrap, StructList
+from ..struct import nvl, StructList
+from ..structs.wraps import wrap, listwrap
 
 
 class DBQuery(object):
@@ -62,7 +63,7 @@ class DBQuery(object):
             # RETURN A CUBE
             sql, post = self._grouped(query, stacked)
         else:
-            select = struct.listwrap(query.select)
+            select = listwrap(query.select)
             if select[0].aggregate != "none":
                 sql, post = self._aggop(query)
             else:
@@ -74,7 +75,7 @@ class DBQuery(object):
             return sql, post
 
     def _grouped(self, query, stacked=False):
-        select = struct.listwrap(query.select)
+        select = listwrap(query.select)
 
         # RETURN SINGLE OBJECT WITH AGGREGATES
         for s in select:
@@ -303,10 +304,16 @@ class DBQuery(object):
 
 
 def _isolate(separator, list):
-    if len(list) > 1:
-        return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
-    else:
-        return list[0]
+    try:
+        if len(list) > 1:
+            return "(\n" + indent((" " + separator + "\n").join(list)) + "\n)"
+        else:
+            return list[0]
+    except Exception, e:
+        Log.error("Programming problem: separator={{separator}}, list={{list}", {
+            "list": list,
+            "separator": separator
+        }, e)
 
 
 def esfilter2sqlwhere(db, esfilter):
@@ -389,6 +396,8 @@ def _esfilter2sqlwhere(db, esfilter):
             return "(" + db.quote_column(esfilter.exists.field) + " IS NOT Null)"
     elif esfilter.match_all:
         return "1=1"
+    elif esfilter.instr:
+        return _isolate("AND", ["instr(" + db.quote_column(col) + ", " + db.quote_value(val) + ")>0" for col, val in esfilter.instr.items()])
     else:
         Log.error("Can not convert esfilter to SQL: {{esfilter}}", {"esfilter": esfilter})
 

@@ -1,0 +1,152 @@
+{
+	"dimension": {
+		"filename": "dimension_b2g.json"
+	},
+	"param": {
+		"default": {
+			"select": {
+				"repo": "B2G.Revision",
+				"value": {
+					"name": "value",
+					"value": "result.stats.median"
+				}
+			},
+			"sort": {
+				"name": "push_date",
+				"value": "datazilla.date_loaded"
+			},
+			"units": "unknown",
+			"better": "lower",
+			"min_regression": "2%",
+			"min_score": 2.5,
+			"window_size": 20
+		},
+		"branch": {
+			"Try": {
+				"disable": true
+			}
+
+		},
+		"suite": {
+			"vsize": {
+				"disable": true,
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"system_vsize": {
+				"disable": true,
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"system_uss": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			}
+		},
+
+		"test": {
+			"fps": {
+				"units": "frames/s",
+				"better": "higher",
+				"min_regression": "1%"
+			},
+			"email_memory": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"cold_load_time": {
+				"units": "ms",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"communications/contacts_memory": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"communications/dialer_memory": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"startup_time": {
+				"units": "ms",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"settings_memory": {
+				"units": "MiB",
+				"better": "lower",
+				"min_regression": "1%"
+			}
+
+		},
+		"reason": "b2g_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
+		"severity": 0.8,
+		"test_dimension":"B2G.Test",
+		"revision_dimension":"B2G.Revision",
+		"branch_dimension": "B2G.Branch",
+		"source_ref": [
+			"B2G.Test",
+			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
+		],
+		"debug": true,
+		"mark_complete": "b2g_sustained_median",
+		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+	},
+	"query": {
+		"from": {
+			"name": "b2g_tests",
+			"host": "http://elasticsearch-private.bugs.scl3.mozilla.com",
+			"port": 9200,
+			"index": "b2g_tests",
+			"type": "results",
+			"debug": true
+		},
+		"edges": [
+			"B2G.Branch",
+			"B2G.Test",
+			"B2G.Platform",
+			"B2G.OS",
+			"B2G.Device"
+		]
+	},
+	"alerts": {
+		"host": "localhost",
+		"port": 3306,
+		"username": "username",
+		"password": "password",
+		"schema": "alerts",
+		"debug": true
+	},
+	"pushlog": {
+		"schema": "pushlog_hgmozilla_1"
+	},
+	"email": {
+		"from_address": "klahnakoski@mozilla.com",
+		"host": "mail.mozilla.com",
+		"port": 465,
+		"username": "username",
+		"password": "password",
+		"use_ssl": 1
+	},
+	"debug": {
+		"log": [
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "results/logs/b2g_alert.log",
+				"maxBytes": 10000000,
+				"backupCount": 100,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "stream",
+				"stream": "sys.stdout"
+			}
+		]
+	}
+}

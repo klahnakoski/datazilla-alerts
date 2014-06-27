@@ -8,43 +8,30 @@
 #
 
 from __future__ import unicode_literals
+from math import log
+from dzAlerts.util.env.logs import Log
 
-from math import sqrt
-from scipy import stats
+from dzAlerts.util.struct import Struct
+from dzAlerts.util.vendor.strangman.stats import lttest_ind
+from dzAlerts.util.struct import unwrap
 
 
-def welchs_ttest(stats1, stats2):
+def welchs_ttest(a, b):
     """
-    SNAGGED FROM https://github.com/mozilla/datazilla-metrics/blob/master/dzmetrics/ttest.py#L56
-    Execute TWO-sided Welch's t-test given pre-calculated means and stddevs.
-
-    Accepts summary data (N, stddev, and mean) for two datasets and performs
-    one-sided Welch's t-test, returning p-value.
+    a AND b ARE SAMPLES
     """
-    n1 = stats1.count
-    m1 = stats1.mean
-    v1 = max(stats1.variance, 1.0/12.0)
+    try:
+        if len(a) < 2 or len(b) < 2:
+            return {"confidence": 0, "diff": 0}
 
-    n2 = stats2.count
-    m2 = stats2.mean
-    v2 = max(stats2.variance, 1.0/12.0)
+        t, prob = lttest_ind(unwrap(a), unwrap(b))
 
-    if n1 < 2 or n2 < 2:
+        if prob == 0.0:
+            return Struct(tstat=t, score=19)
+        else:
+            return Struct(tstat=t, score=-log(prob, 10))
+    except ZeroDivisionError, f:
+        # WE CAN NOT KNOW WHAT WENT WRONG WITH THE LIBRARY
         return {"confidence": 0, "diff": 0}
-
-    vpooled = v1 / n1 + v2 / n2
-    # 1/12 == STD OF STANDARD UNIFORM DISTRIBUTION
-    # We assume test replicates (xi) are actually rounded results from
-    # actual measurements somewhere in the range of (xi - 0.5, xi + 0.5),
-    # which has a variance of 1/12
-    tt = abs(m1 - m2) / sqrt(vpooled)
-
-    df_numerator = vpooled ** 2
-    df_denominator = ((v1 / n1) ** 2) / (n1 - 1) + ((v2 / n2) ** 2) / (n2 - 1)
-    df = df_numerator / df_denominator
-
-    # abs(x - 0.5)*2 IS AN ATTEMPT TO GIVE HIGH NUMBERS TO EITHER TAIL OF THE cdf
-    return {"confidence": abs(stats.t(df).cdf(tt) - 0.5) * 2, "diff": tt}
-
-
-
+    except Exception, e:
+        Log.error("programmer problem", e)

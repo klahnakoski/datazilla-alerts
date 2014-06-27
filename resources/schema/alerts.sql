@@ -3,11 +3,12 @@ USE alerts;
 DELIMITER ;;
 
 
+DROP TABLE IF EXISTS hierarchy;;
 DROP TABLE IF EXISTS alerts;;
+DROP TABLE IF EXISTS page_thresholds;;
 DROP TABLE IF EXISTS reasons;;
 DROP TABLE IF EXISTS stati;;
 DROP TABLE IF EXISTS listeners;;
-DROP TABLE IF EXISTS page_thresholds;;
 
 CREATE TABLE stati (
 	code VARCHAR(10) NOT NULL PRIMARY KEY
@@ -21,7 +22,7 @@ CREATE TABLE reasons (
 	description    VARCHAR(2000), ##MORE DETAILS ABOUT WHAT THIS IS
 	last_run       DATETIME    NOT NULL,
 	config         VARCHAR(8000),
-	email_subject  VARCHAR(1000),
+	email_subject  VARCHAR(2000),
 	email_template VARCHAR(8000)
 );;
 INSERT INTO reasons VALUES (
@@ -72,6 +73,16 @@ INSERT INTO reasons VALUES (
 	NULL,
 	NULL
 );;
+
+INSERT INTO reasons VALUES (
+	'talos_alert_sustained_median',
+	concat('{{page_url}} has continued to perform worse since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL,
+	NULL
+);;
+
 INSERT INTO reasons VALUES (
 	'alert_regression',
 	concat('{{page_url}} has regressed since {{revision}}'),
@@ -88,6 +99,24 @@ INSERT INTO reasons VALUES (
 	NULL,
 	NULL
 );;
+INSERT INTO reasons VALUES (
+	'talos_alert_revision',
+	concat('{{test}} has regressed since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL,
+	NULL
+);;
+INSERT INTO reasons VALUES (
+	'eideticker_alert_sustained_median',
+	concat('{{test}} has regressed since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL,
+	NULL
+);;
+
+
 
 
 CREATE TABLE page_thresholds (
@@ -113,10 +142,14 @@ VALUES (
 
 
 CREATE TABLE listeners (
-	email VARCHAR(200) NOT NULL PRIMARY KEY
+	reason varchar(80) NOT NULL,
+	email VARCHAR(200) NOT NULL,
+	foreign key (reason) references reasons(code)
 );;
-INSERT INTO listeners VALUES ('klahnakoski@mozilla.com');;
-
+INSERT INTO listeners (reason, email) VALUES ('b2g_alert_revision', 'klahnakoski@mozilla.com');;
+INSERT INTO listeners (reason, email) VALUES ('talos_alert_revision', 'klahnakoski@mozilla.com');;
+INSERT INTO listeners (reason, email) VALUES ('eideticker_alert_sustained_median', 'klahnakoski@mozilla.com');;
+INSERT INTO listeners (reason, email) VALUES ('eideticker_alert_sustained_median', 'klahnakoski@mozilla.com');
 
 #ALTER TABLE test_data_all_dimensions ADD UNIQUE INDEX tdad_id(id)
 

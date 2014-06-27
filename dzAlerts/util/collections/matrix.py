@@ -11,13 +11,15 @@ from __future__ import unicode_literals
 from ..collections import PRODUCT, reverse, MAX, MIN
 from ..cnv import CNV
 from ..env.logs import Log
-from ..struct import Null, Struct, wrap
+from ..struct import Null, Struct
+from ..structs.wraps import wrap
 
 
 class Matrix(object):
     """
     SIMPLE n-DIMENSIONAL ARRAY OF OBJECTS
     """
+    ZERO = None
 
     def __init__(self, *dims, **kwargs):
         kwargs = wrap(kwargs)
@@ -124,10 +126,7 @@ class Matrix(object):
         return other / self.value
 
     def __iter__(self):
-        def output():
-            for c in self._all_combos():
-                yield self[c]
-        return output()
+        return (self[c] for c in self._all_combos())
 
     def __float__(self):
         return self.value
@@ -152,12 +151,9 @@ class Matrix(object):
             # RETURN AN ITERATOR OF PAIRS (c, v), WHERE
             # c - COORDINATES INTO THE CUBE
             # v - VALUE AT GIVEN COORDINATES
-            def output():
-                for c in self._all_combos():
-                    yield c, self[c]
-            return output()
+            return ((c, self[c]) for c in self._all_combos())
         else:
-            output = [[None, Matrix(new_dim)] for i in range(acc)]
+            output = [[None, Matrix(*new_dim)] for i in range(acc)]
             _groupby(self.cube, 0, offsets, 0, output, tuple(), [])
 
         return output
@@ -187,8 +183,12 @@ class Matrix(object):
         """
         num = self.num
         dim = self.dims
-        c = [0]*num  # THE CORRECT SIZE
 
+        combos = PRODUCT(dim)
+        if not combos:
+            return
+
+        c = [0]*num  # THE CORRECT SIZE
         while True:
             yield c
 
@@ -207,6 +207,8 @@ class Matrix(object):
     def __json__(self):
         return CNV.object2JSON(self.cube)
 
+
+Matrix.ZERO = Matrix(value=None)
 
 def _max(depth, cube):
     if depth == 0:
@@ -251,9 +253,9 @@ def _null(*dims):
     if d0 == 0:
         Log.error("Zero dimensions not allowed")
     if len(dims) == 1:
-        return [Null for i in range(dims[0])]
+        return [Null for i in range(d0)]
     else:
-        return [_null(*dims[1::]) for i in range(dims[0])]
+        return [_null(*dims[1::]) for i in range(d0)]
 
 
 def _groupby(cube, depth, intervals, offset, output, group, new_coord):

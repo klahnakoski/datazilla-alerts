@@ -10,7 +10,8 @@
 from datetime import timedelta
 from time import clock
 
-from ..struct import nvl, Struct, wrap
+from ..struct import nvl, Struct
+from ..structs.wraps import wrap
 from ..env.logs import Log
 
 
@@ -25,7 +26,7 @@ class Timer:
 
     def __init__(self, description, param=None, debug=True):
         self.template = description
-        self.param = nvl(param, Struct())
+        self.param = nvl(wrap(param), Struct())
         self.debug = debug
 
     def __enter__(self):

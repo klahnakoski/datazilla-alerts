@@ -10,8 +10,7 @@
 
 from __future__ import unicode_literals
 from ..env.logs import Log
-from ..struct import unwrap, wrap, tuplewrap
-
+from ..structs.wraps import wrap, unwrap, tuplewrap
 
 class UniqueIndex(object):
     """
@@ -50,11 +49,12 @@ class UniqueIndex(object):
     def add(self, val):
         key = value2key(self._keys, val)
         d = self._data.get(key, None)
-        if d != None:
+        if d is None:
+            self._data[key] = unwrap(val)
+            self.count += 1
+        elif d is not val:
             Log.error("key already filled")
 
-        self._data[key] = unwrap(val)
-        self.count += 1
 
     def __contains__(self, key):
         return self[key] != None

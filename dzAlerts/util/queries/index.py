@@ -11,8 +11,7 @@
 from __future__ import unicode_literals
 from ..queries.unique_index import UniqueIndex
 from ..env.logs import Log
-from ..struct import unwrap, wrap, tuplewrap
-
+from ..structs.wraps import wrap, unwrap, tuplewrap
 
 class Index(object):
     """
@@ -30,6 +29,7 @@ class Index(object):
                 # RETURN ANOTHER Index
                 filter_key = tuple(self._keys[0:len(key):])
                 key = value2key(filter_key, key)
+                key = key[:len(filter_key)]
                 d = self._data
                 for k in key:
                     d = d.get(k, {})
@@ -127,8 +127,10 @@ class Index(object):
 def value2key(keys, val):
     if len(keys) == 1:
         if isinstance(val, dict):
-            return val[keys[0]]
-        return val
+            return val[keys[0]],
+        elif isinstance(val, (list, tuple)):
+            return val[0],
+        return val,
     else:
         if isinstance(val, dict):
             return tuple(val[k] for k in keys)

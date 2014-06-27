@@ -1,0 +1,162 @@
+{
+	"dimension": {
+		"filename": "dimension_talos.json"
+	},
+	"param": {
+		"default": {
+			"select": {
+				"repo": "Talos.Revision",
+				"value": {
+					"name": "value",
+					"value": "result.stats.median"
+				}
+			},
+			"sort": {
+				"name": "push_date",
+				"value": "datazilla.date_loaded"
+			},
+			"units": "unknown",
+			"better": "lower",
+			"min_regression": "5%",
+			"min_score": 2.5,
+			"window_size": 20
+		},
+		"branch": {
+			"Try": {
+				"disable": true
+			},
+			"Try-Non-PGO": {
+				"disable": true
+			},
+			"Cedar": {
+				"disable": true
+			},
+			"Cedar-Non-PGO": {
+				"disable": true
+			},
+			"Ash": {
+				"disable": true
+			},
+			"Ash-Non-PGO": {
+				"disable": true
+			}
+		},
+		"suite": {
+			"dromaeo_css": {
+				"window_size": 30,
+				"min_regression": "10%",
+				"better": "higher"
+			},
+			"dromaeo_dom": {
+				"window_size": 30,
+				"min_regression": "10%",
+				"better": "higher"
+			},
+			"v8_7": {
+				"better": "higher"
+			},
+			"canvasmark": {
+				"better": "higher"
+			},
+			"tp5o": {
+				"units": "ms",
+				"better": "lower"
+			},
+			"tp4m": {
+				"units": "ms",
+				"select": {
+					"value": {
+						"name": "value",
+						"value": "result.stats.last"
+					}
+				}
+			}
+		},
+		"test": {
+			"1-customize-enter.error.TART": {
+				"units": "unknown units",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"tablemutation.html": {
+				"units": "unknown units",
+				"better": "lower",
+				"min_regression": "3%"
+			},
+			"alipay.com": {
+				//VERY NOISY TEST
+				"window_size": 50,
+				"select": {
+					"value": {
+						"name": "value",
+						"value": "result.stats.min"
+					}
+				}
+			}
+		},
+		"reason": "talos_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
+		"severity": 0.8,
+		"test_dimension": "Talos.Test",
+		"revision_dimension": "Talos.Revision",
+		"branch_dimension": "Talos.Branch",
+		"source_ref": [
+			"Talos.Test",
+			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
+		],
+		"verbose": true,
+		"mark_complete": "talos_sustained_median",
+		"combo_limit": 20  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+	},
+	"query": {
+		"from": {
+			"name": "talos",
+			"host": "http://elasticsearch-private.bugs.scl3.mozilla.com",
+			"port": 9200,
+			"index": "talos",
+			"type": "test_results",
+			"debug": true
+		},
+		"edges": [
+			"Talos.Product",
+			"Talos.Branch",
+			"Talos.OS",
+			"Talos.Platform",
+			"Talos.Test"
+		]
+	},
+	"alerts": {
+		"host": "localhost",
+		"port": 3306,
+		"username": "username",
+		"password": "password",
+		"schema": "alerts",
+		"debug": true
+	},
+	"pushlog": {
+		"schema": "pushlog_hgmozilla_1"
+	},
+	"email": {
+		"from_address": "klahnakoski@mozilla.com",
+		"host": "mail.mozilla.com",
+		"port": 465,
+		"username": "username",
+		"password": "password",
+		"use_ssl": 1
+	},
+	"debug": {
+		"log": [
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "results/logs/talos_alert.log",
+				"maxBytes": 10000000,
+				"backupCount": 100,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "stream",
+				"stream": "sys.stdout"
+			}
+		]
+	}
+}
+

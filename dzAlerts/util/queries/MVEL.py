@@ -13,7 +13,7 @@ from datetime import datetime
 import re
 from .. import struct
 from ..cnv import CNV
-from ..collections import reverse, AND
+from ..collections import reverse
 from ..env.logs import Log
 from ..maths import Math
 from ..queries.filters import TRUE_FILTER
@@ -33,14 +33,14 @@ class _MVEL(object):
         """
         RETURN THE MVEL THAT WILL FILTER USING query.where AND TERM-PACK THE query.select CLAUSE
         """
-        selectList = struct.listwrap(query.select)
+        selectList = listwrap(query.select)
         fromPath = query.frum.name  # FIRST NAME IS THE INDEX
-        indexName = split_field(fromPath)[0]
+        sourceVar = "__sourcedoc__"
         whereClause = query.where
 
         # PARSE THE fromPath
-        code = self.frum(fromPath, indexName, "__loop")
-        select = self.select(selectList, fromPath, "output")
+        code = self.frum(fromPath, sourceVar, "__loop")
+        select = self.select(selectList, fromPath, "output", sourceVar)
 
         body = "var output = \"\";\n" + \
                code.replace(
@@ -56,18 +56,19 @@ class _MVEL(object):
 
         func = UID()
         predef = addFunctions(select.head+context+body).head
+        param = "_source" if body.find(sourceVar) else ""
 
         output = predef + \
             select.head + \
             context + \
-            'var ' + func + ' = function('+indexName+'){\n' + \
+            'var ' + func + ' = function('+sourceVar+'){\n' + \
             body + \
             '};\n' + \
-            func + '(_source)\n'
+            func + '('+param+')\n'
 
         return Compiled(output)
 
-    def frum(self, fromPath, indexName, loopVariablePrefix):
+    def frum(self, fromPath, sourceVar, loopVariablePrefix):
         """
         indexName NAME USED TO REFER TO HIGH LEVEL DOCUMENT
         loopVariablePrefix PREFIX FOR LOOP VARIABLES
@@ -82,15 +83,17 @@ class _MVEL(object):
 
         columns = INDEX_CACHE[path[0]].columns
         for i, c in enumerate(columns):
+            if c.name=="attachments":
+                Log.debug("")
             if c.name.find("\\.") >= 0:
                 self.prefixMap.insert(0, {
                     "path": c.name,
-                    "variable": "get(" + path[0] + ", \"" + c.name.replace("\\.", ".") + "\")"
+                    "variable": "get(" + sourceVar + ", \"" + c.name.replace("\\.", ".") + "\")"
                 })
             else:
                 self.prefixMap.insert(0, {
                     "path": c.name,
-                    "variable": path[0] + ".?" + c.name
+                    "variable": sourceVar + ".?" + c.name
                 })
 
         # ADD LOOP VARIABLES
@@ -119,44 +122,58 @@ class _MVEL(object):
         return shortForm
 
     #  CREATE A PIPE DELIMITED RESULT SET
-    def select(self, selectList, fromPath, varName):
+    def select(self, selectList, fromPath, varName, sourceVar):
+        path = split_field(fromPath)
+        is_deep = len(path) > 1
         heads = []
         list = []
         for s in selectList:
-            if s.value and isKeyword(s.value):
-                list.append("Value2Pipe(getDocValue(" + value2MVEL(s.value) + "))\n")
-            elif s.value:
-                shortForm = self._translate(s.value)
-                list.append("Value2Pipe(" + shortForm + ")\n")
+            if is_deep:
+                if s.value and isKeyword(s.value):
+                    shortForm = self._translate(s.value)
+                    list.append("Value2Pipe(" + shortForm + ")\n")
+                else:
+                    Log.error("do not know how to handle yet")
             else:
-                code, decode = self.Parts2Term(s.domain)
-                heads.append(code.head)
-                list.append("Value2Pipe(" + code.body + ")\n")
+                if s.value and isKeyword(s.value):
+                    list.append("Value2Pipe(getDocValue(" + value2MVEL(s.value) + "))\n")
+                elif s.value:
+                    shortForm = self._translate(s.value)
+                    list.append("Value2Pipe(" + shortForm + ")\n")
+                else:
+                    code, decode = self.Parts2Term(s.domain)
+                    heads.append(code.head)
+                    list.append("Value2Pipe(" + code.body + ")\n")
+
 
         if len(split_field(fromPath)) > 1:
-            output = 'if (' + varName + ' != "") ' + varName + '+="|";\n' + varName + '+=' + '+"|"+'.join(list) + ';\n'
+            output = 'if (' + varName + ' != "") ' + varName + '+="|";\n' + varName + '+=' + '+"|"+'.join(["Value2Pipe("+v+")\n" for v in list]) + ';\n'
         else:
-            output = varName + ' = ' + '+"|"+'.join(list) + ';\n'
+            output = varName + ' = ' + '+"|"+'.join(["Value2Pipe("+v+")\n" for v in list]) + ';\n'
 
         return Struct(
             head="".join(heads),
             body=output
         )
-
-    # CONVERT AN ARRAY OF PARTS{name, esfilter} TO AN MVEL EXPRESSION
-    # RETURN expression, function PAIR, WHERE
-    # expression - MVEL EXPRESSION
-    # function - TAKES RESULT OF expression AND RETURNS PART
     def Parts2Term(self, domain):
+        """
+        TERMS ARE ALWAYS ESCAPED SO THEY CAN BE COMPOUNDED WITH PIPE (|)
+
+        CONVERT AN ARRAY OF PARTS{name, esfilter} TO AN MVEL EXPRESSION
+        RETURN expression, function PAIR, WHERE
+            expression - MVEL EXPRESSION
+            function - TAKES RESULT OF expression AND RETURNS PART
+        """
         fields = domain.dimension.fields
-        if isinstance(fields, dict):
-            # CONVERT UNORDERED FIELD DEFS
-            qb_fields, es_fields = zip(*[(k, fields[k]) for k in sorted(fields.keys())])
-        else:
-            qb_fields, es_fields = zip(*[(i, e) for i, e in enumerate(fields)])
 
         term = []
-        if len(split_field(self.fromData.name))==1 and fields:
+        if len(split_field(self.fromData.name)) == 1 and fields:
+            if isinstance(fields, dict):
+                # CONVERT UNORDERED FIELD DEFS
+                qb_fields, es_fields = zip(*[(k, fields[k]) for k in sorted(fields.keys())])
+            else:
+                qb_fields, es_fields = zip(*[(i, e) for i, e in enumerate(fields)])
+
             #NO LOOPS BECAUSE QUERY IS SHALLOW
             #DOMAIN IS FROM A DIMENSION, USE IT'S FIELD DEFS TO PULL
             if len(es_fields) == 1:
@@ -169,22 +186,28 @@ class _MVEL(object):
                 ), fromTerm
             else:
                 def fromTerm(term):
-                    terms = [CNV.pipe2value(t) for t in term.split("|")]
+                    terms = [CNV.pipe2value(t) for t in CNV.pipe2value(term).split("|")]
 
+                    candidate = dict(zip(qb_fields, terms))
                     for p in domain.partitions:
-                        for k, t in zip(qb_fields, terms):
+                        for k, t in candidate.items():
                             if p.value[k] != t:
                                 break
                         else:
                             return p
-                    return Null
+                    if domain.type in ["uid", "default"]:
+                        part = {"value": candidate}
+                        domain.partitions.append(part)
+                        return part
+                    else:
+                        return Null
 
                 for f in es_fields:
                     term.append('Value2Pipe(getDocValue('+CNV.string2quote(f)+'))')
 
                 return Struct(
                     head="",
-                    body='+"|"+'.join(term)
+                    body='Value2Pipe('+('+"|"+'.join(term))+')'
                 ), fromTerm
         else:
             for v in domain.partitions:
@@ -399,14 +422,15 @@ def _where(esFilter, _translate):
         else:
             return "(" + " && ".join(_translate(k) + "==" + value2MVEL(v) for k, v in pair.items()) + ")"
     elif op == "terms":
-        pair = esFilter[op]
-        variableName, valueList = pair.items()[0]
-        if not valueList:
-            Log.error("Expecting something in 'terms' array")
-        if len(valueList) == 1:
-            return _translate(variableName) + "==" + value2MVEL(valueList[0])
-        output = "(" + " || ".join(_translate(variableName) + "==" + value2MVEL(v) for v in valueList) + ")"
-        return output
+        output = []
+        for variableName, valueList in esFilter[op].items():
+            if not valueList:
+                Log.error("Expecting something in 'terms' array")
+            if len(valueList) == 1:
+                output.append(_translate(variableName) + "==" + value2MVEL(valueList[0]))
+            else:
+                output.append("(" + " || ".join(_translate(variableName) + "==" + value2MVEL(v) for v in valueList) + ")")
+        return " && ".join(output)
     elif op == "exists":
         # "exists":{"field":"myField"}
         pair = esFilter[op]

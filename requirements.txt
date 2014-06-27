@@ -1,7 +1,3 @@
 requests
 pymysql
-numpy
-scipy
-python-dateutil
-pandas
 pytest
