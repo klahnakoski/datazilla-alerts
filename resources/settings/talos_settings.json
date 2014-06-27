@@ -103,7 +103,7 @@
 			"Talos.Test",
 			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
 		],
-		"debug": true,
+		"verbose": true,
 		"mark_complete": "talos_sustained_median",
 		"combo_limit": 20  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
