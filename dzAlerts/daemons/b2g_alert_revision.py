@@ -10,12 +10,12 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
-from dzAlerts.daemons import b2g_sustained_median
 from dzAlerts.daemons.util import significant_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
@@ -24,6 +24,7 @@ from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList
 
 
+SUSTAINED_REASON = "b2g_alert_sustained_median"
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = timedelta(days=90)
 NOW = datetime.utcnow()
@@ -107,7 +108,7 @@ def b2g_alert_revision(settings):
                 "from": "alerts",
                 "select": "*",
                 "where": {"and": [
-                    {"term": {"reason": b2g_sustained_median.REASON}},
+                    {"term": {"reason": SUSTAINED_REASON}},
                     {"not": {"term": {"status": "obsolete"}}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
@@ -123,7 +124,7 @@ def b2g_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"or":[
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": b2g_sustained_median.REASON}},
+                        {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
@@ -148,7 +149,7 @@ def b2g_alert_revision(settings):
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             for revision, total_test_count in Q.groupby(total_tests, ["B2G.Revision"]):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                revision = revision["B2G\.Revision"]
+                revision = revision["B2G.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
@@ -214,7 +215,7 @@ def b2g_alert_revision(settings):
                     {{where}}
             """, {
                 "where": esfilter2sqlwhere(db, {"and": [
-                    {"term": {"p.reason": b2g_sustained_median.REASON}},
+                    {"term": {"p.reason": SUSTAINED_REASON}},
                     {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                     {"missing": "h.parent"}
                 ]}),
