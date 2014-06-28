@@ -144,6 +144,7 @@
 		"use_ssl": 1
 	},
 	"debug": {
+		"trace": false,
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",
