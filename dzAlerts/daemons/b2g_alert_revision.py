@@ -228,7 +228,7 @@ def b2g_alert_revision(settings):
                     continue  # DO NOT TOUCH SOLVED ALERTS
 
                 old_alert = old_alerts[known_alert]
-                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
+                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_score_difference(known_alert.confidence, old_alert.confidence):
                     known_alert.last_updated = NOW
                     db.update("alerts", {"id": old_alert.id}, known_alert)
 
@@ -236,7 +236,7 @@ def b2g_alert_revision(settings):
             for old_alert in old_alerts - known_alerts:
                 if old_alert.status == 'obsolete':
                     continue
-                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW, "details":None})
+                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 
 
 def main():
