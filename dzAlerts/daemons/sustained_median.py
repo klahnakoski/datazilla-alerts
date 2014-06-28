@@ -126,8 +126,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"not": debug},
                     {"and": [
                         #FOR DEBUGGING SPECIFIC SERIES
-                        {"term": {"result.test_name": "video_memory"}},
-                        {"term": {"test_machine.type": "flame"}},
+                        # {"term": {"result.test_name": "video_memory"}},
+                        # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
                         # {"term":{"metadata.test":"startup-abouthome-dirty"}}
                         # {"term": {"metadata.test": "nytimes-load"}},
@@ -390,7 +390,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
 
         except Exception, e:
-            Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
+            Log.warning("Problem with alert identification.  Will continue with rest of other alerts and stop cleanly", e)
 
     if verbose:
         Log.note("Get Current Alerts")
