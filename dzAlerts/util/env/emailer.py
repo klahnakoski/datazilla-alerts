@@ -13,7 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 import sys
-from .. import struct
+from ..structs.wraps import listwrap
 from ..struct import nvl
 
 

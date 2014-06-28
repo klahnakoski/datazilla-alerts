@@ -59,6 +59,8 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     verbose = nvl(settings.param.verbose, VERBOSE)
     debug = False if settings.param.debug is False else DEBUG  # SETTINGS CAN TURN OFF DEBUGGING
+    if debug:
+        Log.warning("Debugging is ON")
     query = settings.query
 
 
