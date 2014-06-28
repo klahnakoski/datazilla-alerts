@@ -20,7 +20,7 @@ def median_test(samples1, samples2, interpolate=True):
     interpolate=True WILL USE AN INTERPOLATED MEDIAN VALUE (FOR WHEN INTEGER VALUES ARE COMMON)
     """
     if len(samples1) < 3 or len(samples2) < 3:
-        return {"diff": 0, "confidence": 0}
+        return {"diff": 0, "score": 0}
     median = dzAlerts.util.maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
 
     above1, below1 = count_partition(samples1, median)

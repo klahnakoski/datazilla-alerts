@@ -59,6 +59,8 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     verbose = nvl(settings.param.verbose, VERBOSE)
     debug = False if settings.param.debug is False else DEBUG  # SETTINGS CAN TURN OFF DEBUGGING
+    if debug:
+        Log.warning("Debugging is ON")
     query = settings.query
 
 
@@ -116,16 +118,16 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                # True if settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                True if debug or settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"and": exists},
                 {"and": disabled},
-                {"or":[
+                {"or": [
                     {"not": debug},
-                    {"and":[
+                    {"and": [
                         #FOR DEBUGGING SPECIFIC SERIES
-                        # {"term": {"metadata.test": "b2g-messages-startup"}},
-                        # {"term": {"metadata.device": "tarako"}},
+                        {"term": {"result.test_name": "video_memory"}},
+                        {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
                         # {"term":{"metadata.test":"startup-abouthome-dirty"}}
                         # {"term": {"metadata.test": "nytimes-load"}},

@@ -18,8 +18,9 @@
 			"units": "unknown",
 			"better": "lower",
 			"min_regression": "2%",
-			"min_score": 2.5,
-			"window_size": 20
+			"min_mscore": 2.0,
+			"min_tscore": 4.0,
+			"window_size": 10
 		},
 		"branch": {
 			"Try": {
@@ -82,6 +83,11 @@
 				"units": "MiB",
 				"better": "lower",
 				"min_regression": "1%"
+			},
+			"startup_>_startup-path-done":{
+			    "units":"ms",
+			    "better":"lower",
+			    "min_regression":"1%"
 			}
 
 		},
@@ -94,7 +100,8 @@
 			"B2G.Test",
 			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
 		],
-		"debug": true,
+		"debug": false,
+		"verbose": true,
 		"mark_complete": "b2g_sustained_median",
 		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},

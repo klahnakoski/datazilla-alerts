@@ -10,12 +10,12 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
-from dzAlerts.daemons import b2g_sustained_median
-from dzAlerts.daemons.util import significant_difference
+from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
@@ -24,6 +24,7 @@ from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList
 
 
+SUSTAINED_REASON = "b2g_alert_sustained_median"
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = timedelta(days=90)
 NOW = datetime.utcnow()
@@ -107,7 +108,7 @@ def b2g_alert_revision(settings):
                 "from": "alerts",
                 "select": "*",
                 "where": {"and": [
-                    {"term": {"reason": b2g_sustained_median.REASON}},
+                    {"term": {"reason": SUSTAINED_REASON}},
                     {"not": {"term": {"status": "obsolete"}}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
@@ -123,7 +124,7 @@ def b2g_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"or":[
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": b2g_sustained_median.REASON}},
+                        {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
@@ -148,7 +149,7 @@ def b2g_alert_revision(settings):
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             for revision, total_test_count in Q.groupby(total_tests, ["B2G.Revision"]):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                revision = revision["B2G\.Revision"]
+                revision = revision["B2G.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
@@ -214,7 +215,7 @@ def b2g_alert_revision(settings):
                     {{where}}
             """, {
                 "where": esfilter2sqlwhere(db, {"and": [
-                    {"term": {"p.reason": b2g_sustained_median.REASON}},
+                    {"term": {"p.reason": SUSTAINED_REASON}},
                     {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                     {"missing": "h.parent"}
                 ]}),
@@ -227,7 +228,7 @@ def b2g_alert_revision(settings):
                     continue  # DO NOT TOUCH SOLVED ALERTS
 
                 old_alert = old_alerts[known_alert]
-                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
+                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_score_difference(known_alert.confidence, old_alert.confidence):
                     known_alert.last_updated = NOW
                     db.update("alerts", {"id": old_alert.id}, known_alert)
 
@@ -235,7 +236,7 @@ def b2g_alert_revision(settings):
             for old_alert in old_alerts - known_alerts:
                 if old_alert.status == 'obsolete':
                     continue
-                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW, "details":None})
+                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 
 
 def main():
