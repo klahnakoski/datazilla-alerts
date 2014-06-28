@@ -22,7 +22,7 @@ def welchs_ttest(a, b):
     """
     try:
         if len(a) < 2 or len(b) < 2:
-            return {"confidence": 0, "diff": 0}
+            return {"score": 0, "diff": 0}
 
         t, prob = lttest_ind(unwrap(a), unwrap(b))
 
@@ -32,6 +32,6 @@ def welchs_ttest(a, b):
             return Struct(tstat=t, score=-log(prob, 10))
     except ZeroDivisionError, f:
         # WE CAN NOT KNOW WHAT WENT WRONG WITH THE LIBRARY
-        return {"confidence": 0, "diff": 0}
+        return {"score": 0, "diff": 0}
     except Exception, e:
         Log.error("programmer problem", e)
