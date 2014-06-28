@@ -10,7 +10,7 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
-from dzAlerts.daemons.util import significant_difference
+from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
