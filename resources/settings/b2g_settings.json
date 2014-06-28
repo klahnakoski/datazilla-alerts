@@ -17,7 +17,7 @@
 			},
 			"units": "unknown",
 			"better": "lower",
-			"min_regression": "2%",
+			"min_regression": "1%",
 			"min_score": 2.5,
 			"window_size": 20
 		},
@@ -82,6 +82,11 @@
 				"units": "MiB",
 				"better": "lower",
 				"min_regression": "1%"
+			},
+			"startup_>_startup-path-done":{
+			    "units":"ms",
+			    "better":"lower",
+			    "min_regression":"1%"
 			}
 
 		},
