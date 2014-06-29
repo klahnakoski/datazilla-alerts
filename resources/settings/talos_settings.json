@@ -18,7 +18,8 @@
 			"units": "unknown",
 			"better": "lower",
 			"min_regression": "5%",
-			"min_score": 2.5,
+			"min_mscore": 2.5,
+			"min_tscore": 4.0,
 			"window_size": 20
 		},
 		"branch": {

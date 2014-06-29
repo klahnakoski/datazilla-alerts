@@ -359,7 +359,7 @@ def _esfilter2sqlwhere(db, esfilter):
                         return "false"
             except Exception, e:
                 pass
-            return db.quote_column(col) + " in (" + ", ".join([db.quote_value(val) for val in v]) + ")"
+            return db.quote_column(col) + " in (" + ",\n".join([db.quote_value(val) for val in v]) + ")"
     elif esfilter.script:
         return "(" + esfilter.script + ")"
     elif esfilter.range:

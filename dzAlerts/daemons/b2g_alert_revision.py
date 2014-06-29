@@ -221,16 +221,16 @@ def b2g_alert_revision(settings):
                 ]}),
                 "parent_reason": REASON
             })
-
             #CURRENT ALERTS, UPDATE IF DIFFERENT
-            for known_alert in known_alerts & old_alerts:
-                if len(nvl(known_alert.solution, "").strip()) != 0:
+            changed_alerts = known_alerts & old_alerts
+            for changed_alert in changed_alerts:
+                if len(nvl(changed_alert.solution, "").strip()) != 0:
                     continue  # DO NOT TOUCH SOLVED ALERTS
 
-                old_alert = old_alerts[known_alert]
-                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_score_difference(known_alert.confidence, old_alert.confidence):
-                    known_alert.last_updated = NOW
-                    db.update("alerts", {"id": old_alert.id}, known_alert)
+                old_alert = old_alerts[changed_alert]
+                if old_alert.status == 'obsolete' or significant_difference(changed_alert.severity, old_alert.severity) or significant_score_difference(changed_alert.confidence, old_alert.confidence):
+                    changed_alert.last_updated = NOW
+                    db.update("alerts", {"id": old_alert.id}, changed_alert)
 
             #OLD ALERTS, OBSOLETE
             for old_alert in old_alerts - known_alerts:
