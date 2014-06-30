@@ -13,12 +13,13 @@
 			},
 			"sort": {
 				"name": "push_date",
-				"value": "datazilla.date_loaded"
+				"value": "test_build.push_date"
 			},
 			"units": "unknown",
 			"better": "lower",
 			"min_regression": "5%",
-			"min_score": 2.5,
+			"min_mscore": 2.5,
+			"min_tscore": 4.0,
 			"window_size": 20
 		},
 		"branch": {

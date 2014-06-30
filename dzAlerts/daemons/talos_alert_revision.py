@@ -148,7 +148,6 @@ def talos_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"or": [
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": settings.param.reason}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}

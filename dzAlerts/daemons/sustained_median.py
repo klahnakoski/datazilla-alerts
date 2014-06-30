@@ -29,7 +29,7 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
-from dzAlerts.util.structs.wraps import wrap_dot
+from dzAlerts.util.structs.wraps import wrap_dot, listwrap
 from dzAlerts.util.times.timer import Timer
 
 
@@ -126,23 +126,19 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"not": debug},
                     {"and": [
                         #FOR DEBUGGING SPECIFIC SERIES
-                        {"term": {"result.test_name": "video_memory"}},
-                        {"term": {"test_machine.type": "flame"}},
+                        {"term": {"result.test_name": "fps"}}
+                        # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
                         # {"term":{"metadata.test":"startup-abouthome-dirty"}}
                         # {"term": {"metadata.test": "nytimes-load"}},
                         # {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
                         # {"term": {"testrun.suite": "dromaeo_css"}},
-                        # {"term": {"result.test_name": "jquery.html.28"}},
-                        # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                        # {"term": {"test_machine.platform": "x86"}}
-                        # {"term": {"test_machine.type": "hamachi"}},
-                        # {"term": {"test_machine.platform": "Gonk"}},
-                        # {"term": {"test_machine.os": "Firefox OS"}},
-                        # {"term": {"test_build.branch": "master"}},
-                        # {"term": {"testrun.suite": "system_uss"}},
-                        # {"term": {"result.test_name": "sms_memory"}}
+                        # {"term": {"result.test_name": "dojo.html.20"}},
+                        # {"term": {"test_machine.platform": "x86_64"}},
+                        # {"term": {"test_build.name": "Firefox"}},
+                        # {"term": {"test_machine.osversion": "OS X 10.8"}},
+                        # {"term": {"test_build.branch": "Mozilla-Inbound"}}
                     ]}
                 ]}
             ]},
@@ -167,12 +163,12 @@ def alert_sustained_median(settings, qb, alerts_db):
         try:
             # FIND SPECIFIC PARAMETERS FOR THIS SLICE
             lookup = []
-            for f in qb.edges[settings.param.test_dimension].fields:
+            for f in listwrap(qb.edges[settings.param.test_dimension].fields):
                 if isinstance(f, basestring):
                     lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
                 else:
-                    for k, v in f:
-                        lookup.append(settings.param[k][literal_field(g[settings.param.test_dimension][k])])
+                    for k, v in f.items():
+                        lookup.append(settings.param['test' if k=='name' else k][literal_field(g[settings.param.test_dimension][k])])
             lookup.append(settings.param.branch[literal_field(g[settings.param.branch_dimension])])
             lookup.append(settings.param.default)
             test_param = set_default(*lookup)
@@ -390,7 +386,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 Log.note("{{num}} new exceptions found", {"num": len(new_exceptions)})
 
         except Exception, e:
-            Log.warning("Problem with alert identification, continue to log existing alerts and stop cleanly", e)
+            Log.warning("Problem with alert identification.  Will continue with rest of other alerts and stop cleanly", e)
 
     if verbose:
         Log.note("Get Current Alerts")
