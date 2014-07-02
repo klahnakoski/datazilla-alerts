@@ -9,7 +9,6 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
-from math import log
 
 from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
@@ -70,7 +69,7 @@ TBPL_PATH = {
 }
 
 
-SUBJECT = "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}}"
+SUBJECT = "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Talos.Test.suite}}"
 
 TEMPLATE = [
     """
