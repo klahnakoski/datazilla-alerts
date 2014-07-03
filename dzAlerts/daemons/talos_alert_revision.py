@@ -21,7 +21,10 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.struct import nvl, StructList, Struct
+from dzAlerts.util.times.durations import Duration
+from dzAlerts.util.times.dates import Date
+
 
 
 REASON = "talos_alert_revision"   # name of the reason in alert_reason
@@ -84,7 +87,7 @@ TEMPLATE = [
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Branch</td><td>Platform</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Branch</td><td>Platform</td><td>Suite</td><td>Test Name</td><td></td><td></td><td>Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
@@ -92,7 +95,8 @@ TEMPLATE = [
             <td>{{example.Talos.OS.name}} ({{example.Talos.OS.version}})</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="https://datazilla.mozilla.org/?product={{example.Talos.Product}}&repository={{example.datazilla.url.branch}}&start={{example.push_date_min|unix}}&stop={{example.datazilla.url.stop|unix}}&os={{example.Talos.OS.name}}&os_version={{example.Talos.OS.version}}&test={{example.Talos.Test.suite}}&graph={{example.Talos.Test.name}}&graph_search={{example.Talos.Revision}}&project=talos&x86={{example.datazilla.url.x86}}&x86_64={{example.datazilla.url.x86_64}}">Datazilla!</a></td>
+            <td><a href="https://datazilla.mozilla.org/?{{example.datazilla.url|url}}">Datazilla!</a></td>
+            <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Results.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
@@ -133,7 +137,8 @@ def talos_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
+                    # {"term":{"revision":"f3192b2f9195"}}
                 ]}
             })
 
@@ -145,12 +150,14 @@ def talos_alert_revision(settings):
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": REASON}},
+                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"status": "obsolete"}},
-                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                        {"term": {"status": "obsolete"}}
                     ]}
-                ]}
+                ]},
+                # "sort":"status",
+                # "limit":10
             })
             old_alerts = Q.unique_index(old_alerts, "revision")
 
@@ -178,14 +185,34 @@ def talos_alert_revision(settings):
                 for g, exceptions in Q.groupby(total_exceptions, ["details.Talos.Test"]):
                     worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
                     example = worst_in_test.details
-                    # ADD SOME DATAZILLA SPECIFIC URL PARAMETERS
+                    # ADD SOME SPECIFIC URL PARAMETERS
                     branch = example.Talos.Branch.replace("-Non-PGO", "")
+                    stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min)
+
                     example.tbpl.url.branch = TBPL_PATH.get(branch, branch)
                     example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
-                    example.datazilla.url.branch = example.Talos.Branch #+ ("" if worst_in_test.Talos.Branch.pgo else "-Non-PGO")
-                    example.datazilla.url.x86 = "true" if example.Talos.Platform == "x86" else "false"
-                    example.datazilla.url.x86_64 = "true" if example.Talos.Platform == "x86_64" else "false"
-                    example.datazilla.url.stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min)
+                    example.datazilla.url = Struct(
+                        project="talos",
+                        product=example.Talos.Product,
+                        repository=example.Talos.Branch, #+ ("" if worst_in_test.Talos.Branch.pgo else "-Non-PGO")
+                        os=example.Talos.OS.name,
+                        os_version=example.Talos.OS.version,
+                        test=example.Talos.Test.suite,
+                        graph=example.Talos.Test.name,
+                        graph_search=example.Talos.Revision,
+                        start=example.push_date_min/1000,
+                        stop=stop/1000,
+                        x86="true" if example.Talos.Platform == "x86" else "false",
+                        x86_64="true" if example.Talos.Platform == "x86_64" else "false",
+                    )
+                    example.charts.url = Struct(
+                        sampleMin=Date(example.push_date_min).floor().format("%Y-%m-%d"),
+                        sampleMax=Date(stop).floor().format("%Y-%m-%d"),
+                        test=example.Talos.Test.name,
+                        branch=example.Talos.Branch,
+                        os=example.Talos.OS.name + "." + example.Talos.OS.version,
+                        platform=example.Talos.Platform
+                    )
 
                     num_except = len(exceptions)
                     if num_except == 0:

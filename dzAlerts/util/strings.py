@@ -44,6 +44,14 @@ def unix(value):
 
     return str(CNV.datetime2unix(value))
 
+def url(value):
+    """
+    CONVERT FROM dict TO URL PARAMETERS
+    """
+    from .cnv import CNV
+    return CNV.value2url(value)
+
+
 def upper(value):
     return value.upper()
 

@@ -220,8 +220,8 @@ class DBQuery(object):
                 FROM
                     {{table}}
                 {{where}}
-                {{limit}}
                 {{sort}}
+                {{limit}}
             """, {
                 "selects": SQL(",\n".join(selects)),
                 "table": self._subquery(query["from"])[0],
@@ -265,8 +265,8 @@ class DBQuery(object):
                 FROM
                     {{table}}
                 {{where}}
-                {{limit}}
                 {{sort}}
+                {{limit}}
             """, {
                 "selects": SQL(select),
                 "table": self._subquery(query["from"])[0],
