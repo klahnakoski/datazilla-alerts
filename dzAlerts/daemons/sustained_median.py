@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
-from dzAlerts.daemons.util import significant_difference
+from dzAlerts.daemons.util import significant_difference, significant_score_difference
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -118,7 +118,10 @@ def alert_sustained_median(settings, qb, alerts_db):
             "select": {"name": "min_push_date", "value": settings.param.default.sort.value, "aggregate": "min"},
             "edges": query.edges,
             "where": {"and": [
-                True if debug or settings.args.restart else {"missing": {"field": settings.param.mark_complete}},
+                True if debug or settings.args.restart else {"or": [
+                    {"missing": {"field": settings.param.mark_complete}},
+                    {"not": {"term": {"settings.param.mark_complete": "done"}}}
+                ]},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"and": exists},
                 {"and": disabled},
@@ -126,19 +129,20 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"not": debug},
                     {"and": [
                         #FOR DEBUGGING SPECIFIC SERIES
-                        {"term": {"result.test_name": "fps"}}
+                        # {"term": {"result.test_name": "fps"}}
                         # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
                         # {"term":{"metadata.test":"startup-abouthome-dirty"}}
                         # {"term": {"metadata.test": "nytimes-load"}},
                         # {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
-                        # {"term": {"testrun.suite": "dromaeo_css"}},
-                        # {"term": {"result.test_name": "dojo.html.20"}},
+                        {"term": {"testrun.suite": "dromaeo_css"}},
+                        {"term": {"result.test_name": "ext.html.9"}},
                         # {"term": {"test_machine.platform": "x86_64"}},
-                        # {"term": {"test_build.name": "Firefox"}},
-                        # {"term": {"test_machine.osversion": "OS X 10.8"}},
-                        # {"term": {"test_build.branch": "Mozilla-Inbound"}}
+                        {"term": {"test_build.name": "Firefox"}},
+                        {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
+                        {"term": {"test_build.branch": "Mozilla-Inbound-Non-PGO"}}
+
                     ]}
                 ]}
             ]},
@@ -446,7 +450,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
 
         if significant_difference(curr.severity, a.severity) or \
-                significant_difference(10**(-curr.confidence), a.confidence) or \
+                significant_score_difference(curr.confidence, a.confidence) or \
                         curr.reason != a.reason:
             curr.last_updated = NOW
             alerts_db.update("alerts", {"id": curr.id}, a)

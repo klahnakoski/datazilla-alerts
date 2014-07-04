@@ -18,6 +18,16 @@ from ..structs.wraps import unwrap, wrap
 
 
 class Duration(object):
+    ZERO = None
+    SECOND = None
+    MINUTE = None
+    HOUR = None
+    DAY = None
+    WEEK = None
+    MONTH = None
+    QUARTER = None
+    YEAR = None
+
 
     def __new__(cls, obj=None):
         output = object.__new__(cls)
@@ -199,7 +209,7 @@ def _string2Duration(text):
         return Duration(0)
 
     amount, interval = regex.match(r"([\d\.]*)(.*)", text)
-    amount = CNV.value2int(amount) if amount else 0
+    amount = CNV.value2int(amount) if amount else 1
 
     if MILLI_VALUES[interval] == None:
         Log.error(interval + " is not a recognized duration type (did you use the pural form by mistake?")
@@ -273,6 +283,19 @@ WEEK = Duration("week")
 MONTH = Duration("month")
 QUARTER = Duration("quarter")
 YEAR = Duration("year")
+
+Duration.ZERO = ZERO
+Duration.SECOND = SECOND
+Duration.MINUTE = MINUTE
+Duration.HOUR = HOUR
+Duration.DAY = DAY
+Duration.WEEK = WEEK
+Duration.MONTH = MONTH
+Duration.QUARTER = QUARTER
+Duration.YEAR = YEAR
+
+
+
 
 COMMON_INTERVALS = [
     Duration("second"),

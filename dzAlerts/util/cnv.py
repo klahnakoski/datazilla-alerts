@@ -19,6 +19,7 @@ from urllib import urlencode
 
 from . import struct
 from . import jsons
+from dzAlerts.util.times.dates import Date
 from .jsons import json_encoder
 from .collections.multiset import Multiset
 from .env.profiles import Profiler
@@ -83,10 +84,7 @@ class CNV:
 
     @staticmethod
     def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
-        try:
-            return value.strftime(format)
-        except Exception, e:
-            Log.error("Can not format {{value}} with {{format}}", {"value": value, "format": format}, e)
+        return Date(value).format(format=format)
 
     @staticmethod
     def datetime2unix(d):

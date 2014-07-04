@@ -16,6 +16,7 @@ import re
 from . import struct
 import math
 import __builtin__
+from urllib import urlencode
 from .structs.wraps import unwrap, wrap
 
 
@@ -43,6 +44,13 @@ def unix(value):
         value = CNV.milli2datetime(value)
 
     return str(CNV.datetime2unix(value))
+
+def url(value):
+    """
+    CONVERT FROM dict TO URL PARAMETERS
+    """
+    return urlencode(value)
+
 
 def upper(value):
     return value.upper()
@@ -198,7 +206,7 @@ def _simple_expand(template, seq):
                 if len(parts) > 1:
                     val = eval(parts[0] + "(val, " + ("(".join(parts[1::])))
                 else:
-                    val = eval(filter + "(val)")
+                    val = globals()[filter](val)
             val = toString(val)
             return val
         except Exception, e:
