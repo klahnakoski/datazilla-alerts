@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
-from math import log
+from math import log, log10
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision
 from dzAlerts.daemons.email_send import email_send
 from dzAlerts.daemons.talos_alert_revision import TEMPLATE, SUBJECT,  REASON
@@ -80,12 +80,12 @@ def send_alerts(settings, db):
             WHERE
                 a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
-                math.bayesian_add(a.severity, a.confidence) > {{alert_limit}} AND
+                math.bayesian_add(a.severity, 1-power(10, -a.confidence)) > {{alert_limit}} AND
                 a.solution IS NULL AND
                 a.reason in {{reasons}} AND
                 a.create_time > {{min_time}}
             ORDER BY
-                math.bayesian_add(a.severity, a.confidence) DESC,
+                math.bayesian_add(a.severity, 1-power(10, -a.confidence)) DESC,
                 json.number(left(details, 65000), "diff_percent") DESC
             LIMIT
                 10
@@ -104,17 +104,14 @@ def send_alerts(settings, db):
         for alert in new_alerts:
             #poor souls that signed up for emails
             listeners = ";".join(db.query("SELECT email FROM listeners WHERE reason={{reason}}", {"reason": alert.reason}).email)
-
             body = [HEADER]
-            if alert.confidence >= 1:
-                alert.confidence = 0.999999
 
             alert.details = CNV.JSON2object(alert.details)
             try:
                 alert.revision = CNV.JSON2object(alert.revision)
             except Exception, e:
                 pass
-            alert.score = str(-log(1.0-Math.bayesian_add(alert.severity, alert.confidence), 10))  #SHOW NUMBER OF NINES
+            alert.score = str(-log10(1.0-Math.bayesian_add(alert.severity, 1-(10**(-alert.confidence)))))  #SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
             example = alert.details.example
             for e in alert.details.tests.example + [example]:

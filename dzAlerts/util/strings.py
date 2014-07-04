@@ -16,6 +16,7 @@ import re
 from . import struct
 import math
 import __builtin__
+from urllib import urlencode
 from .structs.wraps import unwrap, wrap
 
 
@@ -48,8 +49,7 @@ def url(value):
     """
     CONVERT FROM dict TO URL PARAMETERS
     """
-    from .cnv import CNV
-    return CNV.value2url(value)
+    return urlencode(value)
 
 
 def upper(value):
@@ -206,7 +206,7 @@ def _simple_expand(template, seq):
                 if len(parts) > 1:
                     val = eval(parts[0] + "(val, " + ("(".join(parts[1::])))
                 else:
-                    val = eval(filter + "(val)")
+                    val = globals()[filter](val)
             val = toString(val)
             return val
         except Exception, e:
