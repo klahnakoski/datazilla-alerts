@@ -84,7 +84,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             else:
                 min_diff = Math.abs(r.past_stats.mean * 0.01)
 
-            if diff > min_diff:
+            if diff > min_diff:  # THIS MAY NEVER HAPPEN GIVEN THE MEDIAN TEST CAN MISS THE DISCONTINUITY
                 return True
 
         return False
@@ -120,7 +120,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "where": {"and": [
                 True if debug or settings.args.restart else {"or": [
                     {"missing": {"field": settings.param.mark_complete}},
-                    {"not": {"term": {"settings.param.mark_complete": "done"}}}
+                    {"not": {"term": {settings.param.mark_complete: "done"}}}
                 ]},
                 {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
                 {"and": exists},
@@ -136,12 +136,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                         # {"term": {"metadata.test": "nytimes-load"}},
                         # {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
-                        {"term": {"testrun.suite": "dromaeo_css"}},
-                        {"term": {"result.test_name": "ext.html.9"}},
+                        # {"term": {"testrun.suite": "dromaeo_css"}},
+                        # {"term": {"result.test_name": "ext.html.9"}},
                         # {"term": {"test_machine.platform": "x86_64"}},
-                        {"term": {"test_build.name": "Firefox"}},
-                        {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                        {"term": {"test_build.branch": "Mozilla-Inbound-Non-PGO"}}
+                        # {"term": {"test_build.name": "Firefox"}},
+                        # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
+                        # {"term": {"test_build.branch": "Fx-Team-Non-PGO"}}
 
                     ]}
                 ]}
@@ -353,19 +353,20 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "where": {"term": {"ignored": False}}
             }))
 
-            File("test_values.txt").write(CNV.list2tab(Q.run({
-                "from": stats,
-                "select": [
-                    {"name": test_param.sort.name, "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
-                    "value",
-                    {"name": "revision", "value": settings.param.revision_dimension},
-                    {"name": "mtest_score", "value": "result.score"},
-                    {"name": "ttest_score", "value": "ttest_result.score"},
-                    "is_diff",
-                    "pass"
-                ],
-                "sort": test_param.sort.name
-            })))
+            if debug:
+                File("test_values.txt").write(CNV.list2tab(Q.run({
+                    "from": stats,
+                    "select": [
+                        {"name": test_param.sort.name, "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
+                        "value",
+                        {"name": "revision", "value": settings.param.revision_dimension},
+                        {"name": "mtest_score", "value": "result.score"},
+                        {"name": "ttest_score", "value": "ttest_result.score"},
+                        "is_diff",
+                        "pass"
+                    ],
+                    "sort": test_param.sort.name
+                })))
 
             #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})

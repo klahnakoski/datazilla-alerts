@@ -172,7 +172,7 @@ class ESQuery(object):
             if not MVEL.isKeyword(k):
                 Log.error("Only support simple paths for now")
 
-            scripts.append("ctx._source."+k+" = "+MVEL.value2MVEL(v)+";")
+            scripts.append("ctx._source."+k+" = "+MVEL.value2MVEL(v)+";\n")
         script = "".join(scripts)
 
         if results.hits.hits:
