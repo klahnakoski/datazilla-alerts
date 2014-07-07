@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from dzAlerts.daemons.talos_alert_revision import MECURIAL_PATH, TBPL_PATH
 
 from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
@@ -22,82 +23,47 @@ from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList, Struct
-from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.dates import Date
 
 
-
-REASON = "talos_alert_revision"   # name of the reason in alert_reason
+SUSTAINED_REASON = "eideticker_alert_sustained_median"
+REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = timedelta(days=90)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
-# FROM tcp://s4n4.qa.phx1.mozilla.com:3306/pushlog_hgmozilla_1/branches
-MECURIAL_PATH = {
-    "Firefox": "mozilla-central",
-    "Try": "try",
-    "B2G-Inbound": "integration/b2g-inbound",
-    "Mozilla-Aurora": "releases/mozilla-aurora",
-    "Mozilla-Beta": "releases/mozilla-beta",
-    "Mozilla-Release": "releases/mozilla-release",
-    "Mozilla-Esr10": "releases/mozilla-esr10",
-    "Accessibility": "projects/accessibility",
-    "Addon-SDK": "projects/addon-sdk",
-    "Build-System": "projects/build-system",
-    "Devtools": "projects/devtools",
-    "Fx-Team": "integration/fx-team",
-    "Ionmonkey": "projects/ionmonkey",
-    "JägerMonkey": "projects/jaegermonkey",
-    "Profiling": "projects/profiling",
-    "Services-Central": "services/services-central",
-    "UX": "projects/ux",
-    "Alder": "projects/alder",
-    "Ash": "projects/ash",
-    "Birch": "projects/birch",
-    "Cedar": "projects/cedar",
-    "Elm": "projects/elm",
-    "Holly": "projects/holly",
-    "Larch": "projects/larch",
-    "Maple": "projects/maple",
-    "Oak": "projects/oak",
-    "Pine": "projects/pine",
-    "Electrolysis": "projects/electrolysis",
-    "Graphics": "projects/graphics",
-    "Places": "projects/places",
-    "Mozilla-Inbound": "integration/mozilla-inbound",
-}
-
-TBPL_PATH = {
-    "B2G-Inbound": "B2g-Inbound"
-}
-
-
-SUBJECT = "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Talos.Test.suite}}"
-
+SUBJECT = [
+    "[ALERT][Eideticker] {{details.example.Eideticker.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} in ",
+    {
+        "from": "details.tests",
+        "template": "{{test.suite}}",
+        "separator": ", "
+    }
+    ]
 TEMPLATE = [
     """
     <div>
-        <div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-        <span style="font-size: 120%; display:inline-block">
-        [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch}}/rev/{{revision}}">{{revision}}</a>]
-        </span>
-        [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch|lower}}/rev/{{details.example.past_revision}}">Previous</a>]
-        [<a href="https://tbpl.mozilla.org/?tree={{details.example.tbpl.url.branch}}&rev={{revision}}">TBPL</a>]
+    	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
+    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
+    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
+
+    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
+    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
+
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Branch</td><td>Platform</td><td>Suite</td><td>Test Name</td><td></td><td></td><td>Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
-            <td>{{example.Talos.Product}} {{example.Talos.Branch}}</td>
-            <td>{{example.Talos.OS.name}} ({{example.Talos.OS.version}})</td>
+            <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="https://datazilla.mozilla.org/?{{example.datazilla.url|url}}">Datazilla!</a></td>
+            <td><a href="http://eideticker.mozilla.org/b2g/#/{{Eideticker.Device}}/{{Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
             <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Results.html#{{example.charts.url|url}}">charts!</a></td>
-            <td><a href="">DIFF</a></td>
+            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
             <td>{{example.future_stats.mean|round(digits=4)}}</td>
@@ -112,13 +78,17 @@ TEMPLATE = [
 # assumes there is an outside agent corrupting our test results
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
-def talos_alert_revision(settings):
+def eideticker_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
+    debug = settings.param.debug
+
+
+
     with DB(settings.alerts) as db:
         with ESQuery(ElasticSearch(settings.query["from"])) as esq:
-
             dbq = DBQuery(db)
+
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             #TODO: REMOVE, LEAVE IN DB
@@ -137,12 +107,11 @@ def talos_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
-                    # {"term":{"revision":"f3192b2f9195"}}
+                    True if debug else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })
 
-            tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
+            tests = Q.index(existing_sustained_alerts, ["revision", "details.Eideticker.Test"])
 
             #EXISTING REVISION-LEVEL ALERTS
             old_alerts = dbq.query({
@@ -150,16 +119,13 @@ def talos_alert_revision(settings):
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": REASON}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
-                    {"or": [
+                    {"or":[
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                         {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
-                ]},
-                # "sort":"status",
-                # "limit":10
+                ]}
             })
             old_alerts = Q.unique_index(old_alerts, "revision")
 
@@ -167,53 +133,40 @@ def talos_alert_revision(settings):
             known_alerts = StructList()
 
             total_tests = esq.query({
-                "from": "talos",
+                "from": "eideticker_alerts",
                 "select": {"name": "count", "aggregate": "count"},
                 "edges": [
-                    "Talos.Revision"
+                    "Eideticker.Revision"
                 ],
                 "where": {"and": [
-                    {"terms": {"Talos.Revision": set(existing_sustained_alerts.revision)}}
+                    {"terms": {"Eideticker.Revision": list(set(existing_sustained_alerts.revision))}}
                 ]}
             })
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
-            for revision, total_test_count in Q.groupby(total_tests, ["Talos.Revision"]):
+            for revision, total_test_count in Q.groupby(total_tests, ["Eideticker.Revision"]):
             #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                revision = revision["Talos.Revision"]
+                revision = revision["Eideticker.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
-                for g, exceptions in Q.groupby(total_exceptions, ["details.Talos.Test"]):
+                for g, exceptions in Q.groupby(total_exceptions, ["details.Eideticker.Test"]):
                     worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
                     example = worst_in_test.details
                     # ADD SOME SPECIFIC URL PARAMETERS
-                    branch = example.Talos.Branch.replace("-Non-PGO", "")
+                    branch = example.Eideticker.Branch
                     stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min)
 
-                    example.tbpl.url.branch = TBPL_PATH.get(branch, branch)
-                    example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
-                    example.datazilla.url = Struct(
-                        project="talos",
-                        product=example.Talos.Product,
-                        repository=example.Talos.Branch, #+ ("" if worst_in_test.Talos.Branch.pgo else "-Non-PGO")
-                        os=example.Talos.OS.name,
-                        os_version=example.Talos.OS.version,
-                        test=example.Talos.Test.suite,
-                        graph=example.Talos.Test.name,
-                        graph_search=example.Talos.Revision,
-                        start=example.push_date_min/1000,
-                        stop=stop/1000,
-                        x86="true" if example.Talos.Platform == "x86" else "false",
-                        x86_64="true" if example.Talos.Platform == "x86_64" else "false",
+                    example.mercurial.url.branch = branch
+                    example.eideticker.url = Struct(
+                        metricname="timetostableframe"
                     )
                     example.charts.url = Struct(
                         sampleMin=Date(example.push_date_min).floor().format("%Y-%m-%d"),
                         sampleMax=Date(stop).floor().format("%Y-%m-%d"),
-                        test=example.Talos.Test.name,
-                        branch=example.Talos.Branch,
-                        os=example.Talos.OS.name + "." + example.Talos.OS.version,
-                        platform=example.Talos.Platform
+                        test=example.Eideticker.Test,
+                        branch=example.Eideticker.Branch,
+                        device=example.Eideticker.Device
                     )
 
                     num_except = len(exceptions)
@@ -221,7 +174,7 @@ def talos_alert_revision(settings):
                         continue
 
                     part = {
-                        "test": g.details.Talos.Test,
+                        "test": g.details.Eideticker.Test,
                         "num_exceptions": num_except,
                         "num_tests": total_test_count,
                         "confidence": worst_in_test.confidence,
@@ -305,7 +258,7 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
-        talos_alert_revision(settings)
+        eideticker_alert_revision(settings)
     finally:
         Log.stop()
 

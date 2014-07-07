@@ -326,7 +326,9 @@ def _esfilter2sqlwhere(db, esfilter):
     """
     esfilter = wrap(esfilter)
 
-    if esfilter["and"]:
+    if esfilter is True:
+        return "1=1"
+    elif esfilter["and"]:
         return _isolate("AND", [esfilter2sqlwhere(db, a) for a in esfilter["and"]])
     elif esfilter["or"]:
         return _isolate("OR", [esfilter2sqlwhere(db, a) for a in esfilter["or"]])

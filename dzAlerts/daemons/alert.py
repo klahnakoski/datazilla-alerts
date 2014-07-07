@@ -9,10 +9,9 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
-from math import log, log10
-from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision
-from dzAlerts.daemons.email_send import email_send
-from dzAlerts.daemons.talos_alert_revision import TEMPLATE, SUBJECT,  REASON
+from math import log10
+from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
+from dzAlerts.daemons.talos_alert_revision import TEMPLATE, SUBJECT, REASON
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries import Q
@@ -22,27 +21,18 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
-from dzAlerts.util.env.emailer import Emailer
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"
 FOOTER = "<hr><a style='font-size:70%' href='https://wiki.mozilla.org/FirefoxOS/Performance/Investigating_Alerts'>Understanding this alert</a>"
-#TBPL link: https://tbpl.mozilla.org/?rev=c3598b276048
-#TBPL test results:  https://tbpl.mozilla.org/?tree=Mozilla-Inbound&rev=c9429cf294af
-#HG: https://hg.mozilla.org/mozilla-central/rev/330feedee4f1
-#BZ: https://bugzilla.mozilla.org/show_bug.cgi?id=702559
-#DZ: https://datazilla.mozilla.org/talos/summary/Mozilla-Inbound/897654df47b6?product=Firefox&branch_version=23.0a1
-#                            "product":v.product,
-#                            "branch":v.branch,
-#                            "branch_version":v.branch_version,
-#                            "revision":v.revision
 
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = timedelta(days=7)
 LOOK_BACK = timedelta(days=30)
 MAX_EMAIL_LENGTH = 15000
+MAIL_LIMIT = 10  # DO NOT SEND TOO MANY MAILS AT ONCE
 EPSILON = 0.0001
-SEND_REASONS = [b2g_alert_revision.REASON, talos_alert_revision.REASON]
+SEND_REASONS = [b2g_alert_revision.REASON, talos_alert_revision.REASON, eideticker_alert_revision.REASON]
 
 
 def send_alerts(settings, db):
@@ -51,6 +41,16 @@ def send_alerts(settings, db):
     """
     debug = settings.param.debug
     db.debug = debug
+
+    #ALTER CONSTANTS BASED ON SETTING FILE
+    from . import alert as module
+    if settings.features.send_all:
+        Log.warning("send_all option in use:  No email limit!")
+        module.LOOK_BACK = timedelta(years=10)
+        module.MAIL_LIMIT = 1000000
+
+
+
 
     #TODO: REMOVE, LEAVE IN DB
     if db.debug:
@@ -88,12 +88,13 @@ def send_alerts(settings, db):
                 math.bayesian_add(a.severity, 1-power(10, -a.confidence)) DESC,
                 json.number(left(details, 65000), "diff_percent") DESC
             LIMIT
-                10
+                {{limit}}
         """, {
             "last_sent": datetime.utcnow() - RESEND_AFTER,
             "alert_limit": ALERT_LIMIT - EPSILON,
-            "min_time": datetime.utcnow()-LOOK_BACK,
-            "reasons": SQL("("+", ".join(db.quote_value(v) for v in SEND_REASONS)+")")
+            "min_time": datetime.utcnow() - LOOK_BACK,
+            "reasons": SQL("(" + ", ".join(db.quote_value(v) for v in SEND_REASONS) + ")"),
+            "limit": MAIL_LIMIT
         })
 
         if not new_alerts:
@@ -111,18 +112,18 @@ def send_alerts(settings, db):
                 alert.revision = CNV.JSON2object(alert.revision)
             except Exception, e:
                 pass
-            alert.score = str(-log10(1.0-Math.bayesian_add(alert.severity, 1-(10**(-alert.confidence)))))  #SHOW NUMBER OF NINES
+            alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1 - (10 ** (-alert.confidence)))))  #SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
             example = alert.details.example
             for e in alert.details.tests.example + [example]:
                 if e.push_date_min:
                     e.push_date_max = (2 * e.push_date) - e.push_date_min
-                    e.date_range = (datetime.utcnow()-CNV.milli2datetime(e.push_date_min)).total_seconds()/(24*60*60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
+                    e.date_range = (datetime.utcnow() - CNV.milli2datetime(e.push_date_min)).total_seconds() / (24 * 60 * 60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  #PICK FIRST v > CURRENT VALUE
 
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
-            body = "".join(body)+FOOTER
+            body = "".join(body) + FOOTER
 
             if debug:
                 Log.note("EMAIL: {{email}}", {"email": body})
@@ -148,8 +149,6 @@ def send_alerts(settings, db):
 
     except Exception, e:
         Log.error("Could not send alerts", e)
-
-
 
 
 if __name__ == '__main__':
