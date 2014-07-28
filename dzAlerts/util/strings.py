@@ -52,6 +52,11 @@ def url(value, use_plus=False):
     if use_plus:
         return urlencode(value)
     else:
+        # I LOVE ENCODING SPACES AS "+", BECAUSE IT IS HUMANE.  BUT, SINCE
+        # MANY LIBRARIES DO IT WRONG, WE CAN TRUST NOTHING TO INTERPRET URLS
+        # PROPERLY.  SO WE GO WITH LOWEST COMMON DENOMINATOR.
+        #
+        # BTW, THIS WOULD BE MUCH FASTER IF urlencode WAS NOT USED
         return urlencode(value).replace("+", "%20")
 
 
