@@ -45,11 +45,14 @@ def unix(value):
 
     return str(CNV.datetime2unix(value))
 
-def url(value):
+def url(value, use_plus=False):
     """
     CONVERT FROM dict TO URL PARAMETERS
     """
-    return urlencode(value)
+    if use_plus:
+        return urlencode(value)
+    else:
+        return urlencode(value).replace("+", "%20")
 
 
 def upper(value):
