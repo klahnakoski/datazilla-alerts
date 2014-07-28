@@ -189,7 +189,8 @@ def talos_alert_revision(settings):
                     example = worst_in_test.details
                     # ADD SOME SPECIFIC URL PARAMETERS
                     branch = example.Talos.Branch.replace("-Non-PGO", "")
-                    stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min)
+                    stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min) + Duration.DAY.milli
+                    start = Math.min(example.push_date_min, stop-Duration.WEEK.milli)
 
                     example.tbpl.url.branch = TBPL_PATH.get(branch, branch)
                     example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
@@ -202,13 +203,13 @@ def talos_alert_revision(settings):
                         test=example.Talos.Test.suite,
                         graph=example.Talos.Test.name,
                         graph_search=example.Talos.Revision,
-                        start=example.push_date_min/1000,
+                        start=start/1000,
                         stop=stop/1000,
                         x86="true" if example.Talos.Platform == "x86" else "false",
                         x86_64="true" if example.Talos.Platform == "x86_64" else "false",
                     )
                     example.charts.url = Struct(
-                        sampleMin=Date(example.push_date_min).floor().format("%Y-%m-%d"),
+                        sampleMin=Date(start).floor().format("%Y-%m-%d"),
                         sampleMax=Date(stop).floor().format("%Y-%m-%d"),
                         test=example.Talos.Test.name,
                         branch=example.Talos.Branch,

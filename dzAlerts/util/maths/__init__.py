@@ -161,3 +161,15 @@ class Math(object):
             else:
                 pass
         return output
+
+    @staticmethod
+    def min(*values):
+        output = None
+        for v in values:
+            if v == None:
+                continue
+            elif output == None or v < output:
+                output = v
+            else:
+                pass
+        return output
