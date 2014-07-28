@@ -35,9 +35,9 @@ class test_alert:
     """
 
     def __init__(self, db):
-        self.now = datetime.utcnow() - timedelta(seconds=1)
-        self.recent_past = self.now - timedelta(hours=1)
-        self.far_past = self.now - timedelta(days=2)
+        self.now = datetime.utcnow() - Duration(seconds=1)
+        self.recent_past = self.now - Duration(hours=1)
+        self.far_past = self.now - Duration(days=2)
 
         self.db = db
         #        self.uid=None
@@ -72,7 +72,7 @@ class test_alert:
             "code": self.reason,
             "description": ">>>>{{id}}<<<<", #SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
             "config": None,
-            "last_run": self.now - timedelta(days=1)
+            "last_run": self.now - Duration(days=1)
         })
 
 

@@ -8,6 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from dzAlerts.util.collections import OR
 from ..structs.wraps import wrap
 
 TRUE_FILTER = True
@@ -127,8 +128,24 @@ def _normalize(esfilter):
         if esfilter.terms != None:
             for k, v in esfilter.terms.items():
                 if len(v) > 0:
-                    esfilter.isNormal = True
-                    return esfilter
+                    if OR(vv == None for vv in v):
+                        rest = [vv for vv in v if vv != None]
+                        if len(rest) > 0:
+                            return {
+                                "or": [
+                                    {"missing": {"field": k}},
+                                    {"terms": {k: rest}}
+                                ],
+                                "isNormal": True
+                            }
+                        else:
+                            return {
+                                "missing": {"field": k},
+                                "isNormal": True
+                            }
+                    else:
+                        esfilter.isNormal = True
+                        return esfilter
             return FALSE_FILTER
 
         if esfilter["not"] != None:

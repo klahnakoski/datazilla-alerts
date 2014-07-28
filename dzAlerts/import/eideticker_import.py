@@ -14,6 +14,7 @@ from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.logs import Log
+from dzAlerts.util.parsers import URL
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.strings import expand_template
@@ -49,7 +50,8 @@ def get_all_uuid(settings):
                             "test": testname,
                             "app": appname,
                             "date": int(date)*1000,
-                            "uuid": d["uuid"]
+                            "uuid": d["uuid"],
+                            "path": URL(settings.param.url).path.rtrim("/")
                         }
                         output.append(metadata)
 
@@ -95,7 +97,7 @@ def etl(settings):
             except Exception, e:
                 Log.warning("problem getting details from {{response}}", {"response": response}, e)
 
-        with Multithread([get_uuid for i in range(10)], outbound=False, silent_queues=True) as multi:
+        with Multithread(get_uuid, threads=10, outbound=False, silent_queues=True) as multi:
             for metadata in all_tests:
                 if metadata.uuid in existing:
                     continue  # EXISTING STUFF IS SKIPPED

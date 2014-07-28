@@ -12,7 +12,6 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 import sys
-
 from .logs import BaseLog, DEBUG_LOGGING, Log
 from ..strings import expand_template
 from ..thread.threads import Thread

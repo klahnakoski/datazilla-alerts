@@ -24,13 +24,15 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList, Struct
 from dzAlerts.util.times.dates import Date
+from dzAlerts.util.times.durations import Duration
 
 
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=90)
+LOOK_BACK = Duration(days=90)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
+DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
 SUBJECT = [
     "[ALERT][Eideticker] {{details.example.Eideticker.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} in ",
@@ -61,8 +63,8 @@ TEMPLATE = [
             <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="http://eideticker.mozilla.org/b2g/#/{{Eideticker.Device}}/{{Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
-            <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Results.html#{{example.charts.url|url}}">charts!</a></td>
+            <td><a href="http://eideticker.mozilla.org/{{example.eideticker.url.path}}#/{{example.Eideticker.Device}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
+            <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eidieticker.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
@@ -159,7 +161,8 @@ def eideticker_alert_revision(settings):
 
                     example.mercurial.url.branch = branch
                     example.eideticker.url = Struct(
-                        metricname="timetostableframe"
+                        metricname="timetostableframe",
+                        path=nvl(example.metadata.path, "")
                     )
                     example.charts.url = Struct(
                         sampleMin=Date(example.push_date_min).floor().format("%Y-%m-%d"),
@@ -242,9 +245,12 @@ def eideticker_alert_revision(settings):
                     continue  # DO NOT TOUCH SOLVED ALERTS
 
                 old_alert = old_alerts[changed_alert]
-                if old_alert.status == 'obsolete' or significant_difference(changed_alert.severity, old_alert.severity) or significant_score_difference(changed_alert.confidence, old_alert.confidence):
+                if DEBUG_TOUCH_ALL_ALERTS or old_alert.status == 'obsolete' or significant_difference(changed_alert.severity, old_alert.severity) or significant_score_difference(changed_alert.confidence, old_alert.confidence):
                     changed_alert.last_updated = NOW
                     db.update("alerts", {"id": old_alert.id}, changed_alert)
+
+                    if DEBUG_TOUCH_ALL_ALERTS:
+                        db.execute("UPDATE alerts SET last_sent=NULL WHERE id={{id}}", {"id": old_alert.id})
 
             #OLD ALERTS, OBSOLETE
             for old_alert in old_alerts - known_alerts:

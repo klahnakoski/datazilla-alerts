@@ -28,7 +28,7 @@ from dzAlerts.util.times.dates import Date
 
 
 REASON = "talos_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=90)
+LOOK_BACK = Duration(days=90)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 

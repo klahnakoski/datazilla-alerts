@@ -17,21 +17,26 @@ DEBUG = False
 
 class Struct(dict):
     """
-    Struct is an anonymous class with some properties good for manipulating JSON
+    Struct is used to declare an instance of an anonymous type, and has good
+    features for manipulating JSON.  Anonymous types are necessary when
+    writing sophisticated list comprehensions, or queries, and to keep them
+    readable.  There may be an argument to using dict(), but dict does not have
+    the features listed below.
 
     0) a.b==a["b"]
     1) the IDE does tab completion, and my spelling mistakes get found at "compile time"
     2) it deals with missing keys gracefully, so I can put it into set operations (database
-       operations) without choking
+       operations) without raising exceptions
        a = wrap({})
        > a == {}
-       a.b is Null
+       a.b == None
        > True
        a.b.c == None
        > True
     2b) missing keys is important when dealing with JSON, which is often almost anything
+    2b) you loose the ability to perform <code>a is None</code> checks, must always use <code>a == None</code> instead
     3) you can access paths as a variable:   a["b.c"]==a.b.c
-    4) you can set paths to values, missing objects along the path are created:
+    4) you can set paths to values, missing dicts along the path are created:
        a = wrap({})
        > a == {}
        a["b.c"] = 42
@@ -43,11 +48,13 @@ class Struct(dict):
     IT ONLY CONSIDERS THE LEGITIMATE-FIELD-WITH-MISSING-VALUE (Statistical Null)
     AND DOES NOT LOOK AT FIELD-DOES-NOT-EXIST-IN-THIS-CONTEXT (Database Null)
 
-    The Struct is a common pattern in many frameworks (I am still working on this list)
+    The Struct is a common pattern in many frameworks even though it goes by
+    different names, some examples are:
 
-    jinja2.environment.Environment.getattr()
-    argparse.Environment() - code performs setattr(e, name, value) on instances of Environment
-    collections.namedtuple() - gives attribute names to tuple indicies
+    * jinja2.environment.Environment.getattr()
+    * argparse.Environment() - code performs setattr(e, name, value) on instances of Environment
+    * collections.namedtuple() - gives attribute names to tuple indicies
+    * C# Linq requires anonymous types to avoid large amounts of boilerplate code.
 
     """
 
@@ -188,6 +195,19 @@ class Struct(dict):
         d = _get(self, "__dict__")
         return ((k, wrap(v)) for k, v in d.items())
 
+    def leaves(self, prefix=None):
+        """
+        LIKE items() BUT RECURSIVE, AND ONLY FOR THE LEAVES (non dict) VALUES
+        """
+        prefix = nvl(prefix, "")
+        output = []
+        for k, v in self.items():
+            if isinstance(v, dict):
+                output.extend(wrap(v).leaves(prefix=prefix+literal_field(k)+"."))
+            else:
+                output.append((prefix+literal_field(k), v))
+        return output
+
     def all_items(self):
         """
         GET ALL KEY-VALUES OF LEAF NODES IN Struct
@@ -290,7 +310,7 @@ def _setdefault(obj, key, value):
 
 def set_default(*params):
     """
-    I+NPUT dicts IN PRIORITY ORDER
+    INPUT dicts IN PRIORITY ORDER
     UPDATES FIRST dict WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
     FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
     """
@@ -338,8 +358,8 @@ def _assign(obj, path, value, force=True):
     """
     if isinstance(obj, NullType):
         d = _get(obj, "__dict__")
-        o = d["obj"]
-        p = d["path"]
+        o = d["_obj"]
+        p = d["_path"]
         s = split_field(p)+path
         return _assign(o, s, value)
 
@@ -373,8 +393,8 @@ class NullType(object):
 
     def __init__(self, obj=None, path=None):
         d = _get(self, "__dict__")
-        d["obj"] = obj
-        d["path"] = path
+        d["_obj"] = obj
+        d["_path"] = path
 
     def __bool__(self):
         return False
@@ -458,8 +478,8 @@ class NullType(object):
     def __setitem__(self, key, value):
         try:
             d = _get(self, "__dict__")
-            o = d["obj"]
-            path = d["path"]
+            o = d["_obj"]
+            path = d["_path"]
             seq = split_field(path)+split_field(key)
 
             _assign(o, seq, value)
@@ -480,6 +500,9 @@ class NullType(object):
 
     def __repr__(self):
         return "Null"
+
+    def __hash__(self):
+        return hash(None)
 
 
 Null = NullType()

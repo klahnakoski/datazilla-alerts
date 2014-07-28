@@ -19,7 +19,7 @@ from dzAlerts.util.env.logs import Log
 
 
 REASON = "page_threshold_limit"     #name of the reason in alert_reason
-LOOK_BACK = timedelta(weeks=4)
+LOOK_BACK = Duration(weeks=4)
 
 
 def page_threshold_limit(db, debug):

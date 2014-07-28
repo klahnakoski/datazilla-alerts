@@ -485,8 +485,8 @@ class DB(object):
 
         where_clause = " AND\n".join([
             self.quote_column(k) + "=" + self.quote_value(v) if v != None else self.quote_column(k) + " IS NULL"
-            for k, v in where_slice.items()]
-        )
+            for k, v in where_slice.items()
+        ])
 
         command = "UPDATE " + self.quote_column(table_name) + "\n" + \
                   "SET " + \

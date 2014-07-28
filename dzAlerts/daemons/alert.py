@@ -8,7 +8,7 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import log10
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from dzAlerts.daemons.talos_alert_revision import TEMPLATE, SUBJECT, REASON
@@ -21,14 +21,15 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
+from dzAlerts.util.times.durations import Duration
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"
 FOOTER = "<hr><a style='font-size:70%' href='https://wiki.mozilla.org/FirefoxOS/Performance/Investigating_Alerts'>Understanding this alert</a>"
 
 SEPARATOR = "<hr>\n"
-RESEND_AFTER = timedelta(days=7)
-LOOK_BACK = timedelta(days=30)
+RESEND_AFTER = Duration(days=7)
+LOOK_BACK = Duration(days=30)
 MAX_EMAIL_LENGTH = 15000
 MAIL_LIMIT = 10  # DO NOT SEND TOO MANY MAILS AT ONCE
 EPSILON = 0.0001
@@ -41,16 +42,6 @@ def send_alerts(settings, db):
     """
     debug = settings.param.debug
     db.debug = debug
-
-    #ALTER CONSTANTS BASED ON SETTING FILE
-    from . import alert as module
-    if settings.features.send_all:
-        Log.warning("send_all option in use:  No email limit!")
-        module.LOOK_BACK = timedelta(years=10)
-        module.MAIL_LIMIT = 1000000
-
-
-
 
     #TODO: REMOVE, LEAVE IN DB
     if db.debug:

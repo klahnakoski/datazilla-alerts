@@ -225,7 +225,7 @@ def update_repo(repo, settings):
                     """, {"repo": repo.name})[0]
 
             ranges = struct.wrap([
-                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + timedelta(0, 1)},
+                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + Duration(0, 1)},
                 {"max": existing_range.min}
             ])
 

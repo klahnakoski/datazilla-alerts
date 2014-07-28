@@ -10,6 +10,8 @@
 from __future__ import unicode_literals
 
 from .. import regex
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 from ..cnv import CNV
 from ..collections import MIN
 from ..env.logs import Log
@@ -29,24 +31,29 @@ class Duration(object):
     YEAR = None
 
 
-    def __new__(cls, obj=None):
+    def __new__(cls, value=None, **kwargs):
         output = object.__new__(cls)
-        if obj == None:
-            return None
-        if Math.is_number(obj):
-            output.milli = obj
+        if value == None:
+            if kwargs:
+                output.milli = timedelta(**kwargs).total_seconds()*1000
+                output.month = 0
+                return output
+            else:
+                return None
+        if Math.is_number(value):
+            output.milli = value
             output.month = 0
             return output
-        elif isinstance(obj, basestring):
-            return parse(obj)
-        elif isinstance(obj, Duration):
-            output.milli = obj.milli
-            output.month = obj.month
+        elif isinstance(value, basestring):
+            return parse(value)
+        elif isinstance(value, Duration):
+            output.milli = value.milli
+            output.month = value.month
             return output
-        elif Math.is_nan(obj):
+        elif Math.is_nan(value):
             return None
         else:
-            Log.error("Do not know type of object (" + CNV.object2JSON(obj) + ")of to make a Duration")
+            Log.error("Do not know type of object (" + CNV.object2JSON(value) + ")of to make a Duration")
 
 
     def __add__(self, other):
@@ -97,10 +104,21 @@ class Duration(object):
 
 
     def __sub__(self, duration):
-        output = Duration(0)
-        output.milli = self.milli - duration.milli
-        output.month = self.month - duration.month
-        return output
+            output = Duration(0)
+            output.milli = self.milli - duration.milli
+            output.month = self.month - duration.month
+            return output
+
+    def __rsub__(self, time):
+        if isinstance(time, Duration):
+            output = Duration(0)
+            output.milli = time.milli - self.milli
+            output.month = time.month - self.month
+            return output
+        else:
+            return time - relativedelta(months=self.month, seconds=self.milli/1000)
+
+
 
     def floor(self, interval=None):
         if not isinstance(interval, Duration):
@@ -154,7 +172,7 @@ class Duration(object):
         rest = Math.floor(rest / 24)
 
         # DAY
-        if rest < 11 and rest != 7:
+        if (rest < 11 and rest != 7) or rest % 10 == 0:
             rem = rest
             rest = 0
         else:
@@ -162,11 +180,11 @@ class Duration(object):
             rest = Math.floor(rest / 7)
 
         if rem != 0:
-            output = "+" + rem + "day" + output
+            output = "+" + str(rem) + "day" + output
 
         # WEEK
         if rest != 0:
-            output = "+" + rest + "week" + output
+            output = "+" + str(rest) + "week" + output
 
         if isNegative:
             output = output.replace("+", "-")
@@ -183,7 +201,7 @@ class Duration(object):
                 if m != 0:
                     output = sign + m + "month" + output
                 y = Math.floor(month / 12)
-                output = sign + y + "year" + output
+                output = sign + str(y) + "year" + output
 
         if output[0] == "+":
             output = output[1::]

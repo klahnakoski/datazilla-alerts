@@ -30,12 +30,12 @@ from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.structs.wraps import wrap_dot, listwrap
+from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.timer import Timer
 
 
 NOW = datetime.utcnow()
-MAX_AGE = timedelta(days=90)
-OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
+MAX_AGE = Duration(days=90)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
@@ -49,16 +49,17 @@ Raw data:  {{details}}
 
 VERBOSE = True
 DEBUG = True  # SETTINGS CAN TURN OFF DEBUGGING
-
+DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
 def alert_sustained_median(settings, qb, alerts_db):
     """
     find single points that deviate from the trend
     """
-    # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
 
+    # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
+    oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = False if settings.param.debug is False else DEBUG  # SETTINGS CAN TURN OFF DEBUGGING
+    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query
@@ -122,7 +123,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"missing": {"field": settings.param.mark_complete}},
                     {"not": {"term": {settings.param.mark_complete: "done"}}}
                 ]},
-                {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
+                {"range": {settings.param.default.sort.value: {"gte": oldest_ts}}},
                 {"and": exists},
                 {"and": disabled},
                 {"or": [
@@ -178,9 +179,9 @@ def alert_sustained_median(settings, qb, alerts_db):
             test_param = set_default(*lookup)
 
             if settings.args.restart:
-                first_sample = OLDEST_TS
+                first_sample = oldest_ts
             else:
-                first_sample = MAX(MIN(min_push_date), OLDEST_TS)
+                first_sample = MAX(MIN(min_push_date), oldest_ts)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": test_param.sort.name, "aggregate": "min"},
@@ -211,9 +212,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "select": [
                         test_param.sort,
                         test_param.select.repo,
-                        test_param.select.value
-                        ] +
-                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")]+  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
+                        test_param.select.value,
+                    ]+
+                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")] +  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
                         query.edges,
                     "where": {"and": [
                         {"term": g},
@@ -450,11 +451,12 @@ def alert_sustained_median(settings, qb, alerts_db):
         if a == None:
             Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
 
-        if significant_difference(curr.severity, a.severity) or \
-                significant_score_difference(curr.confidence, a.confidence) or \
-                        curr.reason != a.reason:
+        if DEBUG_TOUCH_ALL_ALERTS or significant_difference(curr.severity, a.severity) or significant_score_difference(curr.confidence, a.confidence) or curr.reason != a.reason:
             curr.last_updated = NOW
             alerts_db.update("alerts", {"id": curr.id}, a)
+
+            if DEBUG_TOUCH_ALL_ALERTS:
+                alerts_db.execute("UPDATE alerts SET last_sent=NULL WHERE id={{id}}", {"id": curr.id})
 
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     if obsolete_alerts:

@@ -65,7 +65,7 @@ class test_alert_threshold:
             "SELECT last_run FROM reasons WHERE code={{type}}",
             {"type": REASON}
         )[0].last_run
-        assert last_run >= datetime.utcnow() + timedelta(minutes=-1)
+        assert last_run >= datetime.utcnow() + Duration(minutes=-1)
 
         #REMEMEBER id FOR CHECKING OBSOLETE
         self.alert_id = alert[0].id

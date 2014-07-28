@@ -70,7 +70,7 @@ class test_alert_exception():
             "SELECT last_run FROM reasons WHERE code={{type}}",
             {"type": REASON}
         )[0].last_run
-        expected_run_after = datetime.utcnow() + timedelta(minutes=-1)
+        expected_run_after = datetime.utcnow() + Duration(minutes=-1)
         assert last_run >= expected_run_after
 
         #REMEMEBER id FOR CHECKING OBSOLETE

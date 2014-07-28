@@ -8,7 +8,7 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
@@ -22,11 +22,12 @@ from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.times.durations import Duration
 
 
 SUSTAINED_REASON = "b2g_alert_sustained_median"
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=90)
+LOOK_BACK = Duration(days=90)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
