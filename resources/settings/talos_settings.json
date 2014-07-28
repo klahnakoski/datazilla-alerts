@@ -45,12 +45,12 @@
 		"suite": {
 			"dromaeo_css": {
 				"window_size": 30,
-				"min_regression": "10%",
+				"min_regression": "15%",
 				"better": "higher"
 			},
 			"dromaeo_dom": {
 				"window_size": 30,
-				"min_regression": "10%",
+				"min_regression": "15%",
 				"better": "higher"
 			},
 			"v8_7": {
@@ -61,7 +61,8 @@
 			},
 			"tp5o": {
 				"units": "ms",
-				"better": "lower"
+				"better": "lower",
+				"min_regression": "15%"
 			},
 			"tp4m": {
 				"units": "ms",
@@ -106,7 +107,7 @@
 		],
 		"verbose": true,
 		"mark_complete": "talos_sustained_median",
-		"combo_limit": 20  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {
 		"from": {
