@@ -97,6 +97,8 @@ class Struct(dict):
         return False
 
     def __getitem__(self, key):
+        if key == None:
+            return Null
         if isinstance(key, str):
             key = key.decode("utf8")
 

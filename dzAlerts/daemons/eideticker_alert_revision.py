@@ -34,36 +34,37 @@ NOW = datetime.utcnow()
 SEVERITY = 0.7
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
-SUBJECT = [
-    "[ALERT][Eideticker] {{details.example.Eideticker.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} in ",
-    {
-        "from": "details.tests",
-        "template": "{{test.suite}}",
-        "separator": ", "
-    }
-    ]
+SUBJECT = "[ALERT][Eideticker] {{details.example.Eideticker.Test}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Eideticker.Branch}}";
+
 TEMPLATE = [
     """
     <div>
     	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
-    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
-
-    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
+    <span style="font-size: 120%; display:inline-block">Revision: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision}}">{{revision}}</a></span>
+    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision}}">Previous</a>]
 
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr>
+    <td>Device</td>
+    <td>Suite</td>
+    <td>Test Name</td>
+    <td>Eideticker</td>
+    <td>DIFF</td>
+    <td>Date/Time</td>
+    <td>Before</td>
+    <td>After</td>
+    <td>Diff</td>
+    </tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
             <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="http://eideticker.mozilla.org/{{example.eideticker.url.path}}#/{{example.Eideticker.Device}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
+            <td><a href="http://eideticker.mozilla.org/{{example.eideticker.url.path}}#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
             <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eidieticker.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
@@ -109,7 +110,7 @@ def eideticker_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
-                    True if debug else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })
 
@@ -123,7 +124,6 @@ def eideticker_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"or":[
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
@@ -162,7 +162,7 @@ def eideticker_alert_revision(settings):
                     example.mercurial.url.branch = branch
                     example.eideticker.url = Struct(
                         metricname="timetostableframe",
-                        path=nvl(example.metadata.path, "")
+                        path=nvl(example.path, "")
                     )
                     example.charts.url = Struct(
                         sampleMin=Date(example.push_date_min).floor().format("%Y-%m-%d"),

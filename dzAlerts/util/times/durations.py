@@ -8,15 +8,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from datetime import timedelta
 
 from .. import regex
-from datetime import timedelta
-from dateutil.relativedelta import relativedelta
+from ..vendor.dateutil.relativedelta import relativedelta
 from ..cnv import CNV
 from ..collections import MIN
 from ..env.logs import Log
 from ..maths import Math
-from ..structs.wraps import unwrap, wrap
+from ..structs.wraps import wrap
 
 
 class Duration(object):

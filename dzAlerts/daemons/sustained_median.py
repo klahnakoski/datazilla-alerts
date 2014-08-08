@@ -59,7 +59,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
     oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
+    debug = True if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query
@@ -130,6 +130,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"not": debug},
                     {"and": [
                         #FOR DEBUGGING SPECIFIC SERIES
+                        {"term": {"metadata.device": "flame"}},
+                        {"term": {"metadata.test": "b2g-gallery-startup"}},
+                        {"exists": {"field": "metadata.value"}}
                         # {"term": {"result.test_name": "fps"}}
                         # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
@@ -313,7 +316,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r, i, rows: median_test(
                             rows[-test_param.window_size + i:i:].value,
                             rows[ i:test_param.window_size + i:].value,
-                            interpolate=False
+                            interpolate=False,
+                            resolution=test_param.resolution
                         ),
                         "sort": test_param.sort.name
                     }, {
@@ -384,7 +388,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     revision=v[settings.param.revision_dimension],
                     details=v,
                     severity=settings.param.severity,
-                    confidence=v.result.score
+                    confidence=v.ttest_result.score
                 )
                 alerts.append(alert)
 

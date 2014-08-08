@@ -77,25 +77,26 @@ class ElasticSearch(object):
 
 
     @staticmethod
-    def get_or_create_index(settings, schema, limit_replicas=False):
+    def get_or_create_index(settings, schema=None, limit_replicas=None):
         es = ElasticSearch(settings)
         aliases = es.get_aliases()
-        if settings.index not in [a.index for a in aliases]:
-            schema = CNV.JSON2object(CNV.object2JSON(schema), paths=True)
+        if settings.index not in aliases.index:
             es = ElasticSearch.create_index(settings, schema, limit_replicas=limit_replicas)
         return es
 
 
     @staticmethod
-    def create_index(settings, schema=None, limit_replicas=False):
+    def create_index(settings, schema=None, limit_replicas=None):
         if not schema and settings.schema_file:
             from .files import File
 
             schema = CNV.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
+        elif isinstance(schema, basestring):
+            schema = CNV.JSON2object(schema, paths=True)
         else:
-            schema = wrap(schema)
-            if isinstance(schema, basestring):
-                schema = CNV.JSON2object(schema)
+            schema = CNV.JSON2object(CNV.object2JSON(schema), paths=True)
+
+        limit_replicas = nvl(limit_replicas, settings.limit_replicas)
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
