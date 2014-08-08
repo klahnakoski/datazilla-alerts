@@ -20,33 +20,39 @@ class Struct(dict):
     Struct is used to declare an instance of an anonymous type, and has good
     features for manipulating JSON.  Anonymous types are necessary when
     writing sophisticated list comprehensions, or queries, and to keep them
-    readable.  There may be an argument to using dict(), but dict does not have
-    the features listed below.
+    readable.  In many ways, dict() can act as an anonymous type, but it does
+    not have the features listed here.
 
     0) a.b==a["b"]
-    1) the IDE does tab completion, and my spelling mistakes get found at "compile time"
-    2) it deals with missing keys gracefully, so I can put it into set operations (database
-       operations) without raising exceptions
+    1) by allowing dot notation, the IDE does tab completion and my spelling
+       mistakes get found at "compile time"
+    2) it deals with missing keys gracefully, so I can put it into set
+       operations (database operations) without raising exceptions
        a = wrap({})
        > a == {}
        a.b == None
        > True
        a.b.c == None
        > True
-    2b) missing keys is important when dealing with JSON, which is often almost anything
-    2b) you loose the ability to perform <code>a is None</code> checks, must always use <code>a == None</code> instead
+       a[None] == None
+       > True
+    2b) missing keys is important when dealing with JSON, which is often almost
+        anything
+    2c) you loose the ability to perform <code>a is None</code> checks, must
+        always use <code>a == None</code> instead
     3) you can access paths as a variable:   a["b.c"]==a.b.c
     4) you can set paths to values, missing dicts along the path are created:
        a = wrap({})
        > a == {}
        a["b.c"] = 42
        > a == {"b": {"c": 42}}
-    5) attribute names (keys) are corrected to unicode - it appears Python object.getattribute()
-       is called with str() even when using from __future__ import unicode_literals
+    5) attribute names (keys) are corrected to unicode - it appears Python
+       object.getattribute() is called with str() even when using
+       <code>from __future__ import unicode_literals</code>
 
-    MORE ON MISSING VALUES: http://www.numpy.org/NA-overview.html
-    IT ONLY CONSIDERS THE LEGITIMATE-FIELD-WITH-MISSING-VALUE (Statistical Null)
-    AND DOES NOT LOOK AT FIELD-DOES-NOT-EXIST-IN-THIS-CONTEXT (Database Null)
+    More on missing values: http://www.numpy.org/NA-overview.html
+    it only considers the legitimate-field-with-missing-value (Statistical Null)
+    and does not look at field-does-not-exist-in-this-context (Database Null)
 
     The Struct is a common pattern in many frameworks even though it goes by
     different names, some examples are:

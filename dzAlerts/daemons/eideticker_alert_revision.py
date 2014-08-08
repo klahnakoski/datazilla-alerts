@@ -33,13 +33,14 @@ LOOK_BACK = Duration(days=90)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
+TEST_REVISION = '2d88803a0b9c'
 
 SUBJECT = "[ALERT][Eideticker] {{details.example.Eideticker.Test}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Eideticker.Branch}}";
 
 TEMPLATE = [
     """
     <div>
-    	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
+    <div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
     <span style="font-size: 120%; display:inline-block">Revision: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision}}">{{revision}}</a></span>
     [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision}}">Previous</a>]
 
@@ -52,6 +53,7 @@ TEMPLATE = [
     <td>Suite</td>
     <td>Test Name</td>
     <td>Eideticker</td>
+    <td>Charts</td>
     <td>DIFF</td>
     <td>Date/Time</td>
     <td>Before</td>
@@ -64,8 +66,8 @@ TEMPLATE = [
             <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="http://eideticker.mozilla.org/{{example.eideticker.url.path}}#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
-            <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eidieticker.html#{{example.charts.url|url}}">charts!</a></td>
+            <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
+            <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eideticker.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
