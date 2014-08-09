@@ -130,9 +130,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"not": debug},
                     {"and": [
                         #FOR DEBUGGING SPECIFIC SERIES
-                        {"term": {"metadata.device": "flame"}},
-                        {"term": {"metadata.test": "b2g-gallery-startup"}},
-                        {"exists": {"field": "metadata.value"}}
+                        # {"term": {"metadata.device": "flame"}},
+                        # {"term": {"metadata.test": "b2g-gallery-startup"}},
+                        # {"exists": {"field": "metadata.value"}}
                         # {"term": {"result.test_name": "fps"}}
                         # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
@@ -140,12 +140,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                         # {"term": {"metadata.test": "nytimes-load"}},
                         # {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
-                        # {"term": {"testrun.suite": "dromaeo_css"}},
-                        # {"term": {"result.test_name": "ext.html.9"}},
-                        # {"term": {"test_machine.platform": "x86_64"}},
+                        {"term": {"testrun.suite": "tcanvasmark"}},
+                        # {"term": {"result.test_name": "canvasmark"}},
+                        {"term": {"test_machine.platform": "x86_64"}},
                         # {"term": {"test_build.name": "Firefox"}},
-                        # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                        # {"term": {"test_build.branch": "Fx-Team-Non-PGO"}}
+                        {"term": {"test_machine.osversion": "6.2.9200"}},
+                        {"term": {"test_build.branch": "Mozilla-Aurora"}}
 
                     ]}
                 ]}
@@ -157,7 +157,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     #BRING IN ALL NEEDED DATA
     if verbose:
-        Log.note("Pull all data for {{num}} groups:\n{{groups.name}}", {
+        Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
             "num": len(new_test_points),
             "groups": query.edges
         })

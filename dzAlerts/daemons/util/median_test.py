@@ -26,7 +26,7 @@ def median_test(samples1, samples2, resolution=None, interpolate=True):
         return {"diff": 0, "score": 0}
     median = dzAlerts.util.maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
 
-    if resolution is None:
+    if resolution == None:
         if AND([Math.is_integer(v) for v in samples1 + samples2]):
             resolution = 1.0  # IF WE SEE INTEGERS, THEN BLUR
         else:

@@ -35,10 +35,13 @@ if DEBUG_STRANGMAN:
 
 
 def chisquare(f_obs, f_exp):
-    py_result = strangman.stats.chisquare(
-        f_obs,
-        f_exp
-    )
+    try:
+        py_result = strangman.stats.chisquare(
+            f_obs,
+            f_exp
+        )
+    except Exception, e:
+        Log.error("problem with call", e)
 
     if DEBUG_STRANGMAN:
         sp_result = scipy.stats.chisquare(
