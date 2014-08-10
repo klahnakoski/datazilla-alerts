@@ -430,17 +430,17 @@ def sort(data, fieldnames=None):
         Log.error("Problem sorting\n{{data}}", {"data": data}, e)
 
 
+def pairwise(values):
+    """
+    WITH values = [a, b, c, d, ...]
+    RETURN [(a, b), (b, c), (c, d), ...]
+    """
+    i = iter(values)
+    a = next(i)
 
-
-def add(*values):
-    total = Null
-    for v in values:
-        if total == None:
-            total = v
-        else:
-            if v != None:
-                total += v
-    return total
+    for b in i:
+        yield (a, b)
+        a = b
 
 
 def filter(data, where):

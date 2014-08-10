@@ -1,10 +1,22 @@
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
+from dzAlerts.util.env.logs import Log
+from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import Struct
 
 
 def partition(series, score_threshold):
+    """
+    THIS IS TOTALLY FAKE UNTIL I FIND SOFTWARE THAT DOES THIS ALREADY,
+    OR I DO THE REAL MATH MYSELF.
+    """
     output = []
     _partition(series, score_threshold, output)
+
+    # REVIEW THE KNOTS TO ENSURE WE HAVE OPTIMAL PARTITIONS
+    for s1, s2 in Q.pairwise(output):
+        if welchs_ttest(s1, s2).score < score_threshold:
+            Log.error("We seem to have determined a false knot")
+    return output
 
 
 def _partition(series, score_threshold, output):

@@ -64,7 +64,6 @@ def alert_sustained_median(settings, qb, alerts_db):
         Log.warning("Debugging is ON")
     query = settings.query
 
-
     def is_bad(r, test_param):
         if test_param.min_mscore < r.result.score:
             if test_param.disable:
