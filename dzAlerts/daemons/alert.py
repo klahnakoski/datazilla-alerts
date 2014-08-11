@@ -152,6 +152,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
     new_alerts = found_alerts - old_alerts
     changed_alerts = found_alerts & old_alerts
     obsolete_alerts = old_alerts - found_alerts
+
     if verbose:
         Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
             "num_new": len(new_alerts),
@@ -189,10 +190,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
     #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     for old_alert in obsolete_alerts.filter({"not": {"term": {"status": "obsolete"}}}):
         alerts_db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
-    alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
-        "now": NOW,
-        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": settings.param.reason}})
-    })
+
     alerts_db.flush()
 
 

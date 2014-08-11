@@ -22,6 +22,7 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.maths import Math
 from dzAlerts.util.strings import between, expand_template
+from dzAlerts.util.times.durations import Duration
 from util.testing import make_test_database
 
 

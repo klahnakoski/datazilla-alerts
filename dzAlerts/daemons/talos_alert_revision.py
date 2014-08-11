@@ -30,6 +30,7 @@ from dzAlerts.util.times.dates import Date
 DEBUG_TOUCH_ALL_ALERTS = False
 REASON = "talos_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
+MIN_AGE = Duration(hours=2)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
@@ -138,6 +139,7 @@ def talos_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
+                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     # {"term":{"revision":"f3192b2f9195"}}
                 ]}
