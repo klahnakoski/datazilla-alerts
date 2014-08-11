@@ -62,6 +62,9 @@ class Struct(dict):
     * collections.namedtuple() - gives attribute names to tuple indicies
     * C# Linq requires anonymous types to avoid large amounts of boilerplate code.
 
+
+    http://www.saltycrane.com/blog/2012/08/python-data-object-motivated-desire-mutable-namedtuple-default-values/
+
     """
 
     def __init__(self, **map):

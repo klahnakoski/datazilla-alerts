@@ -6,8 +6,8 @@ from dzAlerts.util.struct import Struct
 
 def partition(series, score_threshold):
     """
-    THIS IS TOTALLY FAKE UNTIL I FIND SOFTWARE THAT DOES THIS ALREADY,
-    OR I DO THE REAL MATH MYSELF.
+    THIS IS TOTALLY FAKE UNTIL I FIND SOFTWARE THAT DOES THIS ALREADY
+    (http://arxiv.org/pdf/1309.3295.pdf), OR I DO THE REAL MATH MYSELF.
     """
     output = []
     _partition(series, score_threshold, output)

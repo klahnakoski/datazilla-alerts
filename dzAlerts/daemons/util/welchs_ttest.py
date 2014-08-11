@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from math import log
 from dzAlerts.util.env.logs import Log
 
-from dzAlerts.util.vendor.strangman.stats import lttest_ind
+from dzAlerts.util.vendor.strangman.stats import lttest_ind, ttest_ind
 from dzAlerts.util.struct import unwrap
 
 
@@ -23,7 +23,7 @@ def welchs_ttest(a, b):
         if len(a) < 2 or len(b) < 2:
             return {"tstat": 0, "score": 0}
 
-        t, prob = lttest_ind(unwrap(a), unwrap(b))
+        t, prob = ttest_ind(unwrap(a), unwrap(b))
 
         if prob == 0.0:
             return {"tstat": t, "score": 19}
