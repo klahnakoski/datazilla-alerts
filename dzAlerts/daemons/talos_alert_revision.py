@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from dzAlerts.daemons.alert import update_alert_status
 
 from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
@@ -26,7 +27,7 @@ from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.dates import Date
 
 
-
+DEBUG_TOUCH_ALL_ALERTS = False
 REASON = "talos_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
 NOW = datetime.utcnow()
@@ -115,20 +116,20 @@ TEMPLATE = [
 def talos_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
-    with DB(settings.alerts) as db:
+    with DB(settings.alerts) as alerts_db:
         with ESQuery(ElasticSearch(settings.query["from"])) as esq:
 
-            dbq = DBQuery(db)
+            dbq = DBQuery(alerts_db)
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             #TODO: REMOVE, LEAVE IN DB
-            if db.debug:
-                db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+            if alerts_db.debug:
+                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
                     "reason": REASON
                 })
-                db.flush()
+                alerts_db.flush()
 
             #EXISTING SUSTAINED EXCEPTIONS
             existing_sustained_alerts = dbq.query({
@@ -144,27 +145,8 @@ def talos_alert_revision(settings):
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 
-            #EXISTING REVISION-LEVEL ALERTS
-            old_alerts = dbq.query({
-                "from": "alerts",
-                "select": "*",
-                "where": {"and": [
-                    {"term": {"reason": REASON}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
-                    {"or": [
-                        {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": SUSTAINED_REASON}},
-                        {"term": {"status": "obsolete"}},
-                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
-                    ]}
-                ]},
-                # "sort":"status",
-                # "limit":10
-            })
-            old_alerts = Q.unique_index(old_alerts, "revision")
-
             #SUMMARIZE
-            known_alerts = StructList()
+            alerts = StructList()
 
             total_tests = esq.query({
                 "from": "talos",
@@ -233,7 +215,7 @@ def talos_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                known_alerts.append({
+                alerts.append({
                     "status": "new",
                     "create_time": CNV.milli2datetime(worst_in_revision.push_date),
                     "reason": REASON,
@@ -250,18 +232,32 @@ def talos_alert_revision(settings):
                     "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
                 })
 
-            known_alerts = Q.unique_index(known_alerts, "revision")
 
-            #NEW ALERTS, JUST INSERT
-            new_alerts = known_alerts - old_alerts
-            if new_alerts:
-                for revision in new_alerts:
-                    revision.id = SQL("util.newid()")
-                    revision.last_updated = NOW
-                db.insert_list("alerts", new_alerts)
+            #EXISTING REVISION-LEVEL ALERTS
+            old_alerts = dbq.query({
+                "from": "alerts",
+                "select": "*",
+                "where": {"and": [
+                    {"term": {"reason": REASON}},
+                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
+                    {"or": [
+                        {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                        {"term": {"reason": SUSTAINED_REASON}},
+                        {"term": {"status": "obsolete"}},
+                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    ]}
+                ]},
+                # "sort":"status",
+                # "limit":10
+            })
+
+            found_alerts = Q.unique_index(alerts, "revision")
+            old_alerts = Q.unique_index(old_alerts, "revision")
+
+            update_alert_status(settings, alerts_db, found_alerts, old_alerts)
 
             #SHOW SUSTAINED ALERTS ARE COVERED
-            db.execute("""
+            alerts_db.execute("""
                 INSERT INTO hierarchy (parent, child)
                 SELECT
                     r.id parent,
@@ -275,30 +271,13 @@ def talos_alert_revision(settings):
                 WHERE
                     {{where}}
             """, {
-                "where": esfilter2sqlwhere(db, {"and": [
+                "where": esfilter2sqlwhere(alerts_db, {"and": [
                     {"term": {"p.reason": settings.param.reason}},
                     {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON
             })
-
-            #CURRENT ALERTS, UPDATE IF DIFFERENT
-            changed_alerts = known_alerts & old_alerts
-            for changed_alert in changed_alerts:
-                if len(nvl(changed_alert.solution, "").strip()) != 0:
-                    continue  # DO NOT TOUCH SOLVED ALERTS
-
-                old_alert = old_alerts[changed_alert]
-                if old_alert.status == 'obsolete' or significant_difference(changed_alert.severity, old_alert.severity) or significant_score_difference(changed_alert.confidence, old_alert.confidence):
-                    changed_alert.last_updated = NOW
-                    db.update("alerts", {"id": old_alert.id}, changed_alert)
-
-            #OLD ALERTS, OBSOLETE
-            for old_alert in old_alerts - known_alerts:
-                if old_alert.status == 'obsolete':
-                    continue
-                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 
 
 def main():

@@ -12,7 +12,9 @@ from datetime import datetime
 from math import log10
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from dzAlerts.daemons.talos_alert_revision import TEMPLATE, SUBJECT, REASON
+from dzAlerts.daemons.util import significant_score_difference, significant_difference
 from dzAlerts.util.cnv import CNV
+from dzAlerts.util.collections import OR
 from dzAlerts.util.env import startup
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
@@ -33,8 +35,10 @@ LOOK_BACK = Duration(days=30)
 MAX_EMAIL_LENGTH = 15000
 MAIL_LIMIT = 10  # DO NOT SEND TOO MANY MAILS AT ONCE
 EPSILON = 0.0001
+VERBOSE = True
 SEND_REASONS = [b2g_alert_revision.REASON, talos_alert_revision.REASON, eideticker_alert_revision.REASON]
-
+DEBUG_TOUCH_ALL_ALERTS = False
+NOW = datetime.utcnow()
 
 def send_alerts(settings, db):
     """
@@ -140,6 +144,60 @@ def send_alerts(settings, db):
 
     except Exception, e:
         Log.error("Could not send alerts", e)
+
+
+def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
+    verbose = nvl(settings.param.verbose, VERBOSE)
+
+    new_alerts = found_alerts - old_alerts
+    changed_alerts = found_alerts & old_alerts
+    obsolete_alerts = old_alerts - found_alerts
+    if verbose:
+        Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
+            "num_new": len(new_alerts),
+            "num_change": len(changed_alerts),
+            "num_delete": len(obsolete_alerts)
+        })
+    if new_alerts:
+        for a in new_alerts:
+            a.id = SQL("util.newid()")
+            a.last_updated = NOW
+        try:
+            alerts_db.insert_list("alerts", new_alerts)
+        except Exception, e:
+            Log.error("problem with insert", e)
+
+    #CURRENT ALERTS, UPDATE IF DIFFERENT
+    for new_alert in changed_alerts:
+        old_alert = old_alerts[new_alert]
+        if len(nvl(old_alert.solution, "").strip()) != 0:
+            continue  # DO NOT TOUCH SOLVED ALERTS
+
+        if new_alert == None:
+            Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": old_alert.tdad.id})
+
+        if OR(
+            DEBUG_TOUCH_ALL_ALERTS,
+            old_alert.status == 'obsolete',
+            significant_difference(new_alert.severity, old_alert.severity),
+            significant_score_difference(new_alert.confidence, old_alert.confidence)
+        ):
+            new_alert.last_updated = NOW
+            if DEBUG_TOUCH_ALL_ALERTS:
+                alerts_db.update("alerts", {"id": old_alert.id}, new_alert)
+
+    #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
+    for old_alert in obsolete_alerts.filter({"not": {"term": {"status": "obsolete"}}}):
+        alerts_db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
+    alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
+        "now": NOW,
+        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": settings.param.reason}})
+    })
+    alerts_db.flush()
+
+
+
+
 
 
 if __name__ == '__main__':

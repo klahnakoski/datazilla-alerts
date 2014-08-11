@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
+from dzAlerts.daemons.alert import update_alert_status
 from dzAlerts.daemons.util import significant_difference, significant_score_difference
 
 from dzAlerts.util.collections import MIN, MAX
@@ -50,6 +51,7 @@ Raw data:  {{details}}
 VERBOSE = True
 DEBUG = True  # SETTINGS CAN TURN OFF DEBUGGING
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
+
 
 def alert_sustained_median(settings, qb, alerts_db):
     """
@@ -402,9 +404,9 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     #CHECK THE CURRENT ALERTS
     if not evaled_tests:
-        current_alerts = StructList.EMPTY
+        old_alerts = StructList.EMPTY
     else:
-        current_alerts = DBQuery(alerts_db).query({
+        old_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
                 "id",
@@ -423,62 +425,9 @@ def alert_sustained_median(settings, qb, alerts_db):
         })
 
     found_alerts = Q.unique_index(alerts, "tdad_id")
-    current_alerts = Q.unique_index(current_alerts, "tdad_id")
+    old_alerts = Q.unique_index(old_alerts, "tdad_id")
 
-    new_alerts = found_alerts - current_alerts
-    changed_alerts = current_alerts & found_alerts
-    obsolete_alerts = Q.filter(current_alerts - found_alerts, {"not": {"term": {"status": "obsolete"}}})
-
-    if verbose:
-        Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
-            "num_new": len(new_alerts),
-            "num_change": len(changed_alerts),
-            "num_delete": len(obsolete_alerts)
-        })
-
-    if new_alerts:
-        for a in new_alerts:
-            a.id = SQL("util.newid()")
-            a.last_updated = NOW
-        try:
-            alerts_db.insert_list("alerts", new_alerts)
-        except Exception, e:
-            Log.error("problem with insert", e)
-
-    for curr in changed_alerts:
-        if len(nvl(curr.solution, "").strip()) != 0:
-            continue  # DO NOT TOUCH SOLVED ALERTS
-
-        a = found_alerts[(curr.tdad_id, )]
-
-        if a == None:
-            Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
-
-        if DEBUG_TOUCH_ALL_ALERTS or significant_difference(curr.severity, a.severity) or significant_score_difference(curr.confidence, a.confidence) or curr.reason != a.reason:
-            curr.last_updated = NOW
-            alerts_db.update("alerts", {"id": curr.id}, a)
-
-            if DEBUG_TOUCH_ALL_ALERTS:
-                alerts_db.execute("UPDATE alerts SET last_sent=NULL WHERE id={{id}}", {"id": curr.id})
-
-    #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
-    if obsolete_alerts:
-        alerts_db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
-            "where": esfilter2sqlwhere(
-                alerts_db,
-                {"and": [
-                    {"terms": {"id": obsolete_alerts.id}},
-                    {"not": {"term": {"status": "obsolete"}}}
-                ]}
-            )
-        })
-
-    alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
-        "now": NOW,
-        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": settings.param.reason}})
-    })
-
-    alerts_db.flush()
+    update_alert_status(settings, alerts_db, found_alerts, old_alerts)
 
     if verbose:
         Log.note("Marking {{num}} {{ids}} as 'done'", {
