@@ -8,11 +8,9 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
+from datetime import datetime
 from dzAlerts.daemons.alert import update_alert_status
-from dzAlerts.daemons.talos_alert_revision import MECURIAL_PATH, TBPL_PATH
 
-from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -20,7 +18,7 @@ from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList, Struct
@@ -31,6 +29,7 @@ from dzAlerts.util.times.durations import Duration
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
+MIN_AGE = Duration(hours=2)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
@@ -67,7 +66,7 @@ TEMPLATE = [
             <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}">Eideticker</a></td>
+            <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}/90">Eideticker</a></td>
             <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eideticker.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
@@ -113,6 +112,7 @@ def eideticker_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
+                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
                     True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })

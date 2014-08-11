@@ -29,6 +29,7 @@ from dzAlerts.util.times.durations import Duration
 SUSTAINED_REASON = "b2g_alert_sustained_median"
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
+MIN_AGE = Duration(hours=2)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
@@ -112,6 +113,7 @@ def b2g_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
+                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })

@@ -139,7 +139,7 @@ def talos_alert_revision(settings):
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
-                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},
+                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     # {"term":{"revision":"f3192b2f9195"}}
                 ]}
