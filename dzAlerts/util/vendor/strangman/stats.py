@@ -237,37 +237,6 @@ __version__ = 0.6
 ############# DISPATCH CODE ##############
 
 
-class Dispatch:
-    """
-The Dispatch class, care of David Ascher, allows different functions to
-be called depending on the argument types.  This way, there can be one
-function name regardless of the argument type.  To access function doc
-in stats.py module, prefix the function with an 'l' or 'a' for list or
-array arguments, respectively.  That is, print stats.lmean.__doc__ or
-print stats.amean.__doc__ or whatever.
-"""
-
-    def __init__(self, *tuples):
-        self._dispatch = {}
-        for func, types in tuples:
-            for t in types:
-                if t in self._dispatch.keys():
-                    raise ValueError, "can't have two dispatches on " + str(t)
-                self._dispatch[t] = func
-        self._types = self._dispatch.keys()
-
-    def __call__(self, arg1, *args, **kw):
-        if type(arg1) not in self._types:
-            raise TypeError, "don't know how to dispatch %s arguments" % type(arg1)
-        return apply(self._dispatch[type(arg1)], (arg1,) + args, kw)
-
-
-##########################################################################
-########################   LIST-BASED FUNCTIONS   ########################
-##########################################################################
-
-### Define these regardless
-
 ####################################
 #######  CENTRAL TENDENCY  #########
 ####################################
@@ -468,7 +437,7 @@ Returns: a 2D frequency table (col [0:n-1]=scores, col n=frequencies)
     freq = []
     for item in scores:
         freq.append(inlist.count(item))
-    return pstat.abut(scores, freq)
+    return zip(scores, freq)
 
 
 def scoreatpercentile(inlist, percent):
@@ -901,32 +870,30 @@ Returns: Spearman's r, two-tailed p-value
     return rs, probrs
 
 
-def pointbiserialr(x, y):
+def pointbiserialr(cats, vals):
     """
 Calculates a point-biserial correlation coefficient and the associated
 probability value.  Taken from Heiman's Basic Statistics for the Behav.
 Sci (1st), p.194.
 
-Usage:   lpointbiserialr(x,y)      where x,y are equal-length lists
+Usage:   pointbiserialr(x,y)      where x,y are equal-length lists
 Returns: Point-biserial r, two-tailed p-value
 """
     TINY = 1e-30
-    if len(x) <> len(y):
+    if len(cats) <> len(vals):
         raise ValueError, 'INPUT VALUES NOT PAIRED IN pointbiserialr.  ABORTING.'
-    data = pstat.abut(x, y)
-    categories = pstat.unique(x)
+    data = zip(cats, vals)
+    categories = pstat.unique(cats)
     if len(categories) <> 2:
         raise ValueError, "Exactly 2 categories required for pointbiserialr()."
     else:   # there are 2 categories, continue
-        codemap = pstat.abut(categories, range(2))
-        recoded = pstat.recode(data, codemap, 0)
-        x = pstat.linexand(data, 0, categories[0])
-        y = pstat.linexand(data, 0, categories[1])
-        xmean = mean(pstat.colex(x, 1))
-        ymean = mean(pstat.colex(y, 1))
-        n = len(data)
-        adjust = math.sqrt((len(x) / float(n)) * (len(y) / float(n)))
-        rpb = (ymean - xmean) / samplestdev(pstat.colex(data, 1)) * adjust
+        c1 = [v for i, v in enumerate(vals) if cats[i] == categories[0]]
+        c2 = [v for i, v in enumerate(vals) if cats[i] == categories[1]]
+        xmean = mean(c1)
+        ymean = mean(c2)
+        n = len(vals)
+        adjust = math.sqrt((len(c1) / float(n)) * (len(c2) / float(n)))
+        rpb = (ymean - xmean) / samplestdev(vals) * adjust
         df = n - 2
         t = rpb * math.sqrt(df / ((1.0 - rpb + TINY) * (1.0 + rpb + TINY)))
         prob = betai(0.5 * df, 0.5, df / (df + t * t))  # t already a float
@@ -1288,7 +1255,7 @@ Returns: chi-square statistic, associated p-value
     if k < 3:
         raise ValueError, 'Less than 3 levels.  Friedman test not appropriate.'
     n = len(args[0])
-    data = apply(pstat.abut, tuple(args))
+    data = apply(zip, tuple(args))
     for i in range(len(data)):
         data[i] = rankdata(data[i])
     ssbn = 0
@@ -1457,11 +1424,11 @@ Usage:   lfprob(dfnum, dfden, F)   where usually dfnum=dfbn, dfden=dfwn
 
 def betacf(a, b, x):
     """
-This function evaluates the continued fraction form of the incomplete
-Beta function, betai.  (Adapted from: Numerical Recipies in C.)
+    This function evaluates the continued fraction form of the incomplete
+    Beta function, betai.  (Adapted from: Numerical Recipies in C.)
 
-Usage:   lbetacf(a,b,x)
-"""
+    Usage:   lbetacf(a,b,x)
+    """
     ITMAX = 200
     EPS = 3.0e-7
 
@@ -1491,15 +1458,14 @@ Usage:   lbetacf(a,b,x)
 
 def gammln(xx):
     """
-Returns the gamma function of xx.
-    Gamma(z) = Integral(0,infinity) of t^(z-1)exp(-t) dt.
-(Adapted from: Numerical Recipies in C.)
+    Returns the gamma function of xx.
+        Gamma(z) = Integral(0,infinity) of t^(z-1)exp(-t) dt.
+    (Adapted from: Numerical Recipies in C.)
 
-Usage:   lgammln(xx)
-"""
+    Usage:   lgammln(xx)
+    """
 
-    coeff = [76.18009173, -86.50532033, 24.01409822, -1.231739516,
-        0.120858003e-2, -0.536382e-5]
+    coeff = [76.18009173, -86.50532033, 24.01409822, -1.231739516, 0.120858003e-2, -0.536382e-5]
     x = xx - 1.0
     tmp = x + 5.5
     tmp = tmp - (x + 0.5) * math.log(tmp)
@@ -1524,11 +1490,12 @@ Usage:   lbetai(a,b,x)
 """
     if (x < 0.0 or x > 1.0):
         raise ValueError, 'Bad x in lbetai'
+
     if (x == 0.0 or x == 1.0):
         bt = 0.0
     else:
-        bt = math.exp(gammln(a + b) - gammln(a) - gammln(b) + a * math.log(x) + b *
-                      math.log(1.0 - x))
+        bt = math.exp(gammln(a + b) - gammln(a) - gammln(b) + a * math.log(x) + b * math.log(1.0 - x))
+
     if (x < (a + 1.0) / (a + b + 2.0)):
         return bt * betacf(a, b, x) / float(a)
     else:
@@ -1587,49 +1554,6 @@ Usage:   lF_value(ER,EF,dfnum,dfden)
 """
     return ((ER - EF) / float(dfnum) / (EF / float(dfden)))
 
-
-####################################
-########  SUPPORT FUNCTIONS  #######
-####################################
-
-def writecc(listoflists, file, writetype='w', extra=2):
-    """
-Writes a list of lists to a file in columns, customized by the max
-size of items within the columns (max size of items in col, +2 characters)
-to specified file.  File-overwrite is the default.
-
-Usage:   writecc (listoflists,file,writetype='w',extra=2)
-Returns: None
-"""
-    if type(listoflists[0]) not in [ListType, TupleType]:
-        listoflists = [listoflists]
-    outfile = open(file, writetype)
-    rowstokill = []
-    list2print = copy.deepcopy(listoflists)
-    for i in range(len(listoflists)):
-        if listoflists[i] == ['\n'] or listoflists[i] == '\n' or listoflists[i] == 'dashes':
-            rowstokill = rowstokill + [i]
-    rowstokill.reverse()
-    for row in rowstokill:
-        del list2print[row]
-    maxsize = [0] * len(list2print[0])
-    for col in range(len(list2print[0])):
-        items = pstat.colex(list2print, col)
-        items = map(pstat.makestr, items)
-        maxsize[col] = max(map(len, items)) + extra
-    for row in listoflists:
-        if row == ['\n'] or row == '\n':
-            outfile.write('\n')
-        elif row == ['dashes'] or row == 'dashes':
-            dashes = [0] * len(maxsize)
-            for j in range(len(maxsize)):
-                dashes[j] = '-' * (maxsize[j] - 2)
-            outfile.write(pstat.lineincustcols(dashes, maxsize))
-        else:
-            outfile.write(pstat.lineincustcols(row, maxsize))
-        outfile.write('\n')
-    outfile.close()
-    return None
 
 
 def incr(l, cap):        # to increment a list up to a max-list of 'cap'
@@ -1698,7 +1622,7 @@ Usage:   lsummult(list1,list2)
     if len(list1) <> len(list2):
         raise ValueError, "Lists not equal length in summult."
     s = 0
-    for item1, item2 in pstat.abut(list1, list2):
+    for item1, item2 in zip(list1, list2):
         s = s + item1 * item2
     return s
 
