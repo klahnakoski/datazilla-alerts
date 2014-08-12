@@ -37,19 +37,13 @@ class Multiset(object):
             Log.error("Not expected", e)
 
     def add(self, value):
-        from ..env.logs import Log
-
-        Log.unexpected("not implemented")
+        raise NotImplementedError
 
     def extend(self, values):
-        from ..env.logs import Log
-
-        Log.unexpected("not implemented")
+        raise NotImplementedError
 
     def remove(self, value):
-        from ..env.logs import Log
-
-        Log.unexpected("not implemented")
+        raise NotImplementedError
 
 
 class _Multiset(Multiset):

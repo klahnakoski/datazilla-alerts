@@ -320,7 +320,7 @@ class Log(object):
 
 
     def write(self):
-        Log.error("not implemented")
+        raise NotImplementedError
 
 def extract_stack(start=0):
     """
