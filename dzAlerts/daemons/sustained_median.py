@@ -8,9 +8,8 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-from dzAlerts.daemons.alert import update_alert_status
-from dzAlerts.daemons.util import significant_difference, significant_score_difference
+from datetime import datetime
+from dzAlerts.daemons import util
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -18,14 +17,13 @@ from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
-from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
+from dzAlerts.util.queries.db_query import DBQuery
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
 from dzAlerts.util.struct import nvl, StructList, literal_field, split_field
-from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
@@ -137,16 +135,16 @@ def alert_sustained_median(settings, qb, alerts_db):
                         # {"term": {"result.test_name": "fps"}}
                         # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
-                        # {"term":{"metadata.test":"startup-abouthome-dirty"}}
-                        # {"term": {"metadata.test": "nytimes-load"}},
-                        # {"term": {"metadata.device": "samsung-gn"}},
+                        {"term":{"metadata.branch":"mozilla-central"}},
+                        {"term": {"metadata.test": "imgur"}},
+                        {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
-                        {"term": {"testrun.suite": "tcanvasmark"}},
+                        # {"term": {"testrun.suite": "tcanvasmark"}},
                         # {"term": {"result.test_name": "canvasmark"}},
-                        {"term": {"test_machine.platform": "x86_64"}},
+                        # {"term": {"test_machine.platform": "x86_64"}},
                         # {"term": {"test_build.name": "Firefox"}},
-                        {"term": {"test_machine.osversion": "6.2.9200"}},
-                        {"term": {"test_build.branch": "Mozilla-Aurora"}}
+                        # {"term": {"test_machine.osversion": "6.2.9200"}},
+                        # {"term": {"test_build.branch": "Mozilla-Aurora"}}
 
                     ]}
                 ]}
@@ -427,7 +425,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     found_alerts = Q.unique_index(alerts, "tdad_id")
     old_alerts = Q.unique_index(old_alerts, "tdad_id")
 
-    update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+    util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
 
     if verbose:
         Log.note("Marking {{num}} {{ids}} as 'done'", {

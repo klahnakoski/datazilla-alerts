@@ -9,9 +9,6 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.daemons.alert import update_alert_status
-
-from dzAlerts.daemons.util import significant_difference, significant_score_difference
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -19,7 +16,7 @@ from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList
@@ -200,7 +197,7 @@ def b2g_alert_revision(settings):
             found_alerts = Q.unique_index(alerts, "revision")
             old_alerts = Q.unique_index(old_alerts, "revision")
 
-            update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+            d.aemonsupdate_alert_status(settings, alerts_db, found_alerts, old_alerts)
 
             #SHOW SUSTAINED ALERTS ARE COVERED
             alerts_db.execute("""
@@ -238,3 +235,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+

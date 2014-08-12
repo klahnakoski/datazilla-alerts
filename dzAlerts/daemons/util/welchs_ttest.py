@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from math import log
 from dzAlerts.util.env.logs import Log
 
-from dzAlerts.util.vendor.strangman.stats import lttest_ind, ttest_ind
+from dzAlerts.util.vendor.strangman.stats import ttest_ind
 from dzAlerts.util.struct import unwrap
 
 

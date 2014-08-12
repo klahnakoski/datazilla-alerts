@@ -9,8 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.daemons.alert import update_alert_status
-
+from dzAlerts.daemons import util
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -66,7 +65,7 @@ TEMPLATE = [
             <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metricname}}/90">Eideticker</a></td>
+            <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metric}}/90">Eideticker</a></td>
             <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eideticker.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
@@ -149,7 +148,7 @@ def eideticker_alert_revision(settings):
 
                     example.mercurial.url.branch = branch
                     example.eideticker.url = Struct(
-                        metricname="timetostableframe",
+                        metric=example.metric,
                         path=nvl(example.path, "")
                     )
                     example.charts.url = Struct(
@@ -157,7 +156,8 @@ def eideticker_alert_revision(settings):
                         sampleMax=Date(stop).floor().format("%Y-%m-%d"),
                         test=example.Eideticker.Test,
                         branch=example.Eideticker.Branch,
-                        device=example.Eideticker.Device
+                        device=example.Eideticker.Device,
+                        metric=example.metric
                     )
 
                     num_except = len(exceptions)
@@ -215,7 +215,7 @@ def eideticker_alert_revision(settings):
             found_alerts = Q.unique_index(alerts, "revision")
             old_alerts = Q.unique_index(old_alerts, "revision")
 
-            update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+            util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
 
             #SHOW SUSTAINED ALERTS ARE COVERED
             alerts_db.execute("""

@@ -96,7 +96,20 @@ def etl(settings):
                 data = wrap(response.json())
                 data.metadata = metadata
                 # FIND DEFAULT VALUE TO TRACK
-                data.metadata.value = nvl(data.metrics[data.test_info.defaultMeasureId], list(data.metrics.values())[0] if len(list(data.metrics.values())) == 1 else None)
+                if data.test_info.defaultMeasureId:
+                    pass
+                elif data.metrics.timetostableframe:
+                    data.test_info.defaultMeasureId = "timetostableframe"
+                elif data.metrics.checkerboard:
+                    data.test_info.defaultMeasureId = "checkerboard"
+                elif data.metrics.overallentropy:
+                    data.test_info.defaultMeasureId = "overallentropy"
+                elif data.metrics.fps:
+                    data.test_info.defaultMeasureId = "fps"
+                elif len(data.metrics.keys()) == 1:
+                    data.test_info.defaultMeasureId = data.metrics.keys()[0]
+                data.metadata.value = data.metrics[data.test_info.defaultMeasureId]
+
                 sink.add({"id": metadata.uuid, "value": data})
             except Exception, e:
                 Log.warning("problem getting details from {{response}}", {"response": response}, e)

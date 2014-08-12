@@ -50,6 +50,9 @@
 						},
 						"date": {
 							"type": "long"
+						},
+						"value":{
+							"type": "double"
 						}
 					}
 				},
@@ -160,6 +163,14 @@
 						},
 						"uniqueframes": {
 							"type": "long"
+						}
+					}
+				},
+				"test_info":{
+					"properties": {
+						"defaultMeasureId": {
+							"index": "not_analyzed",
+							"type": "string"
 						}
 					}
 				},
