@@ -20,6 +20,7 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
+from dzAlerts.util.thread.threads import Thread
 from dzAlerts.util.times.durations import Duration
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  # SIMPLE severity*confidence LIMIT (FOR NOW)
@@ -154,5 +155,6 @@ if __name__ == '__main__':
         Log.note(str(e))
         Log.warning("Failure to run alerts", e)
     finally:
+        Thread.sleep(seconds=2)
         Log.stop()
 
