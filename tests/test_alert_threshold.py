@@ -60,17 +60,17 @@ class test_alert_threshold:
         assert alert[0].severity == self.severity
         assert alert[0].confidence == 1.0
 
-        #VERIFY last_run HAS BEEEN UPDATED
+        # VERIFY last_run HAS BEEEN UPDATED
         last_run = self.db.query(
             "SELECT last_run FROM reasons WHERE code={{type}}",
             {"type": REASON}
         )[0].last_run
-        assert last_run >= datetime.utcnow() + timedelta(minutes=-1)
+        assert last_run >= datetime.utcnow() + Duration(minutes=-1)
 
-        #REMEMEBER id FOR CHECKING OBSOLETE
+        # REMEMEBER id FOR CHECKING OBSOLETE
         self.alert_id = alert[0].id
 
-        #VERIFY test_data_all_dimensions HAS BEEN MARKED PROPERLY
+        # VERIFY test_data_all_dimensions HAS BEEN MARKED PROPERLY
         h0_rejected = self.db.query("""
             SELECT
                 h0_rejected
@@ -90,8 +90,8 @@ class test_alert_threshold:
 
     ## TEST AN INCREASE IN THE THRESHOLD OBSOLETES THE ALERT
     def test_alert_obsolete(self):
-        ##SETUP
-        assert self.alert_id != None  #EXPECTING test_alert_generated TO BE RUN FIRST
+        ## SETUP
+        assert self.alert_id != None  # EXPECTING test_alert_generated TO BE RUN FIRST
 
         self.db.execute("UPDATE alert_page_thresholds SET threshold={{threshold}} WHERE page={{page_id}}", {
             "threshold": 900,
@@ -112,7 +112,7 @@ class test_alert_threshold:
         assert len(new_state) == 1
         assert new_state[0].status == "obsolete"
 
-        #VERIFY test_data_all_dimensions HAS BEEN UNMARKED PROPERLY
+        # VERIFY test_data_all_dimensions HAS BEEN UNMARKED PROPERLY
         h0_rejected = self.db.query("""
             SELECT
                 h0_rejected

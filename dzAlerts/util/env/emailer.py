@@ -22,9 +22,9 @@ class Emailer:
         """
         REQUIRES SETTINGS LIKE
         "email": {
-            "from_address": "klahnakoski@mozilla.com",  #DEFAULT
-            "to":"klahnakoski@mozilla.com",  #DEFAULT
-            "subject": "catchy title",  #DEFAULT
+            "from_address": "klahnakoski@mozilla.com",  # DEFAULT
+            "to":"klahnakoski@mozilla.com",  # DEFAULT
+            "subject": "catchy title",  # DEFAULT
             "host": "mail.mozilla.com",
             "port": 465,
             "username": "example@example.com",

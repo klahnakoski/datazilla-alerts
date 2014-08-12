@@ -115,6 +115,14 @@ INSERT INTO reasons VALUES (
 	NULL,
 	NULL
 );;
+INSERT INTO reasons VALUES (
+	'eideticker_alert_revision',
+	concat('{{test}} has regressed since {{revision}}'),
+	date_add(now(), INTERVAL -30 DAY),
+	'{"minOffset":0.999}',
+	NULL,
+	NULL
+);;
 
 
 
@@ -150,6 +158,7 @@ INSERT INTO listeners (reason, email) VALUES ('b2g_alert_revision', 'klahnakoski
 INSERT INTO listeners (reason, email) VALUES ('talos_alert_revision', 'klahnakoski@mozilla.com');;
 INSERT INTO listeners (reason, email) VALUES ('eideticker_alert_sustained_median', 'klahnakoski@mozilla.com');;
 INSERT INTO listeners (reason, email) VALUES ('eideticker_alert_sustained_median', 'klahnakoski@mozilla.com');
+INSERT INTO listeners (reason, email) VALUES ('eideticker_alert_revision', 'klahnakoski@mozilla.com');
 
 #ALTER TABLE test_data_all_dimensions ADD UNIQUE INDEX tdad_id(id)
 

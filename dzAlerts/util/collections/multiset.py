@@ -9,6 +9,7 @@
 #
 
 from __future__ import unicode_literals
+from dzAlerts.util.env.logs import Log
 
 
 class Multiset(object):
@@ -24,7 +25,6 @@ class Multiset(object):
     |     No     |   No    | Multiset |
     +------------+---------+----------+
     """
-
     def __new__(cls, list=None, key_field=None, count_field=None, allow_negative=False):
         try:
             if allow_negative:
@@ -35,6 +35,15 @@ class Multiset(object):
             from ..env.logs import Log
 
             Log.error("Not expected", e)
+
+    def add(self, value):
+        Log.unexpected("not implemented")
+
+    def extend(self, values):
+        Log.unexpected("not implemented")
+
+    def remove(self, value):
+        Log.unexpected("not implemented")
 
 
 class _Multiset(Multiset):

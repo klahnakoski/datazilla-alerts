@@ -8,9 +8,8 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-
-from dzAlerts.daemons.util import significant_difference, significant_score_difference
+from datetime import datetime
+from dzAlerts.daemons import util
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -18,7 +17,7 @@ from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList, Struct
@@ -26,9 +25,10 @@ from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.dates import Date
 
 
-
+DEBUG_TOUCH_ALL_ALERTS = False
 REASON = "talos_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=90)
+LOOK_BACK = Duration(days=90)
+MIN_AGE = Duration(hours=2)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
@@ -108,35 +108,36 @@ TEMPLATE = [
     """</table></div>"""
 ]
 
-#GET ACTIVE ALERTS
+# GET ACTIVE ALERTS
 # assumes there is an outside agent corrupting our test results
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
 def talos_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
-    with DB(settings.alerts) as db:
+    with DB(settings.alerts) as alerts_db:
         with ESQuery(ElasticSearch(settings.query["from"])) as esq:
 
-            dbq = DBQuery(db)
+            dbq = DBQuery(alerts_db)
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
-            #TODO: REMOVE, LEAVE IN DB
-            if db.debug:
-                db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+            # TODO: REMOVE, LEAVE IN DB
+            if alerts_db.debug:
+                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
                     "reason": REASON
                 })
-                db.flush()
+                alerts_db.flush()
 
-            #EXISTING SUSTAINED EXCEPTIONS
+            # EXISTING SUSTAINED EXCEPTIONS
             existing_sustained_alerts = dbq.query({
                 "from": "alerts",
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
+                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     # {"term":{"revision":"f3192b2f9195"}}
                 ]}
@@ -144,25 +145,8 @@ def talos_alert_revision(settings):
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 
-            #EXISTING REVISION-LEVEL ALERTS
-            old_alerts = dbq.query({
-                "from": "alerts",
-                "select": "*",
-                "where": {"and": [
-                    {"term": {"reason": REASON}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
-                    {"or": [
-                        {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"status": "obsolete"}}
-                    ]}
-                ]},
-                # "sort":"status",
-                # "limit":10
-            })
-            old_alerts = Q.unique_index(old_alerts, "revision")
-
-            #SUMMARIZE
-            known_alerts = StructList()
+            # SUMMARIZE
+            alerts = StructList()
 
             total_tests = esq.query({
                 "from": "talos",
@@ -177,7 +161,7 @@ def talos_alert_revision(settings):
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             for revision, total_test_count in Q.groupby(total_tests, ["Talos.Revision"]):
-            #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
+            # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
                 revision = revision["Talos.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
@@ -187,7 +171,8 @@ def talos_alert_revision(settings):
                     example = worst_in_test.details
                     # ADD SOME SPECIFIC URL PARAMETERS
                     branch = example.Talos.Branch.replace("-Non-PGO", "")
-                    stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min)
+                    stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min) + Duration.DAY.milli
+                    start = Math.min(example.push_date_min, stop-Duration.WEEK.milli)
 
                     example.tbpl.url.branch = TBPL_PATH.get(branch, branch)
                     example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
@@ -200,13 +185,13 @@ def talos_alert_revision(settings):
                         test=example.Talos.Test.suite,
                         graph=example.Talos.Test.name,
                         graph_search=example.Talos.Revision,
-                        start=example.push_date_min/1000,
+                        start=start/1000,
                         stop=stop/1000,
                         x86="true" if example.Talos.Platform == "x86" else "false",
                         x86_64="true" if example.Talos.Platform == "x86_64" else "false",
                     )
                     example.charts.url = Struct(
-                        sampleMin=Date(example.push_date_min).floor().format("%Y-%m-%d"),
+                        sampleMin=Date(start).floor().format("%Y-%m-%d"),
                         sampleMax=Date(stop).floor().format("%Y-%m-%d"),
                         test=example.Talos.Test.name,
                         branch=example.Talos.Branch,
@@ -230,7 +215,7 @@ def talos_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                known_alerts.append({
+                alerts.append({
                     "status": "new",
                     "create_time": CNV.milli2datetime(worst_in_revision.push_date),
                     "reason": REASON,
@@ -247,18 +232,32 @@ def talos_alert_revision(settings):
                     "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
                 })
 
-            known_alerts = Q.unique_index(known_alerts, "revision")
 
-            #NEW ALERTS, JUST INSERT
-            new_alerts = known_alerts - old_alerts
-            if new_alerts:
-                for revision in new_alerts:
-                    revision.id = SQL("util.newid()")
-                    revision.last_updated = NOW
-                db.insert_list("alerts", new_alerts)
+            # EXISTING REVISION-LEVEL ALERTS
+            old_alerts = dbq.query({
+                "from": "alerts",
+                "select": "*",
+                "where": {"and": [
+                    {"term": {"reason": REASON}},
+                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
+                    {"or": [
+                        {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                        {"term": {"reason": settings.param.reason}},
+                        {"term": {"status": "obsolete"}},
+                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    ]}
+                ]},
+                # "sort":"status",
+                # "limit":10
+            })
 
-            #SHOW SUSTAINED ALERTS ARE COVERED
-            db.execute("""
+            found_alerts = Q.unique_index(alerts, "revision")
+            old_alerts = Q.unique_index(old_alerts, "revision")
+
+            util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+
+            # SHOW SUSTAINED ALERTS ARE COVERED
+            alerts_db.execute("""
                 INSERT INTO hierarchy (parent, child)
                 SELECT
                     r.id parent,
@@ -272,29 +271,13 @@ def talos_alert_revision(settings):
                 WHERE
                     {{where}}
             """, {
-                "where": esfilter2sqlwhere(db, {"and": [
+                "where": esfilter2sqlwhere(alerts_db, {"and": [
                     {"term": {"p.reason": settings.param.reason}},
                     {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON
             })
-
-            #CURRENT ALERTS, UPDATE IF DIFFERENT
-            for known_alert in known_alerts & old_alerts:
-                if len(nvl(known_alert.solution, "").strip()) != 0:
-                    continue  # DO NOT TOUCH SOLVED ALERTS
-
-                old_alert = old_alerts[known_alert]
-                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_score_difference(known_alert.confidence, old_alert.confidence):
-                    known_alert.last_updated = NOW
-                    db.update("alerts", {"id": old_alert.id}, known_alert)
-
-            #OLD ALERTS, OBSOLETE
-            for old_alert in old_alerts - known_alerts:
-                if old_alert.status == 'obsolete':
-                    continue
-                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 
 
 def main():
