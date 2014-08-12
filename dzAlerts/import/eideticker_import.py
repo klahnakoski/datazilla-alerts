@@ -9,16 +9,14 @@
 
 from __future__ import unicode_literals
 import requests
-from dzAlerts.util.cnv import CNV
 
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.parsers import URL
-from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.strings import expand_template
-from dzAlerts.util.struct import wrap, StructList, nvl
+from dzAlerts.util.struct import wrap, StructList
 from dzAlerts.util.thread.multithread import Multithread
 from dzAlerts.util.times.timer import Timer
 
@@ -112,7 +110,10 @@ def etl(settings):
 
                 sink.add({"id": metadata.uuid, "value": data})
             except Exception, e:
-                Log.warning("problem getting details from {{response}}", {"response": response}, e)
+                Log.warning("problem getting details for {{slice}} reason = {{response}}", {
+                    "slice": metadata,
+                    "response": response
+                }, e)
 
         with Multithread(get_uuid, threads=10, outbound=False, silent_queues=True) as multi:
             for metadata in all_tests:

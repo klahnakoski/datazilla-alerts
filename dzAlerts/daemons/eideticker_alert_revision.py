@@ -49,7 +49,6 @@ TEMPLATE = [
     <table>
     <thead><tr>
     <td>Device</td>
-    <td>Suite</td>
     <td>Test Name</td>
     <td>Eideticker</td>
     <td>Charts</td>
@@ -63,8 +62,7 @@ TEMPLATE = [
         "from": "details.tests",
         "template": """<tr>
             <td>{{example.Eideticker.Device|upper}}</td>
-            <td>{{test.suite}}</td>
-            <td>{{test.name}}</td>
+            <td>{{example.Eideticker.Test}}</td>
             <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metric}}/90">Eideticker</a></td>
             <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eideticker.html#{{example.charts.url|url}}">charts!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
