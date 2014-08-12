@@ -29,6 +29,7 @@ from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.structs.wraps import wrap_dot, listwrap
+from dzAlerts.util.thread.threads import Thread
 from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.timer import Timer
 
@@ -470,6 +471,7 @@ def main():
                     )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
+        Thread.sleep(seconds=2)
     finally:
         Log.stop()
 
