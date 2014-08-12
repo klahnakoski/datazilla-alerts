@@ -48,7 +48,7 @@ Raw data:  {{details}}
 </div>"""
 
 VERBOSE = True
-DEBUG = True  # SETTINGS CAN TURN OFF DEBUGGING
+DEBUG = False  # SETTINGS CAN TURN OFF DEBUGGING
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
 
@@ -60,7 +60,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
     oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = True if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
+    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query

@@ -49,7 +49,8 @@ SUBJECT = [
         "template": "{{test.suite}}",
         "separator": ", "
     }
-    ]
+]
+
 TEMPLATE = [
     """
     <div>
