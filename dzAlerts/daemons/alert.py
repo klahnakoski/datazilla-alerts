@@ -21,6 +21,7 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.times.durations import Duration
+from dzAlerts.util.thread.threads import Thread
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  # SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"
@@ -143,16 +144,17 @@ if __name__ == '__main__':
     Log.start(settings.debug)
 
     try:
-        Log.note("Running alerts off of schema {{schema|upper}}", {"schema": settings.alerts.schema})
+        Log.note("Running alerts off of schema {{schema|upper}}", {"schema": settings.perftest.schema})
 
         with DB(settings.alerts) as db:
             send_alerts(
                 settings=settings,
                 db=db
             )
+        Log.note("Done")
     except Exception, e:
-        Log.note(str(e))
-        Log.warning("Failure to run alerts", e)
+        Log.warning("Failure to run alerts", cause=e)
+        Thread.sleep(seconds=2)
     finally:
         Log.stop()
 
