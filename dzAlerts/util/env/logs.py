@@ -141,7 +141,7 @@ class Log(object):
         trace = extract_stack(1)
         e = Except(WARNING, template, params, cause, trace)
         Log.note(unicode(e), {
-            "warning": {
+            "warning": {  # REDUNDANT INFO
                 "template": template,
                 "params": params,
                 "cause": cause,
@@ -436,6 +436,9 @@ class Except(Exception):
 
         return output + "\n"
 
+    def __unicode__(self):
+        return unicode(str(self))
+
     def __json__(self):
         return json_encoder(Struct(
             type = self.type,
@@ -528,6 +531,7 @@ class Log_usingThread(BaseLog):
 class Log_usingMulti(BaseLog):
     def __init__(self):
         self.many = []
+
     def write(self, template, params):
         for m in self.many:
             try:
@@ -546,6 +550,7 @@ class Log_usingMulti(BaseLog):
 
     def clear_log(self):
         self.many = []
+
     def stop(self):
         for m in self.many:
             try:

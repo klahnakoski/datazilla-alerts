@@ -34,7 +34,7 @@ SEVERITY = 0.7
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 TEST_REVISION = '2d88803a0b9c'
 
-SUBJECT = "[ALERT][Eideticker] {{details.example.Eideticker.Test}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Eideticker.Branch}}";
+SUBJECT = "[ALERT][Eideticker] {{details.example.Eideticker.Test}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Eideticker.Branch}}"
 
 TEMPLATE = [
     """
