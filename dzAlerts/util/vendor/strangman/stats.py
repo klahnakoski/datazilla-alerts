@@ -190,7 +190,7 @@ SUPPORT FUNCTIONS:  writecc
 ##              re-wrote azprob to calc arrays of probs all at once
 ## 99-08-22 ... edited attest_ind printing section so arrays could be rounded
 ## 99-08-19 ... fixed amean and aharmonicmean for non-error(!) overflow on
-##                   short/byte arrays (mean of #s btw 100-300 = -150??)
+##                   short/byte arrays (mean of # s btw 100-300 = -150??)
 ## 99-08-09 ... fixed asum so that the None case works for Byte arrays
 ## 99-08-08 ... fixed 7/3 'improvement' to handle t-calcs on N-D arrays
 ## 99-07-03 ... improved attest_ind, attest_rel (zero-division errortrap)
@@ -225,7 +225,6 @@ SUPPORT FUNCTIONS:  writecc
 ##              fixed (a)histogram (which sometimes counted points <lowerlimit)
 
 import math
-import string
 import copy
 from types import *
 
@@ -495,9 +494,9 @@ Returns: list of bin values, lowerreallimit, binsize, extrapoints
             upperreallimit = defaultreallimits[1]
         binsize = (upperreallimit - lowerreallimit) / float(numbins)
     else:     # no limits given for histogram, both must be calc'd
-        estbinwidth = (max(inlist) - min(inlist)) / float(numbins) + 1e-6 #1=>cover all
+        estbinwidth = (max(inlist) - min(inlist)) / float(numbins) + 1e-6 # 1=>cover all
         binsize = ((max(inlist) - min(inlist) + estbinwidth)) / float(numbins)
-        lowerreallimit = min(inlist) - binsize / 2 #lower real limit,1st bin
+        lowerreallimit = min(inlist) - binsize / 2 # lower real limit,1st bin
     bins = [0] * (numbins)
     extrapoints = 0
     for num in inlist:
@@ -1571,18 +1570,6 @@ Returns: next set of values for list l, OR -1 (if overflow)
         elif l[i] > cap[i] and i == len(l) - 1: # overflow past last column, must be finished
             l = -1
     return l
-
-
-def sum(inlist):
-    """
-Returns the sum of the items in the passed list.
-
-Usage:   lsum(inlist)
-"""
-    s = 0
-    for item in inlist:
-        s = s + item
-    return s
 
 
 def cumsum(inlist):

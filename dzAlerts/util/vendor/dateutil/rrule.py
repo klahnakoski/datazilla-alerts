@@ -431,7 +431,7 @@ class rrule(rrulebase):
                      HOURLY:ii.ddayset,
                      MINUTELY:ii.ddayset,
                      SECONDLY:ii.ddayset}[freq]
-        
+
         if freq < HOURLY:
             timeset = self._timeset
         else:
@@ -669,7 +669,7 @@ class _iterinfo(object):
                 self.wnomask = None
             else:
                 self.wnomask = [0]*(self.yearlen+7)
-                #no1wkst = firstwkst = self.wdaymask.index(rr._wkst)
+                # no1wkst = firstwkst = self.wdaymask.index(rr._wkst)
                 no1wkst = firstwkst = (7-self.yearweekday+rr._wkst)%7
                 if no1wkst >= 4:
                     no1wkst = 0
@@ -789,7 +789,7 @@ class _iterinfo(object):
         for j in range(7):
             set[i] = i
             i += 1
-            #if (not (0 <= i < self.yearlen) or
+            # if (not (0 <= i < self.yearlen) or
             #    self.wdaymask[i] == self.rrule._wkst):
             # This will cross the year boundary, if necessary.
             if self.wdaymask[i] == self.rrule._wkst:

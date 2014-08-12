@@ -8,7 +8,7 @@
 #
 
 from __future__ import unicode_literals
-from datetime import timedelta, datetime
+from datetime import datetime
 
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
@@ -16,29 +16,30 @@ from dzAlerts.util.struct import nvl
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
+from dzAlerts.util.times.durations import Duration
 
 
-REASON = "page_threshold_limit"     #name of the reason in alert_reason
+REASON = "page_threshold_limit"     # name of the reason in alert_reason
 LOOK_BACK = Duration(weeks=4)
 
 
 def page_threshold_limit(db, debug):
     """
     simplest of rules to test the dataflow from test_run, to alert, to email
-    may prove slightly useful also!
-    #point out any pages that are breaking human-set threshold limits
+    may prove slightly useful also point out any pages that are breaking
+    human-set threshold limits
     """
     db.debug = debug
 
     try:
-        #CALCULATE HOW FAR BACK TO LOOK
+        # CALCULATE HOW FAR BACK TO LOOK
         lasttime = db.query("SELECT last_run, description FROM reasons WHERE code={{type}}", {"type": REASON})[0]
         lasttime = nvl(lasttime.last_run, datetime.utcnow())
         min_date = lasttime + LOOK_BACK
 
-        #FIND ALL PAGES THAT HAVE LIMITS TO TEST
-        #BRING BACK ONES THAT BREAK LIMITS
-        #BUT DO NOT ALREADY HAVE AN ALERTS EXISTING
+        # FIND ALL PAGES THAT HAVE LIMITS TO TEST
+        # BRING BACK ONES THAT BREAK LIMITS
+        # BUT DO NOT ALREADY HAVE AN ALERTS EXISTING
         pages = db.query("""
             SELECT
                 t.id tdad_id,
@@ -63,7 +64,7 @@ def page_threshold_limit(db, debug):
             "type": REASON, "min_date": min_date
         })
 
-        #FOR EACH PAGE THAT BREAKS LIMITS
+        # FOR EACH PAGE THAT BREAKS LIMITS
         for page in pages:
             if page.alert_id != None: break
 
@@ -85,10 +86,10 @@ def page_threshold_limit(db, debug):
 
         for page in pages:
             if page.alert_id == None: break
-            db.update("alerts", None)  #ERROR FOR NOW
+            db.update("alerts", None)  # ERROR FOR NOW
 
 
-        #OBSOLETE THE ALERTS THAT SHOULD NO LONGER GET SENT
+        # OBSOLETE THE ALERTS THAT SHOULD NO LONGER GET SENT
         obsolete = db.query("""
             SELECT
                 m.id,

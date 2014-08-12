@@ -22,7 +22,7 @@ from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.times.durations import Duration
 
-ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  #SIMPLE severity*confidence LIMIT (FOR NOW)
+ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  # SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"
 FOOTER = "<hr><a style='font-size:70%' href='https://wiki.mozilla.org/FirefoxOS/Performance/Investigating_Alerts'>Understanding this alert</a>"
 
@@ -86,7 +86,7 @@ def send_alerts(settings, db):
             return
 
         for alert in new_alerts:
-            #poor souls that signed up for emails
+            # poor souls that signed up for emails
             listeners = ";".join(db.query("SELECT email FROM listeners WHERE reason={{reason}}", {"reason": alert.reason}).email)
             body = [HEADER]
 
@@ -95,14 +95,14 @@ def send_alerts(settings, db):
                 alert.revision = CNV.JSON2object(alert.revision)
             except Exception, e:
                 pass
-            alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1 - (10 ** (-alert.confidence)))))  #SHOW NUMBER OF NINES
+            alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1 - (10 ** (-alert.confidence)))))  # SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
             example = alert.details.example
             for e in alert.details.tests.example + [example]:
                 if e.push_date_min:
                     e.push_date_max = (2 * e.push_date) - e.push_date_min
-                    e.date_range = (datetime.utcnow() - CNV.milli2datetime(e.push_date_min)).total_seconds() / (24 * 60 * 60)  #REQUIRED FOR DATAZILLA B2G CHART REFERENCE
-                    e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  #PICK FIRST v > CURRENT VALUE
+                    e.date_range = (datetime.utcnow() - CNV.milli2datetime(e.push_date_min)).total_seconds() / (24 * 60 * 60)  # REQUIRED FOR DATAZILLA B2G CHART REFERENCE
+                    e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  # PICK FIRST v > CURRENT VALUE
 
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
@@ -114,16 +114,16 @@ def send_alerts(settings, db):
             if len(body) > MAX_EMAIL_LENGTH:
                 Log.note("Truncated the email body")
                 suffix = "... (has been truncated)"
-                body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   #keep it reasonable
+                body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   # keep it reasonable
 
             db.call("mail.send", (
-                listeners, #to
+                listeners, # to
                 subject,
-                body, #body
+                body, # body
                 None
             ))
 
-            #I HOPE I CAN SEND ARRAYS OF NUMBERS
+            # I HOPE I CAN SEND ARRAYS OF NUMBERS
             db.execute(
                 "UPDATE alerts SET last_sent={{time}} WHERE {{where}}", {
                     "time": datetime.utcnow(),

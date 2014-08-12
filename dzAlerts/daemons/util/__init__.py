@@ -14,8 +14,8 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.maths import Math
 
 
-#ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
-#UPDATE?
+# ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
+# UPDATE?
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.struct import nvl
@@ -66,7 +66,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
         except Exception, e:
             Log.error("problem with insert", e)
 
-    #CURRENT ALERTS, UPDATE IF DIFFERENT
+    # CURRENT ALERTS, UPDATE IF DIFFERENT
     for new_alert in changed_alerts:
         old_alert = old_alerts[new_alert]
         if len(nvl(old_alert.solution, "").strip()) != 0:
@@ -84,7 +84,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
             new_alert.last_updated = NOW
             alerts_db.update("alerts", {"id": old_alert.id}, new_alert)
 
-    #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
+    # OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
     for old_alert in Q.filter(obsolete_alerts, {"not": {"term": {"status": "obsolete"}}}):
         alerts_db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 

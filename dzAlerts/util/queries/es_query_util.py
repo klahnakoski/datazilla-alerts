@@ -53,7 +53,7 @@ def loadColumns(es, frum):
     if not frum.host:
         Log.error("must have host defined")
 
-    #DETERMINE IF THE es IS FUNCTIONALLY DIFFERENT
+    # DETERMINE IF THE es IS FUNCTIONALLY DIFFERENT
     diff = False
     for k, v in es.settings.items():
         if k != "name" and v != frum[k]:
@@ -472,7 +472,7 @@ def fix_es_stats(s):
     return s
 
 
-#MAP NAME TO SQL FUNCTION
+# MAP NAME TO SQL FUNCTION
 aggregates = {
     "none": "none",
     "one": "count",

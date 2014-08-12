@@ -65,7 +65,7 @@ class test_alert_exception():
         assert closeEnough(alert[0].severity, EXPECTED_SEVERITY)
         assert alert[0].confidence > settings.param.exception.min_confidence
 
-        #VERIFY last_run HAS BEEN UPDATED
+        # VERIFY last_run HAS BEEN UPDATED
         last_run = self.db.query(
             "SELECT last_run FROM reasons WHERE code={{type}}",
             {"type": REASON}
@@ -73,10 +73,10 @@ class test_alert_exception():
         expected_run_after = datetime.utcnow() + Duration(minutes=-1)
         assert last_run >= expected_run_after
 
-        #REMEMEBER id FOR CHECKING OBSOLETE
+        # REMEMEBER id FOR CHECKING OBSOLETE
         self.alert_id = alert[0].id
 
-        #VERIFY test_data_all_dimensions HAS BEEN MARKED PROPERLY
+        # VERIFY test_data_all_dimensions HAS BEEN MARKED PROPERLY
         h0_rejected = self.db.query("""
             SELECT
                 h0_rejected
@@ -282,5 +282,5 @@ def not_test_2(settings):
         tester.test_alert_generated(test_data2)
 
 
-#ADD TEST TO DECREASE TOLERANCE AND PROVE ALERTS OR obsoleted
+# ADD TEST TO DECREASE TOLERANCE AND PROVE ALERTS OR obsoleted
 

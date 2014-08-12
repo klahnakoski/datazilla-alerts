@@ -165,7 +165,7 @@ class ElasticSearch(object):
             return wrap({"mappings":mapping[self.settings.type]})
 
 
-    #DELETE ALL INDEXES WITH GIVEN PREFIX, EXCEPT name
+    # DELETE ALL INDEXES WITH GIVEN PREFIX, EXCEPT name
     def delete_all_but(self, prefix, name):
         if prefix == name:
             Log.note("{{index_name}} will not be deleted", {"index_name": prefix})

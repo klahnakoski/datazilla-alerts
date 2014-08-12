@@ -108,7 +108,7 @@ TEMPLATE = [
     """</table></div>"""
 ]
 
-#GET ACTIVE ALERTS
+# GET ACTIVE ALERTS
 # assumes there is an outside agent corrupting our test results
 # this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
@@ -121,7 +121,7 @@ def talos_alert_revision(settings):
             dbq = DBQuery(alerts_db)
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
-            #TODO: REMOVE, LEAVE IN DB
+            # TODO: REMOVE, LEAVE IN DB
             if alerts_db.debug:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
@@ -130,7 +130,7 @@ def talos_alert_revision(settings):
                 })
                 alerts_db.flush()
 
-            #EXISTING SUSTAINED EXCEPTIONS
+            # EXISTING SUSTAINED EXCEPTIONS
             existing_sustained_alerts = dbq.query({
                 "from": "alerts",
                 "select": "*",
@@ -145,7 +145,7 @@ def talos_alert_revision(settings):
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 
-            #SUMMARIZE
+            # SUMMARIZE
             alerts = StructList()
 
             total_tests = esq.query({
@@ -161,7 +161,7 @@ def talos_alert_revision(settings):
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             for revision, total_test_count in Q.groupby(total_tests, ["Talos.Revision"]):
-            #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
+            # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
                 revision = revision["Talos.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
@@ -233,7 +233,7 @@ def talos_alert_revision(settings):
                 })
 
 
-            #EXISTING REVISION-LEVEL ALERTS
+            # EXISTING REVISION-LEVEL ALERTS
             old_alerts = dbq.query({
                 "from": "alerts",
                 "select": "*",
@@ -256,7 +256,7 @@ def talos_alert_revision(settings):
 
             util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
 
-            #SHOW SUSTAINED ALERTS ARE COVERED
+            # SHOW SUSTAINED ALERTS ARE COVERED
             alerts_db.execute("""
                 INSERT INTO hierarchy (parent, child)
                 SELECT

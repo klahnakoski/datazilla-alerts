@@ -42,7 +42,7 @@ On page {{page_url}}<br>
 <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
 <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
 <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date_max}}&product={{product}}&repository={{branch}}&os={{operating_system_name}}&os_version={{operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
-<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
+<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html# page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
 Raw data:  {{details}}
 </div>"""
 
@@ -128,16 +128,16 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"or": [
                     {"not": debug},
                     {"and": [
-                        #FOR DEBUGGING SPECIFIC SERIES
+                        # FOR DEBUGGING SPECIFIC SERIES
                         # {"term": {"metadata.device": "flame"}},
                         # {"term": {"metadata.test": "b2g-gallery-startup"}},
                         # {"exists": {"field": "metadata.value"}}
                         # {"term": {"result.test_name": "fps"}}
                         # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
-                        {"term":{"metadata.branch":"mozilla-central"}},
-                        {"term": {"metadata.test": "imgur"}},
-                        {"term": {"metadata.device": "samsung-gn"}},
+                        # {"term":{"metadata.branch":"mozilla-central"}},
+                        # {"term": {"metadata.test": "imgur"}},
+                        # {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
                         # {"term": {"testrun.suite": "tcanvasmark"}},
                         # {"term": {"result.test_name": "canvasmark"}},
@@ -154,7 +154,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         new_test_points = qb.query(temp)
 
-    #BRING IN ALL NEEDED DATA
+    # BRING IN ALL NEEDED DATA
     if verbose:
         Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
             "num": len(new_test_points),
@@ -207,7 +207,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             min_date = MIN(first_sample, first_in_window.min_date)
 
-            #LOAD TEST RESULTS FROM DATABASE
+            # LOAD TEST RESULTS FROM DATABASE
             all_test_results = qb.query({
                 "from": {
                     "from": settings.query["from"],
@@ -256,12 +256,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                 Log.note("Find sustained_median exceptions")
 
             def diff_by_association(r, i, rows):
-                #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH SCORE
+                # MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH SCORE
                 if rows[i - 1].is_diff and r.ttest_result.score > test_param.min_mscore:
                     r.is_diff = True
                 return None
 
-            #APPLY WINDOW FUNCTIONS
+            # APPLY WINDOW FUNCTIONS
             stats = Q.run({
                 "from": {
                     "from": test_results,
@@ -329,13 +329,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "name": "is_diff",
                         "value": lambda r: is_bad(r, test_param)
                     }, {
-                        #USE THIS TO FILL SCORE HOLES
-                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
+                        # USE THIS TO FILL SCORE HOLES
+                        # WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
                         "name": "future_is_diff",
                         "value": diff_by_association,
                         "sort": test_param.sort.name
                     }, {
-                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
+                        # WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
                         "name": "past_is_diff",
                         "value": diff_by_association,
                         "sort": {"value": test_param.sort.name, "sort": -1}
@@ -343,7 +343,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 ]
             })
 
-            #PICK THE BEST SCORE FOR EACH is_diff==True REGION
+            # PICK THE BEST SCORE FOR EACH is_diff==True REGION
             for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
                     best = Q.sort(data, ["ttest_result.score", "diff"]).last()
@@ -372,7 +372,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "sort": test_param.sort.name
                 })))
 
-            #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
+            # TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
             for v in new_exceptions:
                 if v.ignored:
@@ -400,7 +400,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     if verbose:
         Log.note("Get Current Alerts")
 
-    #CHECK THE CURRENT ALERTS
+    # CHECK THE CURRENT ALERTS
     if not evaled_tests:
         old_alerts = StructList.EMPTY
     else:
@@ -459,7 +459,7 @@ def main():
     Log.start(settings.debug)
     try:
         with startup.SingleInstance(flavor_id=settings.args.filename):
-            #MORE SETTINGS
+            # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
             with ESQuery(ElasticSearch(settings.query["from"])) as qb:

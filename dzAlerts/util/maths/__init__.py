@@ -128,7 +128,7 @@ class Math(object):
         return v - (v % mod)
 
 
-    #RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(unicode(value))<len(unicode(value)):
+    # RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(unicode(value))<len(unicode(value)):
     @staticmethod
     def approx_str(value):
         v = unicode(value)

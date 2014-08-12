@@ -92,7 +92,7 @@ print stats.trim1(a,.2)
 print stats.trim1(af,.2)
 
 print '\nCORRELATION'
-#execfile('testpairedstats.py')
+# execfile('testpairedstats.py')
 
 l = range(1,21)
 a = N.array(l)
@@ -107,8 +107,8 @@ pb = [0]*9 + [1]*11
 apb = N.array(pb)
 
 print 'paired:'
-#stats.paired(l,m)
-#stats.paired(a,b)
+# stats.paired(l,m)
+# stats.paired(a,b)
 
 print
 print
@@ -174,7 +174,7 @@ b = N.array(m)
 print '\n\nF_oneway:'
 print stats.F_oneway(l,m)
 print stats.F_oneway(a,b)
-#print 'F_value:',stats.F_value(l),stats.F_value(a)
+# print 'F_value:',stats.F_value(l),stats.F_value(a)
 
 print '\nSUPPORT'
 print 'sum:',stats.sum(l),stats.sum(lf),stats.sum(a),stats.sum(af)

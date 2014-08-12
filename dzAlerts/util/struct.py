@@ -233,7 +233,7 @@ class Struct(dict):
         return output
 
     def iteritems(self):
-        #LOW LEVEL ITERATION, NO WRAPPING
+        # LOW LEVEL ITERATION, NO WRAPPING
         d = _get(self, "__dict__")
         return d.iteritems()
 
@@ -697,7 +697,7 @@ def inverse(d):
 
 
 def nvl(*args):
-    #pick the first none-null value
+    # pick the first none-null value
     for a in args:
         if a != None:
             return wrap(a)

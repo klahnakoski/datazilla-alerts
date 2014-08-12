@@ -116,7 +116,7 @@ Here is the behavior of operations with relativedelta:
         if dt1 and dt2:
             if (not isinstance(dt1, datetime.date)) or (not isinstance(dt2, datetime.date)):
                 raise TypeError("relativedelta only diffs datetime/date")
-            if not type(dt1) == type(dt2): #isinstance(dt1, type(dt2)):
+            if not type(dt1) == type(dt2): # isinstance(dt1, type(dt2)):
                 if not isinstance(dt1, datetime.datetime):
                     dt1 = datetime.datetime.fromordinal(dt1.toordinal())
                 elif not isinstance(dt2, datetime.datetime):

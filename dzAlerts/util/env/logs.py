@@ -131,10 +131,10 @@ class Log(object):
     @classmethod
     def error(
             cls,
-            template, #human readable template
-            params=None, #parameters for template
-            cause=None, #pausible cause
-            offset=0        #stack trace offset (==1 if you do not want to report self)
+            template, # human readable template
+            params=None, # parameters for template
+            cause=None, # pausible cause
+            offset=0        # stack trace offset (==1 if you do not want to report self)
     ):
         """
         raise an exception with a trace for the cause too
@@ -159,10 +159,10 @@ class Log(object):
     @classmethod
     def fatal(
             cls,
-            template, #human readable template
-            params=None, #parameters for template
-            cause=None, #pausible cause
-            offset=0    #stack trace offset (==1 if you do not want to report self)
+            template, # human readable template
+            params=None, # parameters for template
+            cause=None, # pausible cause
+            offset=0    # stack trace offset (==1 if you do not want to report self)
     ):
         """
         SEND TO STDERR
@@ -203,10 +203,10 @@ class Log(object):
         sys.stderr.write(str_e)
 
 
-    #RUN ME FIRST TO SETUP THE THREADED LOGGING
+    # RUN ME FIRST TO SETUP THE THREADED LOGGING
     @classmethod
     def start(cls, settings=None):
-        ##http://victorlin.me/2012/08/good-logging-practice-in-python/
+        ## http://victorlin.me/2012/08/good-logging-practice-in-python/
         if not settings:
             return
 
@@ -456,7 +456,7 @@ class Log_usingFile(BaseLog):
 
 class Log_usingThread(BaseLog):
     def __init__(self, logger):
-        #DELAYED LOAD FOR THREADS MODULE
+        # DELAYED LOAD FOR THREADS MODULE
         from ..thread.threads import Queue
 
         self.queue = Queue(max=10000, silent=True)
@@ -483,13 +483,13 @@ class Log_usingThread(BaseLog):
             return self
         except Exception, e:
             sys.stdout.write("IF YOU SEE THIS, IT IS LIKELY YOU FORGOT TO RUN Log.start() FIRST\n")
-            raise e  #OH NO!
+            raise e  # OH NO!
 
     def stop(self):
         try:
             if DEBUG_LOGGING:
                 sys.stdout.write("injecting stop into queue\n")
-            self.queue.add(Thread.STOP)  #BE PATIENT, LET REST OF MESSAGE BE SENT
+            self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
             if DEBUG_LOGGING:
                 sys.stdout.write("Log_usingThread telling logger to stop\n")

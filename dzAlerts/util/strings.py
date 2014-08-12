@@ -131,7 +131,7 @@ def between(value, prefix, suffix):
     if e == -1:
         return None
 
-    s = value.rfind(prefix, 0, e) + len(prefix) #WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
+    s = value.rfind(prefix, 0, e) + len(prefix) # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
     return value[s:e]
 
 
@@ -220,7 +220,7 @@ def _simple_expand(template, seq):
         except Exception, e:
             try:
                 if e.message.find("is not JSON serializable"):
-                    #WORK HARDER
+                    # WORK HARDER
                     val = toString(val)
                     return val
             except Exception, f:
@@ -257,7 +257,7 @@ def toString(val):
 
 def edit_distance(s1, s2):
     """
-    FROM http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+    FROM http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance# Python
     LICENCE http://creativecommons.org/licenses/by-sa/3.0/
     """
     if len(s1) < len(s2):

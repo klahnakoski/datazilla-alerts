@@ -70,7 +70,7 @@ def etl(settings):
     with Timer("get all uuid"):
         all_tests = get_all_uuid(settings)
 
-    #FILTER EXISTING IDS
+    # FILTER EXISTING IDS
     with ESQuery(es) as esq:
         existing = set()
         batch = esq.query({
@@ -87,7 +87,7 @@ def etl(settings):
         "old": len(existing)
     })
 
-    #PULL ANY NEW STUFF
+    # PULL ANY NEW STUFF
     with es.threaded_queue(size=100) as sink:
         def get_uuid(metadata):
             response = None
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     settings = startup.read_settings()
     Log.start(settings.debug)
 
-    #FIX ANY POSSIBLE SETTINGS PROBLEMS
+    # FIX ANY POSSIBLE SETTINGS PROBLEMS
     settings.param.url = settings.param.url.rstrip("/")
 
     try:

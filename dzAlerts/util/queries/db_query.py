@@ -241,7 +241,7 @@ class DBQuery(object):
                                 r[s.name+"."+k] = None
 
                     if isinstance(s.value, list):
-                        #REWRITE AS TUPLE
+                        # REWRITE AS TUPLE
                         for r in result:
                             r[s.name] = tuple(r[s.name + "," + str(i)] for i, ss in enumerate(s.value))
                             for i, ss in enumerate(s.value):
@@ -376,7 +376,7 @@ def _esfilter2sqlwhere(db, esfilter):
             min = nvl(r["gte"], r[">="])
             max = nvl(r["lte"], r["<="])
             if min and max:
-                #SPECIAL CASE (BETWEEN)
+                # SPECIAL CASE (BETWEEN)
                 return db.quote_column(col) + " BETWEEN " + db.quote_value(min) + " AND " + db.quote_value(max)
             else:
                 return " AND ".join(
@@ -405,7 +405,7 @@ def _esfilter2sqlwhere(db, esfilter):
 
 
 def expand_json(rows):
-    #CONVERT JSON TO VALUES
+    # CONVERT JSON TO VALUES
     for r in rows:
         for k, json in list(r.items()):
             if isinstance(json, basestring) and json[0:1] in ("[", "{"):
@@ -416,7 +416,7 @@ def expand_json(rows):
                     pass
 
 
-#MAP NAME TO SQL FUNCTION
+# MAP NAME TO SQL FUNCTION
 aggregates = {
     "one": "COUNT({{code}})",
     "sum": "SUM({{code}})",
