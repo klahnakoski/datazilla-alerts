@@ -143,7 +143,7 @@ if __name__ == '__main__':
     Log.start(settings.debug)
 
     try:
-        Log.note("Running alerts off of schema {{schema}}", {"schema": settings.perftest.schema})
+        Log.note("Running alerts off of schema {{schema}}", {"schema": settings.alerts.schema})
 
         with DB(settings.alerts) as db:
             send_alerts(
@@ -151,7 +151,7 @@ if __name__ == '__main__':
                 db=db
             )
     except Exception, e:
-        Log.warning("Failure to run alerts", cause=e)
+        Log.warning("Failure to run alerts", e)
     finally:
         Log.stop()
 
