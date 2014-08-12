@@ -138,7 +138,7 @@ def talos_alert_revision(settings):
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
                     {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
+                    True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     # {"term":{"revision":"f3192b2f9195"}}
                 ]}
             })
@@ -241,6 +241,7 @@ def talos_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
+                        {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                         {"term": {"reason": settings.param.reason}},
                         {"term": {"status": "obsolete"}},
@@ -281,8 +282,9 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
-        talos_alert_revision(settings)
+        with startup.SingleInstance(flavor_id=settings.args.filename):
+            Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
+            talos_alert_revision(settings)
     finally:
         Log.stop()
 

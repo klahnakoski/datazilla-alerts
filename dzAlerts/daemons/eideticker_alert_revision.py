@@ -25,6 +25,7 @@ from dzAlerts.util.times.dates import Date
 from dzAlerts.util.times.durations import Duration
 
 
+DEBUG_TOUCH_ALL_ALERTS = False
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)

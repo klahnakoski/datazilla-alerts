@@ -25,7 +25,6 @@ from dzAlerts.util.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
-SUSTAINED_REASON = "b2g_alert_sustained_median"
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
 MIN_AGE = Duration(hours=2)
@@ -186,7 +185,7 @@ def b2g_alert_revision(settings):
                     {"or": [
                         {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": SUSTAINED_REASON}},
+                        {"term": {"reason": settings.param.reason}},
                         {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
