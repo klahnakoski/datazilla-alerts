@@ -89,8 +89,9 @@ def etl(settings):
     with es.threaded_queue(size=100) as sink:
         def get_uuid(metadata):
             response = None
+            url = expand_template(settings.uuid_url, {"uuid": metadata.uuid})
             try:
-                response = requests.get(expand_template(settings.uuid_url, {"uuid": metadata.uuid}))
+                response = requests.get(url)
                 data = wrap(response.json())
                 data.metadata = metadata
                 # FIND DEFAULT VALUE TO TRACK
@@ -110,8 +111,9 @@ def etl(settings):
 
                 sink.add({"id": metadata.uuid, "value": data})
             except Exception, e:
-                Log.warning("problem getting details for {{slice}} reason = {{response}}", {
+                Log.warning("problem getting details for {{slice}} url = {{url}} reason = {{response}}", {
                     "slice": metadata,
+                    "url": url,
                     "response": response
                 }, e)
 
