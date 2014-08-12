@@ -151,7 +151,7 @@ if __name__ == '__main__':
                 db=db
             )
     except Exception, e:
-        Log.note(repr(e))
+        Log.note(str(e))
         Log.warning("Failure to run alerts", e)
     finally:
         Log.stop()
