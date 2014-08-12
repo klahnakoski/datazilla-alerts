@@ -47,6 +47,9 @@ def significant_score_difference(a, b):
 def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
     verbose = nvl(settings.param.verbose, VERBOSE)
 
+    found_alerts = Q.unique_index(found_alerts, "tdad_id")
+    old_alerts = Q.unique_index(old_alerts, "tdad_id")
+
     new_alerts = found_alerts - old_alerts
     changed_alerts = found_alerts & old_alerts
     obsolete_alerts = old_alerts - found_alerts

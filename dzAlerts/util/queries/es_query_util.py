@@ -444,7 +444,7 @@ def compileEdges2Term(mvel_compiler, edges, constants):
 
         if not t.toTerm.body:
             mvel_compiler.Parts2Term(e.domain)
-            Log.error("")
+            Log.unexpected("what?")
 
         fromTerm2Part.append(t.fromTerm)
         mvel_terms.append(t.toTerm.body)

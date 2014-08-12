@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.daemons import util
+from dzAlerts.daemons.util import update_alert_status
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -29,6 +29,7 @@ from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.structs.wraps import wrap_dot, listwrap
+from dzAlerts.util.thread.threads import Thread
 from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.timer import Timer
 
@@ -47,7 +48,7 @@ Raw data:  {{details}}
 </div>"""
 
 VERBOSE = True
-DEBUG = True  # SETTINGS CAN TURN OFF DEBUGGING
+DEBUG = False  # SETTINGS CAN TURN OFF DEBUGGING
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
 
@@ -59,7 +60,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
     oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = True if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
+    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query
@@ -422,10 +423,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             ]}
         })
 
-    found_alerts = Q.unique_index(alerts, "tdad_id")
-    old_alerts = Q.unique_index(old_alerts, "tdad_id")
-
-    util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+    update_alert_status(settings, alerts_db, alerts, old_alerts)
 
     if verbose:
         Log.note("Marking {{num}} {{ids}} as 'done'", {
@@ -473,6 +471,7 @@ def main():
                     )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
+        Thread.sleep(seconds=2)
     finally:
         Log.stop()
 

@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.daemons import util
+from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -25,6 +25,7 @@ from dzAlerts.util.times.dates import Date
 from dzAlerts.util.times.durations import Duration
 
 
+DEBUG_TOUCH_ALL_ALERTS = False
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
@@ -34,7 +35,7 @@ SEVERITY = 0.7
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 TEST_REVISION = '2d88803a0b9c'
 
-SUBJECT = "[ALERT][Eideticker] {{details.example.Eideticker.Test}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Eideticker.Branch}}";
+SUBJECT = "[ALERT][Eideticker] {{details.example.Eideticker.Test}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Eideticker.Branch}}"
 
 TEMPLATE = [
     """
@@ -200,6 +201,7 @@ def eideticker_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
+                        {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                         {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
@@ -210,10 +212,7 @@ def eideticker_alert_revision(settings):
                 # "limit":10
             })
 
-            found_alerts = Q.unique_index(alerts, "revision")
-            old_alerts = Q.unique_index(old_alerts, "revision")
-
-            util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+            update_alert_status(settings, alerts_db, alerts, old_alerts)
 
             # SHOW SUSTAINED ALERTS ARE COVERED
             alerts_db.execute("""

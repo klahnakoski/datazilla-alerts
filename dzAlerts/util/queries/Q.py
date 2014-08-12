@@ -43,7 +43,7 @@ def run(query):
         Log.error("Do not know how to handle")
 
     if query.edges:
-        Log.error("not implemented yet")
+        raise NotImplementedError
 
     try:
         if query.filter != None or query.esfilter != None:

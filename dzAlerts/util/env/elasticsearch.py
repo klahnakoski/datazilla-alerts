@@ -237,7 +237,7 @@ class ElasticSearch(object):
         elif self.node_metatdata.version.number.startswith("1.0"):
             query = {"query": filter}
         else:
-            Log.error("not implemented yet")
+            raise NotImplementedError
 
         if self.debug:
             Log.note("Delete bugs:\n{{query}}", {"query": query})
