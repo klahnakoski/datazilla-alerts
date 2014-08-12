@@ -22,7 +22,6 @@ from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
 from dzAlerts.util.thread.threads import Thread
 from dzAlerts.util.times.durations import Duration
-from dzAlerts.util.thread.threads import Thread
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  # SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"
@@ -152,11 +151,9 @@ if __name__ == '__main__':
                 settings=settings,
                 db=db
             )
-        Log.note("Done")
     except Exception, e:
         Log.warning("Failure to run alerts", cause=e)
         Thread.sleep(seconds=2)
     finally:
-        Thread.sleep(seconds=2)
         Log.stop()
 
