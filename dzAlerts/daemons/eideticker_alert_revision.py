@@ -243,8 +243,9 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
-        eideticker_alert_revision(settings)
+        with startup.SingleInstance(flavor_id=settings.args.filename):
+            Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
+            eideticker_alert_revision(settings)
     finally:
         Log.stop()
 
