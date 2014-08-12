@@ -62,7 +62,7 @@
 			"cold_load_time": {
 				"units": "ms",
 				"better": "lower",
-				"min_regression": "1%"
+				"min_regression": "50"
 			},
 			"communications/contacts_memory": {
 				"units": "MiB",
