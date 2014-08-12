@@ -27,6 +27,7 @@ from ..thread.threads import Thread
 DEBUG_LOGGING = False
 ERROR = "ERROR"
 WARNING = "WARNING"
+UNEXPECTED = "UNEXPECTED"
 NOTE = "NOTE"
 
 
@@ -106,6 +107,27 @@ class Log(object):
             log_template = "{{timestamp|datetime}} - " + template.replace("{{", "{{params.")
 
         cls.main_log.write(log_template, log_params)
+
+    @classmethod
+    def unexpected(cls, template, params=None, cause=None):
+        if isinstance(params, BaseException):
+            cause = params
+            params = None
+
+        if cause and not isinstance(cause, Except):
+            cause = Except(UNEXPECTED, unicode(cause), trace=extract_tb(0))
+
+        trace = extract_stack(1)
+        e = Except(UNEXPECTED, template, params, cause, trace)
+        Log.note(unicode(e), {
+            "warning": {
+                "template": template,
+                "params": params,
+                "cause": cause,
+                "trace": trace
+            }
+        })
+
 
     @classmethod
     def warning(cls, template, params=None, cause=None):
@@ -375,7 +397,7 @@ def format_trace(tbs, start=0):
 
 class Except(Exception):
     def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
-        super(Exception, self).__init__(self)
+        Exception.__init__(self)
         self.type = type
         self.template = template
         self.params = params
@@ -446,10 +468,8 @@ class Log_usingFile(BaseLog):
         self.file_lock = threads.Lock()
 
     def write(self, template, params):
-        from ..env.files import File
-
         with self.file_lock:
-            File(self.filename).append(expand_template(template, params))
+            self.file.append(expand_template(template, params))
 
 
 

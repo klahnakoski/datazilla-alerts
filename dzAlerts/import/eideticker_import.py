@@ -36,29 +36,32 @@ def get_all_uuid(settings):
                 continue
             for testname, test_info in tests.json()['tests'].items():
                 testdata = requests.get(baseurl + '/%s/%s/%s.json' % (device_name, branch, testname))
-                for appname, appdata in testdata.json()['testdata'].items():
-                    for date, date_data in appdata.items():
-                        Log.note("Pull data for device={{device}}, test={{test}}, app={{app}}, date={{date}}", {
-                            "device": device_name,
-                            "branch": branch,
-                            "test": testname,
-                            "app": appname,
-                            "date": int(date)*1000,
-                            "num": len(date_data)
-                        })
-
-                        for d in date_data:
-                            metadata = {
+                try:
+                    apps = testdata.json()['testdata']
+                    for appname, appdata in apps.items():
+                        for date, date_data in appdata.items():
+                            Log.note("Pull data for device={{device}}, test={{test}}, app={{app}}, date={{date}}, num={{num}}", {
                                 "device": device_name,
                                 "branch": branch,
                                 "test": testname,
                                 "app": appname,
                                 "date": int(date)*1000,
-                                "uuid": d["uuid"],
-                                "path": URL(settings.url).path.rstrip("/")
-                            }
-                            output.append(metadata)
+                                "num": len(date_data)
+                            })
 
+                            for d in date_data:
+                                metadata = {
+                                    "device": device_name,
+                                    "branch": branch,
+                                    "test": testname,
+                                    "app": appname,
+                                    "date": int(date)*1000,
+                                    "uuid": d["uuid"],
+                                    "path": URL(settings.url).path.rstrip("/")
+                                }
+                                output.append(metadata)
+                except Exception, e:
+                    Log.warning("problem with json", e)
     return output
 
 

@@ -130,15 +130,10 @@ class SingleInstance:
                 sys.exit(-1)
         self.initialized = True
 
-
     def __exit__(self, type, value, traceback):
         self.__del__()
 
-
     def __del__(self):
-        import sys
-        import os
-
         temp, self.initialized = self.initialized, False
         if not temp:
             return

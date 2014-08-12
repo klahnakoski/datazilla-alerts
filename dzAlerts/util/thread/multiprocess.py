@@ -7,7 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from multiprocessing.queues import Queue
+from dzAlerts.util.thread.threads import Queue
 from ..env.logs import Log
 
 

@@ -211,7 +211,7 @@ class Duration(object):
 
 
     def format(self, interval, rounding):
-        return self.round(Duration.newInstance(interval), rounding) + interval
+        return self.round(Duration(interval), rounding) + interval
 
     def round(self, interval, rounding=0):
         output = self / interval
