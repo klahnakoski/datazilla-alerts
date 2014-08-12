@@ -11,6 +11,17 @@
 	},
 	"mappings": {
 		"results": {
+			"dynamic_templates": [
+				{
+					"default_strings": {
+						"match": "*",
+						"mapping": {
+							"type": "string",
+							"index": "not_analyzed"
+						}
+					}
+				}
+			],
 			"_all": {
 				"enabled": false
 			},
@@ -19,26 +30,29 @@
 			},
 			"properties": {
 				"metadata": {
-					"type":"object",
+					"type": "object",
 					"properties": {
 						"app": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						},
 						"test": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						},
 						"device": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						},
 						"uuid": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						},
 						"date": {
 							"type": "long"
+						},
+						"value":{
+							"type": "double"
 						}
 					}
 				},
@@ -49,7 +63,7 @@
 					"type": "string"
 				},
 				"actionLog": {
-					"type":"object",
+					"type": "object",
 					"properties": {
 						"start": {
 							"type": "double"
@@ -89,7 +103,7 @@
 							}
 						},
 						"type": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						},
 						"end": {
@@ -101,15 +115,15 @@
 					"type": "double"
 				},
 				"sourceRepo": {
-					"index":"not_analyzed",
+					"index": "not_analyzed",
 					"type": "string"
 				},
 				"label": {
-					"index":"not_analyzed",
+					"index": "not_analyzed",
 					"type": "string"
 				},
 				"revision": {
-					"index":"not_analyzed",
+					"index": "not_analyzed",
 					"type": "string"
 				},
 				"httpLog": {
@@ -118,11 +132,11 @@
 							"type": "double"
 						},
 						"path": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						},
 						"method": {
-							"index":"not_analyzed",
+							"index": "not_analyzed",
 							"type": "string"
 						}
 					}
@@ -152,6 +166,14 @@
 						}
 					}
 				},
+				"test_info":{
+					"properties": {
+						"defaultMeasureId": {
+							"index": "not_analyzed",
+							"type": "string"
+						}
+					}
+				},
 				"framesobelentropies": {
 					"type": "double"
 				},
@@ -162,11 +184,11 @@
 					"type": "long"
 				},
 				"buildid": {
-					"index":"not_analyzed",
+					"index": "not_analyzed",
 					"type": "string"
 				},
 				"video": {
-					"index":"not_analyzed",
+					"index": "not_analyzed",
 					"type": "string"
 				}
 			}

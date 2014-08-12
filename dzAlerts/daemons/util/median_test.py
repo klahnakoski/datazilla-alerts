@@ -11,20 +11,29 @@ from __future__ import unicode_literals
 from math import log, exp
 import dzAlerts
 from dzAlerts.util import maths
+from dzAlerts.util.collections import AND
 from dzAlerts.util.env.logs import Log
+from dzAlerts.util.maths import Math
 from dzAlerts.util.struct import Struct
 
 
-def median_test(samples1, samples2, interpolate=True):
+def median_test(samples1, samples2, resolution=None, interpolate=True):
     """
     interpolate=True WILL USE AN INTERPOLATED MEDIAN VALUE (FOR WHEN INTEGER VALUES ARE COMMON)
+    resolution IS REQUIRED TO ASSUME MAXIMUM RESOLUTION OF THE SAMPLES, AND PROVIDE SOME BLURRING
     """
     if len(samples1) < 3 or len(samples2) < 3:
         return {"diff": 0, "score": 0}
     median = dzAlerts.util.maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
 
-    above1, below1 = count_partition(samples1, median)
-    above2, below2 = count_partition(samples2, median)
+    if resolution == None:
+        if AND([Math.is_integer(v) for v in samples1 + samples2]):
+            resolution = 1.0  # IF WE SEE INTEGERS, THEN BLUR
+        else:
+            resolution = median/1000000  # ASSUME SOME BLUR
+
+    above1, below1 = count_partition(samples1, median, resolution=resolution)
+    above2, below2 = count_partition(samples2, median, resolution=resolution)
 
     result = maths.stats.chisquare(
         [above1, below1, above2, below2],

@@ -36,7 +36,7 @@ def pull_repo(repo):
     if not File(os.path.join(repo.directory, ".hg")).exists:
         File(repo.directory).delete()
 
-        #REPO DOES NOT EXIST, CLONE IT
+        # REPO DOES NOT EXIST, CLONE IT
         with Timer("Clone hg log for {{name}}", {"name":repo.name}):
             proc = subprocess.Popen(
                 ["hg", "clone", repo.url, File(repo.directory).filename],
@@ -65,7 +65,7 @@ def pull_repo(repo):
         if not hgrc_file.exists:
             hgrc_file.write("[paths]\ndefault = " + repo.url + "\n")
 
-        #REPO EXISTS, PULL TO UPDATE
+        # REPO EXISTS, PULL TO UPDATE
         with Timer("Pull hg log for {{name}}", {"name":repo.name}):
             proc = subprocess.Popen(
                 ["hg", "pull", "--cwd", File(repo.directory).filename],
@@ -107,14 +107,14 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                     CNV.datetime2unix(date_range.max) - 1) + " 0"
 
 
-    #GET ALL CHANGESET INFO
+    # GET ALL CHANGESET INFO
     args = [
         "hg",
         "log",
         "--cwd",
         File(repo.directory).filename,
         "-v",
-        # "-p",   #TO GET PATCH CONTENTS
+        # "-p",   # TO GET PATCH CONTENTS
         "--style",
         TEMPLATE_FILE.filename
     ]
@@ -211,7 +211,7 @@ def update_repo(repo, settings):
         try:
             pull_repo(repo)
 
-            #GET LATEST DATE
+            # GET LATEST DATE
             existing_range = db.query("""
                         SELECT
                             max(`date`) `max`,
@@ -225,7 +225,7 @@ def update_repo(repo, settings):
                     """, {"repo": repo.name})[0]
 
             ranges = struct.wrap([
-                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + timedelta(0, 1)},
+                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + Duration(0, 1)},
                 {"max": existing_range.min}
             ])
 

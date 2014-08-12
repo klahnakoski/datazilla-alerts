@@ -8,7 +8,7 @@
 				"repo": "Eideticker.Revision",
 				"value": {
 					"name": "value",
-					"value": "metrics.checkerboard"
+					"value": "metadata.value"
 				}
 			},
 			"sort": {
@@ -16,53 +16,26 @@
 				"value": "metadata.date"
 			},
 			"units": "unknown",
-			"better": "lower",
 			"min_regression": "5%",
 			"min_mscore": 2.0,
 			"min_tscore": 4.0,
-			"window_size": 20
+			"window_size": 10,
+			"resolution": 0.01
 		},
 		"branch": {
 		},
 		"test": {
-			"nytimes-load": {
-				"select": {
-					"value": {
-						"value": "metrics.timetostableframe"
-					}
-				}
-			},
-			"nytimes-load-poststartup": {
-				"select": {
-					"value": {
-						"value": "metrics.timetostableframe"
-					}
-				}
-			},
-			"startup-abouthome-dirty": {
-				"select": {
-					"value": {
-						"value": "metrics.timetostableframe"
-					}
-				}
-			},
-			"startup-abouthome-fresh": {
-				"select": {
-					"value": {
-						"value": "metrics.timetostableframe"
-					}
-				}
-			}
 		},
 		"reason": "eideticker_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
 		"severity": 0.8,
 		"test_dimension": "Eideticker.Test",
 		"revision_dimension": "Eideticker.Revision",
 		"branch_dimension": "Eideticker.Branch",
-		"source_ref": {
-			"name": "uuid",
-			"value": "metadata.uuid"
-		},
+		"source_ref": [
+			{"name": "path", "value": "metadata.path"},
+			{"name": "metric", "value": "test_info.defaultMeasureId"},
+			{"name": "uuid", "value": "metadata.uuid"}
+		],
 		"debug": true,
 		"mark_complete": "eideticker_sustained_median",
 		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
@@ -78,6 +51,7 @@
 		},
 		"edges": [
 			"Eideticker.Device",
+			"Eideticker.App",
 			"Eideticker.Branch",
 			"Eideticker.Test"
 		]
@@ -92,6 +66,12 @@
 	},
 	"debug": {
 		"trace": true,
+		"constants":{
+//			"dzAlerts.daemons.eideticker_alert_revision.LOOK_BACK":"10year",
+//			"dzAlerts.daemons.eideticker_alert_revision.DEBUG_TOUCH_ALL_ALERTS":true,
+//			"dzAlerts.daemons.sustained_median.MAX_AGE":"10year",
+//			"dzAlerts.daemons.sustained_median.DEBUG_TOUCH_ALL_ALERTS":true
+		},
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",

@@ -8,8 +8,8 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-from dzAlerts.daemons.util import significant_difference, significant_score_difference
+from datetime import datetime
+from dzAlerts.daemons.util import update_alert_status
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -17,25 +17,25 @@ from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.env import startup
-from dzAlerts.util.queries.db_query import DBQuery, esfilter2sqlwhere
+from dzAlerts.util.queries.db_query import DBQuery
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
 from dzAlerts.util.struct import nvl, StructList, literal_field, split_field
-from dzAlerts.util.sql.db import SQL
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.structs.wraps import wrap_dot, listwrap
+from dzAlerts.util.thread.threads import Thread
+from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.timer import Timer
 
 
 NOW = datetime.utcnow()
-MAX_AGE = timedelta(days=90)
-OLDEST_TS = CNV.datetime2milli(NOW - MAX_AGE)
+MAX_AGE = Duration(days=90)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
@@ -43,26 +43,27 @@ On page {{page_url}}<br>
 <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
 <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
 <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date_max}}&product={{product}}&repository={{branch}}&os={{operating_system_name}}&os_version={{operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
-<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html#page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
+<a href=\"http://people.mozilla.com/~klahnakoski/test/es/DZ-ShowPage.html# page={{page_url}}&sampleMax={{push_date}}000&sampleMin={{push_date_min}}000&branch={{branch}}\">Kyle's ES</a><br>
 Raw data:  {{details}}
 </div>"""
 
 VERBOSE = True
-DEBUG = True  # SETTINGS CAN TURN OFF DEBUGGING
+DEBUG = False  # SETTINGS CAN TURN OFF DEBUGGING
+DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
 
 def alert_sustained_median(settings, qb, alerts_db):
     """
     find single points that deviate from the trend
     """
-    # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
 
+    # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
+    oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = False if settings.param.debug is False else DEBUG  # SETTINGS CAN TURN OFF DEBUGGING
+    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query
-
 
     def is_bad(r, test_param):
         if test_param.min_mscore < r.result.score:
@@ -122,26 +123,29 @@ def alert_sustained_median(settings, qb, alerts_db):
                     {"missing": {"field": settings.param.mark_complete}},
                     {"not": {"term": {settings.param.mark_complete: "done"}}}
                 ]},
-                {"range": {settings.param.default.sort.value: {"gte": OLDEST_TS}}},
+                {"range": {settings.param.default.sort.value: {"gte": oldest_ts}}},
                 {"and": exists},
                 {"and": disabled},
                 {"or": [
                     {"not": debug},
                     {"and": [
-                        #FOR DEBUGGING SPECIFIC SERIES
+                        # FOR DEBUGGING SPECIFIC SERIES
+                        # {"term": {"metadata.device": "flame"}},
+                        # {"term": {"metadata.test": "b2g-gallery-startup"}},
+                        # {"exists": {"field": "metadata.value"}}
                         # {"term": {"result.test_name": "fps"}}
                         # {"term": {"test_machine.type": "flame"}},
                         # {"term": {"metadata.app": "b2g-nightly"}}
-                        # {"term":{"metadata.test":"startup-abouthome-dirty"}}
-                        # {"term": {"metadata.test": "nytimes-load"}},
+                        # {"term":{"metadata.branch":"mozilla-central"}},
+                        # {"term": {"metadata.test": "imgur"}},
                         # {"term": {"metadata.device": "samsung-gn"}},
                         # {"term": {"metadata.app": "nightly"}},
-                        # {"term": {"testrun.suite": "dromaeo_css"}},
-                        # {"term": {"result.test_name": "ext.html.9"}},
+                        # {"term": {"testrun.suite": "tcanvasmark"}},
+                        # {"term": {"result.test_name": "canvasmark"}},
                         # {"term": {"test_machine.platform": "x86_64"}},
                         # {"term": {"test_build.name": "Firefox"}},
-                        # {"term": {"test_machine.osversion": "Ubuntu 12.04"}},
-                        # {"term": {"test_build.branch": "Fx-Team-Non-PGO"}}
+                        # {"term": {"test_machine.osversion": "6.2.9200"}},
+                        # {"term": {"test_build.branch": "Mozilla-Aurora"}}
 
                     ]}
                 ]}
@@ -151,9 +155,9 @@ def alert_sustained_median(settings, qb, alerts_db):
 
         new_test_points = qb.query(temp)
 
-    #BRING IN ALL NEEDED DATA
+    # BRING IN ALL NEEDED DATA
     if verbose:
-        Log.note("Pull all data for {{num}} groups:\n{{groups.name}}", {
+        Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
             "num": len(new_test_points),
             "groups": query.edges
         })
@@ -178,9 +182,9 @@ def alert_sustained_median(settings, qb, alerts_db):
             test_param = set_default(*lookup)
 
             if settings.args.restart:
-                first_sample = OLDEST_TS
+                first_sample = oldest_ts
             else:
-                first_sample = MAX(MIN(min_push_date), OLDEST_TS)
+                first_sample = MAX(MIN(min_push_date), oldest_ts)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
             first_in_window = qb.query({
                 "select": {"name": "min_date", "value": test_param.sort.name, "aggregate": "min"},
@@ -204,16 +208,16 @@ def alert_sustained_median(settings, qb, alerts_db):
 
             min_date = MIN(first_sample, first_in_window.min_date)
 
-            #LOAD TEST RESULTS FROM DATABASE
+            # LOAD TEST RESULTS FROM DATABASE
             all_test_results = qb.query({
                 "from": {
                     "from": settings.query["from"],
                     "select": [
                         test_param.sort,
                         test_param.select.repo,
-                        test_param.select.value
-                        ] +
-                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")]+  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
+                        test_param.select.value,
+                    ]+
+                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")] +  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
                         query.edges,
                     "where": {"and": [
                         {"term": g},
@@ -253,12 +257,12 @@ def alert_sustained_median(settings, qb, alerts_db):
                 Log.note("Find sustained_median exceptions")
 
             def diff_by_association(r, i, rows):
-                #MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH SCORE
+                # MARK IT DIFF IF IT IS IN THE T-TEST MOUNTAIN OF HIGH SCORE
                 if rows[i - 1].is_diff and r.ttest_result.score > test_param.min_mscore:
                     r.is_diff = True
                 return None
 
-            #APPLY WINDOW FUNCTIONS
+            # APPLY WINDOW FUNCTIONS
             stats = Q.run({
                 "from": {
                     "from": test_results,
@@ -312,7 +316,8 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r, i, rows: median_test(
                             rows[-test_param.window_size + i:i:].value,
                             rows[ i:test_param.window_size + i:].value,
-                            interpolate=False
+                            interpolate=False,
+                            resolution=test_param.resolution
                         ),
                         "sort": test_param.sort.name
                     }, {
@@ -325,13 +330,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "name": "is_diff",
                         "value": lambda r: is_bad(r, test_param)
                     }, {
-                        #USE THIS TO FILL SCORE HOLES
-                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
+                        # USE THIS TO FILL SCORE HOLES
+                        # WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
                         "name": "future_is_diff",
                         "value": diff_by_association,
                         "sort": test_param.sort.name
                     }, {
-                        #WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
+                        # WE CAN MARK IT is_diff KNOWING THERE IS A HIGHER SCORE
                         "name": "past_is_diff",
                         "value": diff_by_association,
                         "sort": {"value": test_param.sort.name, "sort": -1}
@@ -339,7 +344,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 ]
             })
 
-            #PICK THE BEST SCORE FOR EACH is_diff==True REGION
+            # PICK THE BEST SCORE FOR EACH is_diff==True REGION
             for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
                     best = Q.sort(data, ["ttest_result.score", "diff"]).last()
@@ -368,7 +373,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     "sort": test_param.sort.name
                 })))
 
-            #TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
+            # TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
             new_exceptions = Q.filter(stats, {"term": {"pass": True}})
             for v in new_exceptions:
                 if v.ignored:
@@ -383,7 +388,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     revision=v[settings.param.revision_dimension],
                     details=v,
                     severity=settings.param.severity,
-                    confidence=v.result.score
+                    confidence=v.ttest_result.score
                 )
                 alerts.append(alert)
 
@@ -396,11 +401,11 @@ def alert_sustained_median(settings, qb, alerts_db):
     if verbose:
         Log.note("Get Current Alerts")
 
-    #CHECK THE CURRENT ALERTS
+    # CHECK THE CURRENT ALERTS
     if not evaled_tests:
-        current_alerts = StructList.EMPTY
+        old_alerts = StructList.EMPTY
     else:
-        current_alerts = DBQuery(alerts_db).query({
+        old_alerts = DBQuery(alerts_db).query({
             "from": "alerts",
             "select": [
                 "id",
@@ -418,62 +423,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             ]}
         })
 
-    found_alerts = Q.unique_index(alerts, "tdad_id")
-    current_alerts = Q.unique_index(current_alerts, "tdad_id")
-
-    new_alerts = found_alerts - current_alerts
-    changed_alerts = current_alerts & found_alerts
-    obsolete_alerts = Q.filter(current_alerts - found_alerts, {"not": {"term": {"status": "obsolete"}}})
-
-    if verbose:
-        Log.note("Update Alerts: ({{num_new}} new, {{num_change}} changed, {{num_delete}} obsoleted)", {
-            "num_new": len(new_alerts),
-            "num_change": len(changed_alerts),
-            "num_delete": len(obsolete_alerts)
-        })
-
-    if new_alerts:
-        for a in new_alerts:
-            a.id = SQL("util.newid()")
-            a.last_updated = NOW
-        try:
-            alerts_db.insert_list("alerts", new_alerts)
-        except Exception, e:
-            Log.error("problem with insert", e)
-
-    for curr in changed_alerts:
-        if len(nvl(curr.solution, "").strip()) != 0:
-            continue  # DO NOT TOUCH SOLVED ALERTS
-
-        a = found_alerts[(curr.tdad_id, )]
-
-        if a == None:
-            Log.error("Programmer error, changed_alerts must have {{key_value}}", {"key_value": curr.tdad.id})
-
-        if significant_difference(curr.severity, a.severity) or \
-                significant_score_difference(curr.confidence, a.confidence) or \
-                        curr.reason != a.reason:
-            curr.last_updated = NOW
-            alerts_db.update("alerts", {"id": curr.id}, a)
-
-    #OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
-    if obsolete_alerts:
-        alerts_db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {
-            "where": esfilter2sqlwhere(
-                alerts_db,
-                {"and": [
-                    {"terms": {"id": obsolete_alerts.id}},
-                    {"not": {"term": {"status": "obsolete"}}}
-                ]}
-            )
-        })
-
-    alerts_db.execute("UPDATE reasons SET last_run={{now}} WHERE {{where}}", {
-        "now": NOW,
-        "where": esfilter2sqlwhere(alerts_db, {"term": {"code": settings.param.reason}})
-    })
-
-    alerts_db.flush()
+    update_alert_status(settings, alerts_db, alerts, old_alerts)
 
     if verbose:
         Log.note("Marking {{num}} {{ids}} as 'done'", {
@@ -507,7 +457,7 @@ def main():
     Log.start(settings.debug)
     try:
         with startup.SingleInstance(flavor_id=settings.args.filename):
-            #MORE SETTINGS
+            # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
             with ESQuery(ElasticSearch(settings.query["from"])) as qb:
@@ -521,6 +471,7 @@ def main():
                     )
     except Exception, e:
         Log.warning("Failure to find sustained_median exceptions", e)
+        Thread.sleep(seconds=2)
     finally:
         Log.stop()
 

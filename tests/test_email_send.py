@@ -63,7 +63,7 @@ class test_email_send():
         ########################################################################
         self.verify_notify_is_cleared()
         if len(to_list) == 0:
-            #ENSURE NOTHING SENT
+            # ENSURE NOTHING SENT
             mail_content = self.db.query("SELECT id, subject, date_sent, body FROM mail.content WHERE subject={{subject}}", {"subject": "subject" + self.uid})
             assert len(mail_content) == 0
         else:
@@ -76,21 +76,21 @@ class test_email_send():
         self.emailer = testing.Emailer(self.settings.email)
 
         self.db.call("mail.send", (
-            ";".join(to_list), #to
-            "subject" + self.uid, #title
-            "body" + self.uid, #body
+            ";".join(to_list), # to
+            "subject" + self.uid, # title
+            "body" + self.uid, # body
             None
         ))
 
 
     def verify_notify_is_cleared(self):
-        #THE NOTIFY FLAG IS PROPERLY CLEARED
+        # THE NOTIFY FLAG IS PROPERLY CLEARED
         notify = self.db.query("SELECT new_mail FROM mail.notify")[0].new_mail
         assert notify == 0
 
 
     def verify_content(self):
-        #MAIL DOES EXIST
+        # MAIL DOES EXIST
         mail_content = self.db.query("SELECT id, subject, date_sent, body FROM mail.content WHERE subject={{subject}}", {"subject": "subject" + self.uid})
         assert len(mail_content) == 1
         assert mail_content[0].date_sent != None
@@ -99,7 +99,7 @@ class test_email_send():
 
 
     def verify_delivery(self, mail_content, to_list):
-        #VERIFY DELIVERY IN DATABASE IS SAME AS LIST
+        # VERIFY DELIVERY IN DATABASE IS SAME AS LIST
         mail_delivery = self.db.query("SELECT id, deliver_to FROM mail.delivery WHERE content={{content_id}}", {"content_id": mail_content.id})
         mail_delivery = set(Q.select(mail_delivery, "deliver_to"))
         assert mail_delivery == set(to_list)
@@ -112,7 +112,7 @@ class test_email_send():
         assert self.emailer.sent[0].text_data == None
         assert self.emailer.sent[0].html_data == "body" + self.uid
 
-        #THE EMAIL SHOULD HAVE BEEN SENT TO EVERYONE IN to_list. NO MORE, NO LESS
+        # THE EMAIL SHOULD HAVE BEEN SENT TO EVERYONE IN to_list. NO MORE, NO LESS
         to_list = set(to_list)
         to_addr = set(self.emailer.sent[0].to_addrs)
         assert to_list == to_addr

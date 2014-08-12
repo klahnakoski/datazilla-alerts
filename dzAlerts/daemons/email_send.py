@@ -19,7 +19,7 @@ from dzAlerts.util.struct import nvl
 def email_send(db, emailer, debug):
     db.debug = debug
 
-    ##VERIFY self SHOULD BE THE ONE PERFORMING OPS (TO PREVENT MULTIPLE INSTANCES NEEDLESSLY RUNNING)
+    ## VERIFY self SHOULD BE THE ONE PERFORMING OPS (TO PREVENT MULTIPLE INSTANCES NEEDLESSLY RUNNING)
     try:
 
         ## EXIT EARLY IF THERE ARE NO EMAILS TO SEND
@@ -48,7 +48,7 @@ def email_send(db, emailer, debug):
             """)
 
         ## SEND MAILS
-        not_done = 0   ##SET TO ONE IF THERE ARE MAIL FAILURES, AND THERE ARE MAILS STILL LEFT TO SEND
+        not_done = 0   ## SET TO ONE IF THERE ARE MAIL FAILURES, AND THERE ARE MAILS STILL LEFT TO SEND
         num_done = 0
         for email in emails:
             try:

@@ -156,7 +156,7 @@ class ESQuery(object):
         """
         command = wrap(command)
 
-        #GET IDS OF DOCUMENTS
+        # GET IDS OF DOCUMENTS
         results = self.es.search({
             "fields": [],
             "query": {"filtered": {

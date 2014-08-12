@@ -96,7 +96,7 @@ def groupby_size(data, size):
                 break
         return output
 
-    #THIS IS LAZY
+    # THIS IS LAZY
     i = 0
     while True:
         output = more()

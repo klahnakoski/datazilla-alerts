@@ -18,7 +18,7 @@ CONFIDENCE = 0.70
 
 def failure_rate(previous_results, current_results, real_rate=REAL_REGRESSION_RATE, confidence=CONFIDENCE):
     if confidence is None:
-        #USED FOR TESTING
+        # USED FOR TESTING
         for page_name, results in previous_results.items():
             results["failure_probability"] = float(results["total_fail"]) / (results["total_pass"] + results["total_fail"])
     else:
