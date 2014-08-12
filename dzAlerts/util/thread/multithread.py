@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 from collections import Iterable
 from types import GeneratorType
-from dzAlerts.util.struct import nvl
+from ..struct import nvl
 from ..env.logs import Log
 from ..thread.threads import Queue, Thread
 
@@ -107,7 +107,7 @@ class Multithread(object):
                 else:
                     yield result["response"]
 
-        if self.outbound:
+        if self.outbound is not None:
             return output()
         else:
             return

@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import AND, SUM, OR
-from dzAlerts.util.structs.wraps import listwrap
+from ..structs.wraps import listwrap
 from ..queries.es_query_util import aggregates
 from ..queries import domains, es_query_util
 from ..queries.filters import simplify, TRUE_FILTER

@@ -309,7 +309,7 @@ class Log(object):
 
     @classmethod
     def stop(cls):
-        from dzAlerts.util.env import profiles
+        from ..env import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
             write_profile(cls.settings.cprofile, cls.cprofiler)
