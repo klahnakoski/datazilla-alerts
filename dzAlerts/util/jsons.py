@@ -66,7 +66,7 @@ def encode(value, pretty=False):
         output = _buffer.build()
         return output
     except Exception, e:
-        #THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
+        # THE PRETTY JSON WILL PROVIDE MORE DETAIL ABOUT THE SERIALIZATION CONCERNS
         from .env.logs import Log
         Log.warning("Serialization of JSON problems", e)
         try:
@@ -202,7 +202,7 @@ for i in range(0x20):
     ESCAPE_DCT.setdefault(chr(i), u'\\u{0:04x}'.format(i))
 
 
-#REMOVE VALUES THAT CAN NOT BE JSON-IZED
+# REMOVE VALUES THAT CAN NOT BE JSON-IZED
 def json_scrub(value):
     return _scrub(value)
 
@@ -249,29 +249,6 @@ def _scrub(value):
         output = []
         for v in value:
             v = _scrub(v)
-            output.append(v)
-        return output
-    else:
-        return value
-
-
-def expand_dot(value):
-    """
-    JSON CAN HAVE ATTRIBUTE NAMES WITH DOTS
-    """
-    if value == None:
-        return None
-    elif isinstance(value, (basestring, int, float)):
-        return value
-    elif isinstance(value, dict):
-        output = Struct()
-        for k, v in value.iteritems():
-            output[k] = expand_dot(v)
-        return output
-    elif hasattr(value, '__iter__'):
-        output = []
-        for v in value:
-            v = expand_dot(v)
             output.append(v)
         return output
     else:
@@ -363,7 +340,7 @@ def pretty_json(value):
             js = [pretty_json(v) for v in value]
             max_len = MAX(len(j) for j in js)
             if max_len <= ARRAY_ITEM_MAX_LENGTH and AND(j.find("\n") == -1 for j in js):
-                #ALL TINY VALUES
+                # ALL TINY VALUES
                 num_columns = max(1, min(ARRAY_MAX_COLUMNS, int(floor((ARRAY_ROW_LENGTH + 2.0)/float(max_len+2)))))  # +2 TO COMPENSATE FOR COMMAS
                 if len(js)<=num_columns:  # DO NOT ADD \n IF ONLY ONE ROW
                     return "[" + ", ".join(js) + "]"

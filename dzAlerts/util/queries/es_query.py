@@ -21,8 +21,8 @@ from ..queries.dimensions import Dimension
 from ..queries.query import Query, _normalize_where
 from ..env.logs import Log
 from ..queries.MVEL import _MVEL
-from ..struct import Struct, split_field, wrap, listwrap, StructList
-
+from ..struct import Struct, split_field, StructList, nvl
+from ..structs.wraps import wrap, unwrap, listwrap
 
 class ESQuery(object):
     """
@@ -49,11 +49,11 @@ class ESQuery(object):
         else:
             self.worker.join()
 
-    def query(self, query):
+    def query(self, _query):
         if not self.ready:
             Log.error("Must use with clause for any instance of ESQuery")
 
-        query = Query(query, schema=self)
+        query = Query(_query, schema=self)
 
         for s in listwrap(query.select):
             if not aggregates[s.aggregate]:
@@ -106,6 +106,47 @@ class ESQuery(object):
     def __getattr__(self, item):
         return self.edges[item]
 
+    def normalize_edges(self, edges):
+        output = StructList()
+        for e in listwrap(edges):
+            output.extend(self._normalize_edge(e))
+        return output
+
+    def _normalize_edge(self, edge):
+        """
+        RETURN A EDGE DEFINITION INTO A SIMPLE ARRAY OF PATH-LEAF
+        DEFINITIONS [ {"name":<pathA>, "value":<pathB>}, ... ]
+
+        USEFUL FOR DECLARING HIGH-LEVEL DIMENSIONS, AND RELIEVING LOW LEVEL PATH PAIRS
+        """
+        if isinstance(edge, basestring):
+            e = self[edge]
+            if e:
+                domain = e.getDomain()
+                fields = domain.dimension.fields
+
+                if isinstance(fields, list):
+                    if len(fields) == 1:
+                        return [{"value": fields[0]}]
+                    else:
+                        return [{"name": (edge + "["+str(i)+"]"), "value": v} for i, v in enumerate(fields)]
+                elif isinstance(fields, dict):
+                    return [{"name": (edge + "." + k), "value": v} for k, v in fields.items()]
+                else:
+                    Log.error("do not know how to handle")
+
+            return [{
+                "name": edge,
+                "value": edge
+            }]
+        else:
+            return [{
+                "name": nvl(edge.name, edge.value),
+                "value": edge.value
+            }]
+
+
+
 
     def update(self, command):
         """
@@ -115,7 +156,7 @@ class ESQuery(object):
         """
         command = wrap(command)
 
-        #GET IDS OF DOCUMENTS
+        # GET IDS OF DOCUMENTS
         results = self.es.search({
             "fields": [],
             "query": {"filtered": {
@@ -131,16 +172,17 @@ class ESQuery(object):
             if not MVEL.isKeyword(k):
                 Log.error("Only support simple paths for now")
 
-            scripts.append("ctx._source."+k+" = "+MVEL.value2MVEL(v)+";")
+            scripts.append("ctx._source."+k+" = "+MVEL.value2MVEL(v)+";\n")
         script = "".join(scripts)
 
-        command = []
-        for id in results.hits.hits._id:
-            command.append({"update": {"_id": id}})
-            command.append({"script": script})
-        content = ("\n".join(CNV.object2JSON(c) for c in command)+"\n").encode('utf-8')
-        self.es._post(
-            self.es.path + "/_bulk",
-            data=content,
-            headers={"Content-Type": "application/json"}
-        )
+        if results.hits.hits:
+            command = []
+            for id in results.hits.hits._id:
+                command.append({"update": {"_id": id}})
+                command.append({"script": script})
+            content = ("\n".join(CNV.object2JSON(c) for c in command)+"\n").encode('utf-8')
+            self.es._post(
+                self.es.path + "/_bulk",
+                data=content,
+                headers={"Content-Type": "application/json"}
+            )

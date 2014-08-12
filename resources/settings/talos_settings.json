@@ -3,36 +3,111 @@
 		"filename": "dimension_talos.json"
 	},
 	"param": {
-		"test": {
-			"fps": {
-				"units": "frames/s",
-				"better": "higher",
-				"min_regression": "1%"
+		"default": {
+			"select": {
+				"repo": "Talos.Revision",
+				"value": {
+					"name": "value",
+					"value": "result.stats.median"
+				}
 			},
-			"cold_load_time": {
-				"units": "ms",
-				"better": "lower",
-				"min_regression": "1%"
+			"sort": {
+				"name": "push_date",
+				"value": "test_build.push_date"
+			},
+			"units": "unknown",
+			"better": "lower",
+			"min_regression": "5%",
+			"min_mscore": 2.5,
+			"min_tscore": 4.0,
+			"window_size": 20
+		},
+		"branch": {
+			"Try": {
+				"disable": true
+			},
+			"Try-Non-PGO": {
+				"disable": true
+			},
+			"Cedar": {
+				"disable": true
+			},
+			"Cedar-Non-PGO": {
+				"disable": true
+			},
+			"Ash": {
+				"disable": true
+			},
+			"Ash-Non-PGO": {
+				"disable": true
 			}
 		},
-		"sustained": {
-			"trigger": 0.999, //WHEN THE WELCH'S T-TEST RETURNS POSITIVE RESULT
-			"max_test_results_per_run": 1,
-			"window_size": 10
+		"suite": {
+			"dromaeo_css": {
+				"window_size": 30,
+				"min_regression": "15%",
+				"better": "higher"
+			},
+			"dromaeo_dom": {
+				"window_size": 30,
+				"min_regression": "15%",
+				"better": "higher"
+			},
+			"v8_7": {
+				"better": "higher"
+			},
+			"canvasmark": {
+				"better": "higher"
+			},
+			"tp5o": {
+				"units": "ms",
+				"better": "lower",
+				"min_regression": "15%"
+			},
+			"tp4m": {
+				"units": "ms",
+				"select": {
+					"value": {
+						"name": "value",
+						"value": "result.stats.last"
+					}
+				}
+			}
 		},
-		"sustained_median": {
-			"trigger": 0.999,
-			"max_test_results_per_run": 1,
-			"window_size": 10
+		"test": {
+			"1-customize-enter.error.TART": {
+				"units": "unknown units",
+				"better": "lower",
+				"min_regression": "1%"
+			},
+			"tablemutation.html": {
+				"units": "unknown units",
+				"better": "lower",
+				"min_regression": "3%"
+			},
+			"alipay.com": {
+				//VERY NOISY TEST
+				"window_size": 50,
+				"select": {
+					"value": {
+						"name": "value",
+						"value": "result.stats.min"
+					}
+				}
+			}
 		},
-		"exception": {
-			"min_confidence": 0.999,
-			"window_size": 20,
-			"max_test_results_per_run": 10  // MULTIPLY FURTHER BY NUMBER OF PAGES (5.3 average, but also higher tp5o=25) AND THEN BY NUMBER FOUND IN HISTORY (?30? average)
-		},
-		"debug": true,
-		"mark_complete": "kyle_test_talos_sustained_median",
-		"combo_limit": 10  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+		"reason": "talos_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
+		"severity": 0.8,
+		"test_dimension": "Talos.Test",
+		"revision_dimension": "Talos.Revision",
+		"branch_dimension": "Talos.Branch",
+		"source_ref": [
+			"Talos.Test",
+			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
+		],
+		"verbose": true,
+		"mark_complete": "talos_sustained_median",
+		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {
 		"from": {
@@ -43,32 +118,20 @@
 			"type": "test_results",
 			"debug": true
 		},
-		"select": [
-			{
-				"name": "test_run_id",
-				"value": "datazilla.test_run_id"
-			},
-			"Talos.Revision",
-			{
-				"name": "value",
-				"value": "result.stats.median"
-			}
-		],
 		"edges": [
 			"Talos.Product",
 			"Talos.Branch",
 			"Talos.OS",
 			"Talos.Platform",
 			"Talos.Test"
-		],
-		"sort": "datazilla.date_loaded"
+		]
 	},
 	"alerts": {
 		"host": "localhost",
 		"port": 3306,
 		"username": "username",
 		"password": "password",
-		"schema": "ekyle_perftest_1",
+		"schema": "alerts",
 		"debug": true
 	},
 	"pushlog": {
@@ -83,6 +146,7 @@
 		"use_ssl": 1
 	},
 	"debug": {
+		"trace": false,
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",
@@ -98,3 +162,4 @@
 		]
 	}
 }
+

@@ -18,7 +18,8 @@ from ..thread.threads import ThreadedQueue
 from ..maths import Math
 from ..cnv import CNV
 from ..env.logs import Log
-from ..struct import nvl, Null, wrap, unwrap
+from ..struct import nvl, Null
+from ..structs.wraps import wrap, unwrap
 from ..struct import Struct, StructList
 
 
@@ -76,20 +77,26 @@ class ElasticSearch(object):
 
 
     @staticmethod
-    def get_or_create_index(settings, schema, limit_replicas=False):
+    def get_or_create_index(settings, schema=None, limit_replicas=None):
         es = ElasticSearch(settings)
         aliases = es.get_aliases()
-        if settings.index not in [a.index for a in aliases]:
-            schema = CNV.JSON2object(CNV.object2JSON(schema), paths=True)
+        if settings.index not in aliases.index:
             es = ElasticSearch.create_index(settings, schema, limit_replicas=limit_replicas)
         return es
 
 
     @staticmethod
-    def create_index(settings, schema, limit_replicas=False):
-        schema = wrap(schema)
-        if isinstance(schema, basestring):
-            schema = CNV.JSON2object(schema)
+    def create_index(settings, schema=None, limit_replicas=None):
+        if not schema and settings.schema_file:
+            from .files import File
+
+            schema = CNV.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
+        elif isinstance(schema, basestring):
+            schema = CNV.JSON2object(schema, paths=True)
+        else:
+            schema = CNV.JSON2object(CNV.object2JSON(schema), paths=True)
+
+        limit_replicas = nvl(limit_replicas, settings.limit_replicas)
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -158,7 +165,7 @@ class ElasticSearch(object):
             return wrap({"mappings":mapping[self.settings.type]})
 
 
-    #DELETE ALL INDEXES WITH GIVEN PREFIX, EXCEPT name
+    # DELETE ALL INDEXES WITH GIVEN PREFIX, EXCEPT name
     def delete_all_but(self, prefix, name):
         if prefix == name:
             Log.note("{{index_name}} will not be deleted", {"index_name": prefix})
@@ -230,7 +237,7 @@ class ElasticSearch(object):
         elif self.node_metatdata.version.number.startswith("1.0"):
             query = {"query": filter}
         else:
-            Log.error("not implemented yet")
+            raise NotImplementedError
 
         if self.debug:
             Log.note("Delete bugs:\n{{query}}", {"query": query})
@@ -323,7 +330,7 @@ class ElasticSearch(object):
                 "error": response.content.decode("utf-8")
             })
 
-    def search(self, query):
+    def search(self, query, timeout=None):
         query = wrap(query)
         try:
             if self.debug:
@@ -336,7 +343,7 @@ class ElasticSearch(object):
             return self._post(
                 self.path + "/_search",
                 data=CNV.object2JSON(query).encode("utf8"),
-                timeout=self.settings.timeout
+                timeout=nvl(timeout, self.settings.timeout)
             )
         except Exception, e:
             Log.error("Problem with search (path={{path}}):\n{{query|indent}}", {
@@ -393,7 +400,7 @@ class ElasticSearch(object):
     def put(self, *args, **kwargs):
         try:
             kwargs = wrap(kwargs)
-            kwargs.setdefault("timeout", 30)
+            kwargs.setdefault("timeout", 60)
             response = requests.put(*args, **kwargs)
             if self.debug:
                 Log.note(response.content.decode("utf-8"))
@@ -403,7 +410,7 @@ class ElasticSearch(object):
 
     def delete(self, *args, **kwargs):
         try:
-            kwargs.setdefault("timeout", 30)
+            kwargs.setdefault("timeout", 60)
             response = requests.delete(*args, **kwargs)
             if self.debug:
                 Log.note(response.content.decode("utf-8"))

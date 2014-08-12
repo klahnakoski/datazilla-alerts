@@ -8,24 +8,26 @@
 #
 
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-
-from dzAlerts.daemons import b2g_sustained_median
-from dzAlerts.daemons.util import significant_difference
+from datetime import datetime
+from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
+from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.sql.db import DB, SQL
+from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.times.durations import Duration
 
 
+DEBUG_TOUCH_ALL_ALERTS = False
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
-LOOK_BACK = timedelta(days=90)
+LOOK_BACK = Duration(days=90)
+MIN_AGE = Duration(hours=2)
 NOW = datetime.utcnow()
 SEVERITY = 0.7
 
@@ -40,13 +42,14 @@ SEVERITY = 0.7
 #      * Summary statistics for the regression; mean, median, stdev before and after event
 #
 SUBJECT = [
-    "[ALERT][B2G] {{details.example.B2G.Test.name}} regressed by {{details.example.diff|round(digits=2)}}{{details.example.units}} in ",
+    "[ALERT][B2G] {{details.example.B2G.Test.name}} regressed by {{details.example.diff_percent|percent(digits=3)}}{{details.example.units}} in ",
     {
         "from": "details.tests",
         "template": "{{test.suite}}",
         "separator": ", "
     }
-    ]
+]
+
 TEMPLATE = [
     """
     <div>
@@ -80,69 +83,63 @@ TEMPLATE = [
     """</table></div>"""
 ]
 
-#GET ACTIVE ALERTS
-# assumes there is an outside agent corrupting our test results
-# this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
 def b2g_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
-    with DB(settings.alerts) as db:
+    with DB(settings.alerts) as alerts_db:
         with ESQuery(ElasticSearch(settings.query["from"])) as esq:
-            dbq = DBQuery(db)
+            dbq = DBQuery(alerts_db)
 
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
-            #TODO: REMOVE, LEAVE IN DB
-            if db.debug:
-                db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+            # TODO: REMOVE, LEAVE IN DB
+            if alerts_db.debug:
+                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
                     "reason": REASON
                 })
-                db.flush()
+                alerts_db.flush()
 
-            #EXISTING SUSTAINED EXCEPTIONS
+            # EXISTING SUSTAINED EXCEPTIONS
             existing_sustained_alerts = dbq.query({
                 "from": "alerts",
                 "select": "*",
                 "where": {"and": [
-                    {"term": {"reason": b2g_sustained_median.REASON}},
+                    {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
+                    True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.B2G.Test"])
 
-            #EXISTING REVISION-LEVEL ALERTS
-            old_alerts = dbq.query({
-                "from": "alerts",
-                "select": "*",
+            # SUMMARIZE
+            alerts = StructList()
+
+            total_tests = esq.query({
+                "from": "b2g_alerts",
+                "select": {"name": "count", "aggregate": "count"},
+                "edges": [
+                    "B2G.Revision"
+                ],
                 "where": {"and": [
-                    {"term": {"reason": REASON}},
-                    {"or":[
-                        {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
-                    ]}
+                    {"terms": {"B2G.Revision": list(set(existing_sustained_alerts.revision))}}
                 ]}
             })
-            old_alerts = Q.unique_index(old_alerts, "revision")
 
-            #SUMMARIZE
-            known_alerts = StructList()
-            for revision in set(existing_sustained_alerts.revision):
-            #FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                total_tests = esq.query({
-                    "from": "b2g_alerts",
-                    "select": {"name": "count", "aggregate": "count"},
-                    "where": {"terms": {"B2G.Revision": revision}}
-                })
+            # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
+            for revision, total_test_count in Q.groupby(total_tests, ["B2G.Revision"]):
+            # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
+                revision = revision["B2G.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
                 parts = StructList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
-                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff"]).last()
+                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
+                    example = worst_in_test.details
 
                     num_except = len(exceptions)
                     if num_except == 0:
@@ -151,16 +148,16 @@ def b2g_alert_revision(settings):
                     part = {
                         "test": g.details.B2G.Test,
                         "num_exceptions": num_except,
-                        "num_tests": total_tests,
+                        "num_tests": total_test_count,
                         "confidence": worst_in_test.confidence,
-                        "example": worst_in_test.details
+                        "example": example
                     }
                     parts.append(part)
 
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                known_alerts.append({
+                alerts.append({
                     "status": "new",
                     "create_time": CNV.milli2datetime(worst_in_revision.push_date),
                     "reason": REASON,
@@ -168,27 +165,39 @@ def b2g_alert_revision(settings):
                     "tdad_id": revision,
                     "details": {
                         "revision": revision,
-                        "total_tests": total_tests,
+                        "total_tests": total_test_count,
                         "total_exceptions": len(total_exceptions),
                         "tests": parts,
                         "example": worst_in_revision
                     },
                     "severity": SEVERITY,
-                    "confidence": worst_in_revision.result.confidence
+                    "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
                 })
 
-            known_alerts = Q.unique_index(known_alerts, "revision")
 
-            #NEW ALERTS, JUST INSERT
-            new_alerts = known_alerts - old_alerts
-            if new_alerts:
-                for revision in new_alerts:
-                    revision.id = SQL("util.newid()")
-                    revision.last_updated = NOW
-                db.insert_list("alerts", new_alerts)
+            # EXISTING REVISION-LEVEL ALERTS
+            old_alerts = dbq.query({
+                "from": "alerts",
+                "select": "*",
+                "where": {"and": [
+                    {"term": {"reason": REASON}},
+                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
+                    {"or": [
+                        {"terms": {"tdad_id": set(alerts.tdad_id)}},
+                        {"terms": {"revision": set(existing_sustained_alerts.revision)}},
+                        {"term": {"reason": settings.param.reason}},
+                        {"term": {"status": "obsolete"}},
+                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    ]}
+                ]},
+                # "sort":"status",
+                # "limit":10
+            })
 
-            #SHOW SUSTAINED ALERTS ARE COVERED
-            db.execute("""
+            update_alert_status(settings, alerts_db, alerts, old_alerts)
+
+            # SHOW SUSTAINED ALERTS ARE COVERED
+            alerts_db.execute("""
                 INSERT INTO hierarchy (parent, child)
                 SELECT
                     r.id parent,
@@ -202,40 +211,27 @@ def b2g_alert_revision(settings):
                 WHERE
                     {{where}}
             """, {
-                "where": esfilter2sqlwhere(db, {"and": [
-                    {"term": {"p.reason": b2g_sustained_median.REASON}},
+                "where": esfilter2sqlwhere(alerts_db, {"and": [
+                    {"term": {"p.reason": settings.param.reason}},
                     {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON
             })
 
-            #CURRENT ALERTS, UPDATE IF DIFFERENT
-            for known_alert in known_alerts & old_alerts:
-                if len(nvl(known_alert.solution, "").strip()) != 0:
-                    continue  # DO NOT TOUCH SOLVED ALERTS
-
-                old_alert = old_alerts[known_alert]
-                if old_alert.status == 'obsolete' or significant_difference(known_alert.severity, old_alert.severity) or significant_difference(known_alert.confidence, old_alert.confidence):
-                    known_alert.last_updated = NOW
-                    db.update("alerts", {"id": old_alert.id}, known_alert)
-
-            #OLD ALERTS, OBSOLETE
-            for old_alert in old_alerts - known_alerts:
-                if old_alert.status == 'obsolete':
-                    continue
-                db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW, "details":None})
-
 
 def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
-        b2g_alert_revision(settings)
+        with startup.SingleInstance(flavor_id=settings.args.filename):
+            Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
+            b2g_alert_revision(settings)
     finally:
         Log.stop()
 
 
 if __name__ == '__main__':
     main()
+
+

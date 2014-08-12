@@ -12,7 +12,8 @@ from __future__ import unicode_literals
 import sys
 from .cube import Cube
 from ..queries.index import value2key
-from ..struct import listwrap, StructList, wrap, Struct
+from ..struct import StructList, Struct
+from ..structs.wraps import listwrap, wrap
 from ..env.logs import Log
 from ..collections.multiset import Multiset
 
@@ -20,7 +21,7 @@ from ..collections.multiset import Multiset
 def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous=False):
     """
         return list of (keys, values) pairs where
-            group by the set of set of keys
+            group by the set of keys
             values IS LIST OF ALL data that has those keys
         contiguous - MAINTAIN THE ORDER OF THE DATA, STARTING THE NEW GROUP WHEN THE SELECTOR CHANGES
     """
@@ -34,10 +35,6 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         return data.groupby(keys)
 
     keys = listwrap(keys)
-
-    def value2hash(x):
-        return value2key(keys, x)
-
     def get_keys(d):
         output = Struct()
         for k in keys:
@@ -51,9 +48,9 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
 
             agg = StructList()
             acc = StructList()
-            curr_key = value2hash(data[0])
+            curr_key = value2key(keys, data[0])
             for d in data:
-                key = value2hash(d)
+                key = value2key(keys, d)
                 if key != curr_key:
                     agg.append((get_keys(acc[0]), acc))
                     curr_key = key
@@ -68,7 +65,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
     try:
         agg = {}
         for d in data:
-            key = value2hash(d)
+            key = value2key(keys, d)
             pair = agg.get(key, None)
             if pair is None:
                 pair = (get_keys(d), StructList())
@@ -99,7 +96,7 @@ def groupby_size(data, size):
                 break
         return output
 
-    #THIS IS LAZY
+    # THIS IS LAZY
     i = 0
     while True:
         output = more()

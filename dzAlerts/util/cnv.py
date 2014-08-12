@@ -19,12 +19,13 @@ from urllib import urlencode
 
 from . import struct
 from . import jsons
+from dzAlerts.util.times.dates import Date
 from .jsons import json_encoder
 from .collections.multiset import Multiset
 from .env.profiles import Profiler
 from .env.logs import Log
 from .strings import expand_template
-from .struct import wrap
+from .structs.wraps import wrap, wrap_dot
 
 
 json_decoder = json.JSONDecoder().decode
@@ -40,8 +41,8 @@ class CNV:
         try:
             json = json_encoder(obj, pretty=pretty)
             if json == None:
-                Log.note(str(type(obj))+ " is not valid{{type}}JSON", {"type": " (pretty) " if pretty else " "})
-                Log.error("Not valid JSON: "+str(obj)+ " of type "+str(type(obj)))
+                Log.note(str(type(obj)) + " is not valid{{type}}JSON", {"type": " (pretty) " if pretty else " "})
+                Log.error("Not valid JSON: " + str(obj) + " of type " + str(type(obj)))
             return json
         except Exception, e:
             Log.error("Can not encode into JSON: {{value}}", {"value": repr(obj)}, e)
@@ -50,11 +51,10 @@ class CNV:
     def JSON2object(json_string, params=None, flexible=False, paths=False):
         with Profiler("JSON2Object"):
             try:
-                #REMOVE """COMMENTS""", #COMMENTS, //COMMENTS, AND \n \r
+                # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
                 if flexible:
-                    #DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py#L58
-                    json_string = re.sub(r"\"\"\".*?\"\"\"|[ \t]+//.*\n|^//.*\n|#.*?\n", r"\n", json_string)
-                    json_string = re.sub(r"\n//.*\n", r"\n\n", json_string)
+                    # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
+                    json_string = re.sub(r"\"\"\".*?\"\"\"|[ \t]+//.*\n|^//.*\n|#.*?\n", r"\n", json_string, flags=re.MULTILINE)
                 if params:
                     params = dict([(k, CNV.value2quote(v)) for k, v in params.items()])
                     json_string = expand_template(json_string, params)
@@ -64,17 +64,16 @@ class CNV:
                 value = wrap(json_decoder(json_string))
 
                 if paths:
-                    value = jsons.expand_dot(value)
+                    value = wrap_dot(value)
 
                 return value
 
             except Exception, e:
                 Log.error("Can not decode JSON:\n\t" + str(json_string), e)
 
-
     @staticmethod
     def string2datetime(value, format):
-        ## http://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
+        ## http://docs.python.org/2/library/datetime.html# strftime-and-strptime-behavior
         if value == None:
             return None
         try:
@@ -82,21 +81,15 @@ class CNV:
         except Exception, e:
             Log.error("Can not format {{value}} with {{format}}", {"value": value, "format": format}, e)
 
-
     @staticmethod
     def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
-        try:
-            return value.strftime(format)
-        except Exception, e:
-            Log.error("Can not format {{value}} with {{format}}", {"value": value, "format": format}, e)
-
+        return Date(value).format(format=format)
 
     @staticmethod
     def datetime2unix(d):
         if d == None:
             return None
         return long(time.mktime(d.timetuple()))
-
 
     @staticmethod
     def datetime2milli(d):
@@ -108,7 +101,7 @@ class CNV:
             elif isinstance(d, datetime.date):
                 epoch = datetime.date(1970, 1, 1)
             else:
-                Log.error("Can not convert {{value}} of type {{type}}", {"value": d, "type":d.__class__})
+                Log.error("Can not convert {{value}} of type {{type}}", {"value": d, "type": d.__class__})
 
             diff = d - epoch
             return long(diff.total_seconds()) * 1000L + long(diff.microseconds / 1000)
@@ -132,7 +125,7 @@ class CNV:
 
     @staticmethod
     def milli2datetime(u):
-        return CNV.unix2datetime(u/1000.0)
+        return CNV.unix2datetime(u / 1000.0)
 
     @staticmethod
     def dict2Multiset(dic):
@@ -154,8 +147,8 @@ class CNV:
 
     @staticmethod
     def table2list(
-            column_names, #tuple of columns names
-            rows          #list of tuples
+            column_names, # tuple of columns names
+            rows          # list of tuples
     ):
         return wrap([dict(zip(column_names, r)) for r in rows])
 
@@ -170,10 +163,9 @@ class CNV:
         for r in rows:
             output.append("\t".join(CNV.object2JSON(r[k]) for k in keys))
 
-        return "\t".join(keys)+"\n"+"\n".join(output)
+        return "\t".join(keys) + "\n" + "\n".join(output)
 
-
-    #PROPER NULL HANDLING
+    # PROPER NULL HANDLING
     @staticmethod
     def value2string(value):
         if value == None:
@@ -181,7 +173,7 @@ class CNV:
         return unicode(value)
 
 
-    #RETURN PRETTY PYTHON CODE FOR THE SAME
+    # RETURN PRETTY PYTHON CODE FOR THE SAME
     @staticmethod
     def value2quote(value):
         if isinstance(value, basestring):
@@ -204,7 +196,7 @@ class CNV:
 
         return value.replace("\\\\", "\\").replace("\\\"", "\"").replace("\\'", "'").replace("\\\n", "\n").replace("\\\t", "\t")
 
-    #RETURN PYTHON CODE FOR THE SAME
+    # RETURN PYTHON CODE FOR THE SAME
     @staticmethod
     def value2code(value):
         return repr(value)
@@ -263,7 +255,6 @@ class CNV:
         else:
             return [int(value)]
 
-
     @staticmethod
     def value2int(value):
         if value == None:
@@ -271,13 +262,12 @@ class CNV:
         else:
             return int(value)
 
-
     @staticmethod
     def value2number(v):
         try:
             if isinstance(v, float) and round(v, 0) != v:
                 return v
-                #IF LOOKS LIKE AN INT, RETURN AN INT
+                # IF LOOKS LIKE AN INT, RETURN AN INT
             return int(v)
         except Exception:
             try:
@@ -295,7 +285,12 @@ class CNV:
 
     @staticmethod
     def latin12unicode(value):
-        return unicode(value.decode('iso-8859-1'))
+        if isinstance(value, unicode):
+            Log.error("can not convert unicode from latin1")
+        try:
+            return unicode(value.decode('iso-8859-1'))
+        except Exception, e:
+            Log.error("Can not convert {{value|quote}} to unicode", {"value": value})
 
     @staticmethod
     def esfilter2where(esfilter):
@@ -308,7 +303,6 @@ class CNV:
             return _filter(esfilter, row, rownum, rows)
 
         return output
-
 
     @staticmethod
     def pipe2value(value):

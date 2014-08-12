@@ -11,16 +11,16 @@ from __future__ import unicode_literals
 from datetime import datetime
 
 from .. import struct
-import functools
 from ..cnv import CNV
 from .. import strings
-from ..collections import COUNT, MAX
+from ..collections import COUNT
 from ..maths import stats
 from ..env.elasticsearch import ElasticSearch
 from ..env.logs import Log
 from ..maths import Math
 from ..queries import domains, MVEL, filters
-from ..struct import nvl, StructList, Struct, split_field, join_field, wrap, Null
+from ..struct import nvl, StructList, Struct, split_field, join_field
+from ..structs.wraps import wrap
 from ..times import durations
 
 
@@ -48,12 +48,12 @@ def loadColumns(es, frum):
             return INDEX_CACHE[frum.name]
 
     # FILL frum WITH DEFAULTS FROM es.settings
-    struct.set_default(frum, default=es.settings)
+    struct.set_default(frum, es.settings)
 
     if not frum.host:
         Log.error("must have host defined")
 
-    #DETERMINE IF THE es IS FUNCTIONALLY DIFFERENT
+    # DETERMINE IF THE es IS FUNCTIONALLY DIFFERENT
     diff = False
     for k, v in es.settings.items():
         if k != "name" and v != frum[k]:
@@ -371,14 +371,14 @@ def compileNullTest(edge):
 
 def compileEdges2Term(mvel_compiler, edges, constants):
     """
+    TERMS ARE ALWAYS ESCAPED SO THEY CAN BE COMPOUNDED WITH PIPE (|)
+
     GIVE MVEL CODE THAT REDUCES A UNIQUE TUPLE OF PARTITIONS DOWN TO A UNIQUE TERM
     GIVE LAMBDA THAT WILL CONVERT THE TERM BACK INTO THE TUPLE
     RETURNS TUPLE OBJECT WITH "type" and "value" ATTRIBUTES.
     "type" CAN HAVE A VALUE OF "script", "field" OR "count"
     CAN USE THE constants (name, value pairs)
     """
-
-    from ..queries import Q
 
     # IF THE QUERY IS SIMPLE ENOUGH, THEN DO NOT USE TERM PACKING
     edge0 = edges[0]
@@ -444,20 +444,20 @@ def compileEdges2Term(mvel_compiler, edges, constants):
 
         if not t.toTerm.body:
             mvel_compiler.Parts2Term(e.domain)
-            Log.error("")
+            Log.unexpected("what?")
 
         fromTerm2Part.append(t.fromTerm)
         mvel_terms.append(t.toTerm.body)
 
     # REGISTER THE DECODE FUNCTION
     def temp(term):
-        terms = [CNV.pipe2value(t) for t in term.split('|')]
+        terms = term.split('|')
 
         output = StructList([t2p(t) for t, t2p in zip(terms, fromTerm2Part)])
         return output
 
     return Struct(
-        expression=mvel_compiler.compile_expression("+'|'+".join(["Value2Pipe("+t+")" for t in mvel_terms]), constants),
+        expression=mvel_compiler.compile_expression("+'|'+".join(mvel_terms), constants),
         term2parts=temp
     )
 
@@ -472,7 +472,7 @@ def fix_es_stats(s):
     return s
 
 
-#MAP NAME TO SQL FUNCTION
+# MAP NAME TO SQL FUNCTION
 aggregates = {
     "none": "none",
     "one": "count",

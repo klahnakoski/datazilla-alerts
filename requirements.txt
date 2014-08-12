@@ -1,8 +1,4 @@
 requests
 pymysql
-numpy
-scipy
-python-dateutil
-pandas
 pytest
-talos20140411_212125/test_result
+python-dateutil

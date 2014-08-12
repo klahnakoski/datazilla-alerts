@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from datetime import timedelta, datetime
 from ..cnv import CNV
 from .elasticsearch import ElasticSearch
-from ..struct import wrap
+from ..structs.wraps import wrap
 from ..thread.threads import Thread, Queue
 from .logs import BaseLog, Log
 
@@ -33,17 +33,17 @@ class Log_usingElasticSearch(BaseLog):
     def write(self, template, params):
         try:
             if params.get("template", None):
-                #DETECTED INNER TEMPLATE, ASSUME TRACE IS ON, SO DO NOT NEED THE OUTER TEMPLATE
+                # DETECTED INNER TEMPLATE, ASSUME TRACE IS ON, SO DO NOT NEED THE OUTER TEMPLATE
                 self.queue.add(params)
             else:
                 self.queue.add({"template": template, "params": params})
             return self
         except Exception, e:
-            raise e  #OH NO!
+            raise e  # OH NO!
 
     def stop(self):
         try:
-            self.queue.add(Thread.STOP)  #BE PATIENT, LET REST OF MESSAGE BE SENT
+            self.queue.add(Thread.STOP)  # BE PATIENT, LET REST OF MESSAGE BE SENT
             self.thread.join()
         except Exception, e:
             pass

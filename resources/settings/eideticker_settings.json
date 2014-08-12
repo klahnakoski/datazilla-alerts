@@ -1,0 +1,89 @@
+{
+	"dimension": {
+		"filename": "dimension_eideticker.json"
+	},
+	"param": {
+		"default": {
+			"select": {
+				"repo": "Eideticker.Revision",
+				"value": {
+					"name": "value",
+					"value": "metadata.value"
+				}
+			},
+			"sort": {
+				"name": "push_date",
+				"value": "metadata.date"
+			},
+			"units": "unknown",
+			"min_regression": "5%",
+			"min_mscore": 2.0,
+			"min_tscore": 4.0,
+			"window_size": 10,
+			"resolution": 0.01
+		},
+		"branch": {
+		},
+		"test": {
+		},
+		"reason": "eideticker_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
+		"severity": 0.8,
+		"test_dimension": "Eideticker.Test",
+		"revision_dimension": "Eideticker.Revision",
+		"branch_dimension": "Eideticker.Branch",
+		"source_ref": [
+			{"name": "path", "value": "metadata.path"},
+			{"name": "metric", "value": "test_info.defaultMeasureId"},
+			{"name": "uuid", "value": "metadata.uuid"}
+		],
+		"debug": true,
+		"mark_complete": "eideticker_sustained_median",
+		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+	},
+	"query": {
+		"from": {
+			"name": "eideticker",
+			"host": "http://localhost",
+			"port": 9200,
+			"index": "eideticker",
+			"type": "results",
+			"debug": true
+		},
+		"edges": [
+			"Eideticker.Device",
+			"Eideticker.App",
+			"Eideticker.Branch",
+			"Eideticker.Test"
+		]
+	},
+	"alerts": {
+		"host": "localhost",
+		"port": 3306,
+		"username": "username",
+		"password": "password",
+		"schema": "alerts",
+		"debug": true
+	},
+	"debug": {
+		"trace": true,
+		"constants":{
+//			"dzAlerts.daemons.eideticker_alert_revision.LOOK_BACK":"10year",
+//			"dzAlerts.daemons.eideticker_alert_revision.DEBUG_TOUCH_ALL_ALERTS":true,
+//			"dzAlerts.daemons.sustained_median.MAX_AGE":"10year",
+//			"dzAlerts.daemons.sustained_median.DEBUG_TOUCH_ALL_ALERTS":true
+		},
+		"log": [
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "results/logs/eideticker_alert.log",
+				"maxBytes": 10000000,
+				"backupCount": 100,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "stream",
+				"stream": "sys.stdout"
+			}
+		]
+	}
+}

@@ -11,7 +11,8 @@ from __future__ import unicode_literals
 from ..collections import PRODUCT, reverse, MAX, MIN
 from ..cnv import CNV
 from ..env.logs import Log
-from ..struct import Null, Struct, wrap
+from ..struct import Null, Struct
+from ..structs.wraps import wrap
 
 
 class Matrix(object):
@@ -135,7 +136,7 @@ class Matrix(object):
         SLICE THIS MATRIX INTO ONES WITH LESS DIMENSIONALITY
         """
 
-        #offsets WILL SERVE TO MASK DIMS WE ARE NOT GROUPING BY, AND SERVE AS RELATIVE INDEX FOR EACH COORDINATE
+        # offsets WILL SERVE TO MASK DIMS WE ARE NOT GROUPING BY, AND SERVE AS RELATIVE INDEX FOR EACH COORDINATE
         offsets = []
         new_dim = []
         acc = 1
@@ -152,7 +153,7 @@ class Matrix(object):
             # v - VALUE AT GIVEN COORDINATES
             return ((c, self[c]) for c in self._all_combos())
         else:
-            output = [[None, Matrix(new_dim)] for i in range(acc)]
+            output = [[None, Matrix(*new_dim)] for i in range(acc)]
             _groupby(self.cube, 0, offsets, 0, output, tuple(), [])
 
         return output
@@ -252,9 +253,9 @@ def _null(*dims):
     if d0 == 0:
         Log.error("Zero dimensions not allowed")
     if len(dims) == 1:
-        return [Null for i in range(dims[0])]
+        return [Null for i in range(d0)]
     else:
-        return [_null(*dims[1::]) for i in range(dims[0])]
+        return [_null(*dims[1::]) for i in range(d0)]
 
 
 def _groupby(cube, depth, intervals, offset, output, group, new_coord):

@@ -23,7 +23,7 @@ class Emailer:
         self.sent = []
 
     def send_email(self, **args):
-        self.sent.append(args)      #SIMPLY RECORD THE CALL FOR LATER VERIFICATION
+        self.sent.append(args)      # SIMPLY RECORD THE CALL FOR LATER VERIFICATION
 
 
 def make_test_database(settings):
@@ -38,7 +38,7 @@ def make_test_database(settings):
             db.flush()
             db.execute("CREATE DATABASE " + settings.perftest.schema)
 
-        #TEMPLATE HAS {engine} TAG THAT MUST BE REPLACED
+        # TEMPLATE HAS {engine} TAG THAT MUST BE REPLACED
         Log.note("BUILD NEW DATABASE {{database}}", {"database": settings.perftest.schema})
         DB.execute_file(settings.perftest, "tests/resources/sql/schema_perftest.sql")
         DB.execute_file(settings.perftest, "tests/resources/sql/Add test_data_all_dimensions.sql")
@@ -54,7 +54,7 @@ def make_test_database(settings):
             db.execute("DELETE FROM mail.attachment")
             db.execute("DELETE FROM mail.content")
 
-        #ADD FUNCTIONS FOR TEST VERIFICATION
+        # ADD FUNCTIONS FOR TEST VERIFICATION
         DB.execute_file(settings.perftest, "tests/resources/sql/add_objectstore.sql")
         DB.execute_file(settings.perftest, "tests/resources/sql/json.sql")
 

@@ -33,7 +33,7 @@ class _MVEL(object):
         """
         RETURN THE MVEL THAT WILL FILTER USING query.where AND TERM-PACK THE query.select CLAUSE
         """
-        selectList = struct.listwrap(query.select)
+        selectList = listwrap(query.select)
         fromPath = query.frum.name  # FIRST NAME IS THE INDEX
         sourceVar = "__sourcedoc__"
         whereClause = query.where
@@ -155,12 +155,15 @@ class _MVEL(object):
             head="".join(heads),
             body=output
         )
-
-    # CONVERT AN ARRAY OF PARTS{name, esfilter} TO AN MVEL EXPRESSION
-    # RETURN expression, function PAIR, WHERE
-    # expression - MVEL EXPRESSION
-    # function - TAKES RESULT OF expression AND RETURNS PART
     def Parts2Term(self, domain):
+        """
+        TERMS ARE ALWAYS ESCAPED SO THEY CAN BE COMPOUNDED WITH PIPE (|)
+
+        CONVERT AN ARRAY OF PARTS{name, esfilter} TO AN MVEL EXPRESSION
+        RETURN expression, function PAIR, WHERE
+            expression - MVEL EXPRESSION
+            function - TAKES RESULT OF expression AND RETURNS PART
+        """
         fields = domain.dimension.fields
 
         term = []
@@ -171,8 +174,8 @@ class _MVEL(object):
             else:
                 qb_fields, es_fields = zip(*[(i, e) for i, e in enumerate(fields)])
 
-            #NO LOOPS BECAUSE QUERY IS SHALLOW
-            #DOMAIN IS FROM A DIMENSION, USE IT'S FIELD DEFS TO PULL
+            # NO LOOPS BECAUSE QUERY IS SHALLOW
+            # DOMAIN IS FROM A DIMENSION, USE IT'S FIELD DEFS TO PULL
             if len(es_fields) == 1:
                 def fromTerm(term):
                     return domain.getPartByKey(term)
@@ -183,22 +186,28 @@ class _MVEL(object):
                 ), fromTerm
             else:
                 def fromTerm(term):
-                    terms = [CNV.pipe2value(t) for t in term.split("|")]
+                    terms = [CNV.pipe2value(t) for t in CNV.pipe2value(term).split("|")]
 
+                    candidate = dict(zip(qb_fields, terms))
                     for p in domain.partitions:
-                        for k, t in zip(qb_fields, terms):
+                        for k, t in candidate.items():
                             if p.value[k] != t:
                                 break
                         else:
                             return p
-                    return Null
+                    if domain.type in ["uid", "default"]:
+                        part = {"value": candidate}
+                        domain.partitions.append(part)
+                        return part
+                    else:
+                        return Null
 
                 for f in es_fields:
                     term.append('Value2Pipe(getDocValue('+CNV.string2quote(f)+'))')
 
                 return Struct(
                     head="",
-                    body='+"|"+'.join(term)
+                    body='Value2Pipe('+('+"|"+'.join(term))+')'
                 ), fromTerm
         else:
             for v in domain.partitions:

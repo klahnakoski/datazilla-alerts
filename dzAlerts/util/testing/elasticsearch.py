@@ -1,13 +1,13 @@
 # encoding: utf-8
 #
-from bzETL.util import struct
-from bzETL.util.cnv import CNV
-from bzETL.util.env.elasticsearch import ElasticSearch
-from bzETL.util.env.logs import Log
-from bzETL.util.env.files import File
-from bzETL.util.queries import Q
-from bzETL.util.struct import Struct, wrap, unwrap
-
+from .. import struct
+from ..cnv import CNV
+from ..env.elasticsearch import ElasticSearch
+from ..env.logs import Log
+from ..env.files import File
+from ..queries import Q
+from ..struct import Struct
+from ..structs.wraps import unwrap, wrap
 
 def make_test_instance(name, settings):
     if settings.filename:

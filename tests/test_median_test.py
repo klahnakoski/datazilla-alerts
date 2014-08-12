@@ -22,7 +22,7 @@ class TestMedianTest(unittest.TestCase):
         smooth_result = median_test(sample1, sample2)
         assert smooth_result["confidence"] < 0.90, "These are not different!"
 
-        #MORE 21s
+        # MORE 21s
         sample1 = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21]
         sample2 = [20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21]
 

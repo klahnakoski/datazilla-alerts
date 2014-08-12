@@ -22,6 +22,7 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.maths import Math
 from dzAlerts.util.strings import between, expand_template
+from dzAlerts.util.times.durations import Duration
 from util.testing import make_test_database
 
 
@@ -35,9 +36,9 @@ class test_alert:
     """
 
     def __init__(self, db):
-        self.now = datetime.utcnow() - timedelta(seconds=1)
-        self.recent_past = self.now - timedelta(hours=1)
-        self.far_past = self.now - timedelta(days=2)
+        self.now = datetime.utcnow() - Duration(seconds=1)
+        self.recent_past = self.now - Duration(hours=1)
+        self.far_past = self.now - Duration(days=2)
 
         self.db = db
         #        self.uid=None
@@ -54,29 +55,29 @@ class test_alert:
     def setup(self, to_list):
         self.uid = self.db.query("SELECT util.newid() uid FROM DUAL")[0].uid
 
-        #CLEAR EMAILS
+        # CLEAR EMAILS
         self.db.execute("DELETE FROM mail.delivery")
         self.db.execute("DELETE FROM mail.attachment")
         self.db.execute("DELETE FROM mail.content")
 
-        #TEST NUMBER OF LISTENERS IN listeners TABLE
+        # TEST NUMBER OF LISTENERS IN listeners TABLE
         self.db.execute("DELETE FROM listeners")
         for l in to_list:
             self.db.insert("listeners", {"email": l})
 
 
-        #MAKE A REASON FOR USE IN THIS TESTING
+        # MAKE A REASON FOR USE IN THIS TESTING
         self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason": self.reason})
         self.db.execute("DELETE FROM reasons WHERE code={{reason}}", {"reason": self.reason})
         self.db.insert("reasons", {
             "code": self.reason,
-            "description": ">>>>{{id}}<<<<", #SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
+            "description": ">>>>{{id}}<<<<", # SPECIAL PATTERN TO DISTINGUISH BETWEEN RESULTING MAILS
             "config": None,
-            "last_run": self.now - timedelta(days=1)
+            "last_run": self.now - Duration(days=1)
         })
 
 
-        #MAKE SOME TEST DATA (AND GET ID)
+        # MAKE SOME TEST DATA (AND GET ID)
         all_dim = struct.wrap({
             "header":
                 ("id", "test_run_id", "product_id", "operating_system_id", "test_id", "page_id", "date_received", "revision", "product", "branch", "branch_version", "operating_system_name",
@@ -96,20 +97,20 @@ class test_alert:
             "header":
                 ("id", "status", "create_time", "last_updated", "last_sent", "tdad_id", "reason", "details", "severity", "confidence", "solution"),
             "data": [
-                #TEST last_sent IS NOT TOO YOUNG
+                # TEST last_sent IS NOT TOO YOUNG
                 (self.uid + 0, "new", self.far_past, self.far_past, self.recent_past, self.series, self.reason, CNV.object2JSON({"id": 0, "expect": "fail"}), self.high_severity, self.high_confidence,
                  None),
-                #TEST last_sent IS TOO OLD, SHOULD BE (RE)SENT
+                # TEST last_sent IS TOO OLD, SHOULD BE (RE)SENT
                 (self.uid + 1, "new", self.far_past, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 1, "expect": "pass"}), self.high_severity, self.high_confidence, None),
                 (self.uid + 2, "new", self.far_past, self.now, self.far_past, self.series, self.reason, CNV.object2JSON({"id": 2, "expect": "pass"}), self.high_severity, self.high_confidence, None),
                 (self.uid + 3, "new", self.now, self.now, self.recent_past, self.series, self.reason, CNV.object2JSON({"id": 3, "expect": "pass"}), self.high_severity, self.high_confidence, None),
-                #TEST obsolete ARE NOT SENT
+                # TEST obsolete ARE NOT SENT
                 (self.uid + 4, "obsolete", self.now, self.now, self.far_past, self.series, self.reason, CNV.object2JSON({"id": 4, "expect": "fail"}), self.high_severity, self.high_confidence, None),
-                #TEST ONLY IMPORTANT ARE SENT
+                # TEST ONLY IMPORTANT ARE SENT
                 (self.uid + 5, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 5, "expect": "pass"}), self.important, 0.5, None),
                 (self.uid + 6, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 6, "expect": "fail"}), self.low_severity, self.high_confidence, None),
                 (self.uid + 7, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 7, "expect": "fail"}), self.high_severity, self.low_confidence, None),
-                #TEST ONES WITH SOLUTION ARE NOT SENT
+                # TEST ONES WITH SOLUTION ARE NOT SENT
                 (self.uid + 8, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 8, "expect": "fail"}), self.high_severity, self.high_confidence, "a solution!")
             ]
         })
@@ -151,12 +152,12 @@ class test_alert:
                 assert len(emails) == 0
                 return
 
-            #VERIFY ONE MAIL SENT
+            # VERIFY ONE MAIL SENT
             assert len(emails) == 1
-            #VERIFY to MATCHES WHAT WAS PASSED TO THIS FUNCTION
+            # VERIFY to MATCHES WHAT WAS PASSED TO THIS FUNCTION
             assert set(emails[0].to) == set(to_list), "mail.delivery not matching what's send"
 
-            #VERIFY last_sent IS WRITTEN
+            # VERIFY last_sent IS WRITTEN
             alert_state = self.db.query("""
                 SELECT
                     id
@@ -177,7 +178,7 @@ class test_alert:
                     "actual": str(actual_marked)
                 })
 
-            #VERIFY BODY HAS THE CORRECT ALERTS
+            # VERIFY BODY HAS THE CORRECT ALERTS
             expecting_alerts = set([d.id for d in map(lambda d: CNV.JSON2object(d.details), self.test_data) if d.expect == 'pass'])
             actual_alerts_sent = set([
                 CNV.value2int(between(b, ">>>>", "<<<<"))

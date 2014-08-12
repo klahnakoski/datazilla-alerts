@@ -13,9 +13,11 @@ from datetime import timedelta
 import os
 import subprocess
 import urllib
-from dzAlerts.util import struct, sql
+from dzAlerts.util import struct
+from dzAlerts.util.sql.sql import find_holes
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
+from dzAlerts.util.maths.randoms import Random
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
@@ -23,6 +25,7 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.strings import between
 from dzAlerts.util.struct import nvl
+from dzAlerts.util.thread.multithread import Multithread
 from dzAlerts.util.times.timer import Timer
 
 DEBUG = True
@@ -33,7 +36,7 @@ def pull_repo(repo):
     if not File(os.path.join(repo.directory, ".hg")).exists:
         File(repo.directory).delete()
 
-        #REPO DOES NOT EXIST, CLONE IT
+        # REPO DOES NOT EXIST, CLONE IT
         with Timer("Clone hg log for {{name}}", {"name":repo.name}):
             proc = subprocess.Popen(
                 ["hg", "clone", repo.url, File(repo.directory).filename],
@@ -62,7 +65,7 @@ def pull_repo(repo):
         if not hgrc_file.exists:
             hgrc_file.write("[paths]\ndefault = " + repo.url + "\n")
 
-        #REPO EXISTS, PULL TO UPDATE
+        # REPO EXISTS, PULL TO UPDATE
         with Timer("Pull hg log for {{name}}", {"name":repo.name}):
             proc = subprocess.Popen(
                 ["hg", "pull", "--cwd", File(repo.directory).filename],
@@ -104,14 +107,14 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                     CNV.datetime2unix(date_range.max) - 1) + " 0"
 
 
-    #GET ALL CHANGESET INFO
+    # GET ALL CHANGESET INFO
     args = [
         "hg",
         "log",
         "--cwd",
         File(repo.directory).filename,
         "-v",
-        # "-p",   #TO GET PATCH CONTENTS
+        # "-p",   # TO GET PATCH CONTENTS
         "--style",
         TEMPLATE_FILE.filename
     ]
@@ -169,7 +172,7 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                     children,
                     tags,
                     desc
-                ) = (CNV.latin12unicode(urllib.unquote(c)) for c in line.split("\t"))
+                ) = (urllib.unquote(c) for c in line.split("\t"))
 
                 file_adds = set(file_adds.split("\n")) - {""}
                 file_dels = set(file_dels.split("\n")) - {""}
@@ -203,17 +206,13 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
     return iterator()
 
 
-def main():
-    settings = startup.read_settings()
-    Log.start(settings.debug)
-    try:
-        for repo in settings.param.repos:
-            with DB(settings.database) as db:
-                try:
-                    pull_repo(repo)
+def update_repo(repo, settings):
+    with DB(settings.database) as db:
+        try:
+            pull_repo(repo)
 
-                    #GET LATEST DATE
-                    existing_range = db.query("""
+            # GET LATEST DATE
+            existing_range = db.query("""
                         SELECT
                             max(`date`) `max`,
                             min(`date`) `min`,
@@ -225,38 +224,47 @@ def main():
                             repo={{repo}}
                     """, {"repo": repo.name})[0]
 
-                    ranges = struct.wrap([
-                        {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + timedelta(0, 1)},
-                        {"max": existing_range.min}
-                    ])
+            ranges = struct.wrap([
+                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + Duration(0, 1)},
+                {"max": existing_range.min}
+            ])
 
-                    for r in ranges:
-                        for g, docs in Q.groupby(get_changesets(date_range=r, repo=repo), size=100):
-                            for doc in docs:
-                                doc.file_changes = None
-                                doc.file_adds = None
-                                doc.file_dels = None
-                                doc.description = doc.description[0:16000]
+            for r in ranges:
+                for g, docs in Q.groupby(get_changesets(date_range=r, repo=repo), size=100):
+                    for doc in docs:
+                        doc.file_changes = None
+                        doc.file_adds = None
+                        doc.file_dels = None
+                        doc.description = doc.description[0:16000]
 
-                            db.insert_list("changesets", docs)
-                            db.flush()
+                    db.insert_list("changesets", docs)
+                    db.flush()
 
-                    missing_revisions = sql.find_holes(db, "changesets", "revision", {"term":{"repo":repo.name}}, {"min": 0, "max": existing_range.max_rev + 1})
-                    for _range in missing_revisions:
-                        for g, docs in Q.groupby(get_changesets(revision_range=_range, repo=repo), size=100):
-                            for doc in docs:
-                                doc.file_changes = None
-                                doc.file_adds = None
-                                doc.file_dels = None
-                                doc.description = doc.description[0:16000]
+            missing_revisions = find_holes(db, "changesets", "revision",  {"min": 0, "max": existing_range.max_rev + 1}, {"term": {"repo": repo.name}})
+            for _range in missing_revisions:
+                for g, docs in Q.groupby(get_changesets(revision_range=_range, repo=repo), size=100):
+                    for doc in docs:
+                        doc.file_changes = None
+                        doc.file_adds = None
+                        doc.file_dels = None
+                        doc.description = doc.description[0:16000]
 
-                            db.insert_list("changesets", docs)
-                            db.flush()
+                    db.insert_list("changesets", docs)
+                    db.flush()
 
 
 
-                except Exception, e:
-                    Log.warning("Failure to pull from {{repo.name}}", {"repo":repo}, e)
+        except Exception, e:
+            Log.warning("Failure to pull from {{repo.name}}", {"repo": repo}, e)
+
+
+def main():
+    settings = startup.read_settings()
+    Log.start(settings.debug)
+    try:
+        with Multithread(update_repo, threads=10, outbound=False) as multi:
+            for repo in Random.combination(settings.param.repos):
+                multi.execute([{"repo": repo, "settings": settings}])
     finally:
         Log.stop()
 
