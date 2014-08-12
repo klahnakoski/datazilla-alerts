@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
+from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -23,6 +24,7 @@ from dzAlerts.util.struct import nvl, StructList
 from dzAlerts.util.times.durations import Duration
 
 
+DEBUG_TOUCH_ALL_ALERTS = False
 SUSTAINED_REASON = "b2g_alert_sustained_median"
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
@@ -81,9 +83,6 @@ TEMPLATE = [
     """</table></div>"""
 ]
 
-# GET ACTIVE ALERTS
-# assumes there is an outside agent corrupting our test results
-# this will look at all alerts on a revision, and figure out the probability there is an actual regression
 
 def b2g_alert_revision(settings):
     assert settings.alerts != None
@@ -111,7 +110,7 @@ def b2g_alert_revision(settings):
                     {"term": {"reason": settings.param.reason}},
                     {"not": {"term": {"status": "obsolete"}}},
                     {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                    True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                 ]}
             })
 
@@ -184,6 +183,7 @@ def b2g_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
+                        {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                         {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
@@ -194,10 +194,7 @@ def b2g_alert_revision(settings):
                 # "limit":10
             })
 
-            found_alerts = Q.unique_index(alerts, "revision")
-            old_alerts = Q.unique_index(old_alerts, "revision")
-
-            d.aemonsupdate_alert_status(settings, alerts_db, found_alerts, old_alerts)
+            update_alert_status(settings, alerts_db, alerts, old_alerts)
 
             # SHOW SUSTAINED ALERTS ARE COVERED
             alerts_db.execute("""
@@ -227,8 +224,9 @@ def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
-        Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
-        b2g_alert_revision(settings)
+        with startup.SingleInstance(flavor_id=settings.args.filename):
+            Log.note("Summarize by revision {{schema}}", {"schema": settings.perftest.schema})
+            b2g_alert_revision(settings)
     finally:
         Log.stop()
 

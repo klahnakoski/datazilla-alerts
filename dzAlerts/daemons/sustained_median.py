@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.daemons import util
+from dzAlerts.daemons.util import update_alert_status
 
 from dzAlerts.util.collections import MIN, MAX
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -422,10 +422,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             ]}
         })
 
-    found_alerts = Q.unique_index(alerts, "tdad_id")
-    old_alerts = Q.unique_index(old_alerts, "tdad_id")
-
-    util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+    update_alert_status(settings, alerts_db, alerts, old_alerts)
 
     if verbose:
         Log.note("Marking {{num}} {{ids}} as 'done'", {

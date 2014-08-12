@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from datetime import datetime
-from dzAlerts.daemons import util
+from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.elasticsearch import ElasticSearch
@@ -200,6 +200,7 @@ def eideticker_alert_revision(settings):
                     {"term": {"reason": REASON}},
                     {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
+                        {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
                         {"term": {"reason": SUSTAINED_REASON}},
                         {"term": {"status": "obsolete"}},
@@ -210,10 +211,7 @@ def eideticker_alert_revision(settings):
                 # "limit":10
             })
 
-            found_alerts = Q.unique_index(alerts, "revision")
-            old_alerts = Q.unique_index(old_alerts, "revision")
-
-            util.update_alert_status(settings, alerts_db, found_alerts, old_alerts)
+            update_alert_status(settings, alerts_db, alerts, old_alerts)
 
             # SHOW SUSTAINED ALERTS ARE COVERED
             alerts_db.execute("""

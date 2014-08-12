@@ -9,7 +9,7 @@
 #
 
 from __future__ import unicode_literals
-from dzAlerts.util.env.logs import Log
+
 
 
 class Multiset(object):
@@ -37,12 +37,18 @@ class Multiset(object):
             Log.error("Not expected", e)
 
     def add(self, value):
+        from ..env.logs import Log
+
         Log.unexpected("not implemented")
 
     def extend(self, values):
+        from ..env.logs import Log
+
         Log.unexpected("not implemented")
 
     def remove(self, value):
+        from ..env.logs import Log
+
         Log.unexpected("not implemented")
 
 
