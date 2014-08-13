@@ -259,12 +259,9 @@ def talos_alert_revision(settings):
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": REASON}},
-                    # {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
                         {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        # {"term": {"reason": settings.param.reason}},
-                        # {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]},
@@ -291,7 +288,7 @@ def talos_alert_revision(settings):
             """, {
                 "where": esfilter2sqlwhere(alerts_db, {"and": [
                     {"term": {"p.reason": settings.param.reason}},
-                    {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
+                    {"terms": {"p.revision": set(Q.select(existing_sustained_alerts, "revision"))}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON
