@@ -9,7 +9,10 @@ SELECT
 FROM 
 	alerts a 
 WHERE
-	a.details like '%5c90a723bb82%'
+	a.reason like 'talos%' and
+	details like '%71a1dcb2697d%'
 ORDER BY
 	create_time DESC
+LIMIT 
+	100
 ;
