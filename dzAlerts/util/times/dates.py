@@ -17,6 +17,10 @@ import math
 
 
 class Date(object):
+
+    MIN = None
+    MAX = None
+
     def __init__(self, *args):
         try:
             if len(args) == 1:
@@ -27,8 +31,9 @@ class Date(object):
                     self.value = a0.value
                 elif isinstance(a0, (int, long, float)):
                     if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
-                        return datetime.datetime(2286, 11, 20, 17, 46, 39)
-                    self.value = datetime.utcfromtimestamp(a0/1000)
+                        self.value = Date.MAX
+                    else:
+                        self.value = datetime.utcfromtimestamp(a0/1000)
                 else:
                     self.value = datetime(*args)
             else:
@@ -81,9 +86,11 @@ class Date(object):
     def today():
         return Date(datetime.utcnow()).floor()
 
-
     def __str__(self):
         return str(self.value)
 
+
+Date.MIN = datetime(1, 1, 1)
+Date.MAX = datetime(2286, 11, 20, 17, 46, 39)
 
 from ..env.logs import Log
