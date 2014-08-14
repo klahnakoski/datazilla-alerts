@@ -153,7 +153,7 @@ if __name__ == '__main__':
             )
     except Exception, e:
         Log.warning("Failure to run alerts", cause=e)
-        Thread.sleep(seconds=2)
     finally:
+        Thread.sleep(seconds=2)
         Log.stop()
 

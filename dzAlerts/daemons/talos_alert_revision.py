@@ -131,16 +131,37 @@ def talos_alert_revision(settings):
                 alerts_db.flush()
 
             # EXISTING SUSTAINED EXCEPTIONS
-            existing_sustained_alerts = dbq.query({
-                "from": "alerts",
-                "select": "*",
-                "where": {"and": [
-                    {"term": {"reason": settings.param.reason}},
-                    {"not": {"term": {"status": "obsolete"}}},
-                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
-                    True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
-                ]}
+            existing_sustained_alerts = dbq.db.query("""
+                SELECT
+                    a.*
+                FROM
+                    (# ENSURE ALL ALERTS FOR GIVEN REVISION ARE OVER 2 HOURS OLD
+                    SELECT
+                        revision
+                    FROM
+                        alerts a
+                    WHERE
+                        create_time >= {{min_time}} AND
+                        {{where}}
+                    GROUP BY
+                        revision
+                    HAVING
+                        max(create_time) < {{max_time}}
+                    ) r
+                JOIN
+                    alerts a ON a.revision=r.revision
+                WHERE
+                    {{where}}
+            """, {
+                "where": esfilter2sqlwhere(dbq.db, {"and": [
+                    {"term": {"a.reason": settings.param.reason}},
+                    {"not": {"term": {"a.status": "obsolete"}}}
+                ]}),
+                "max_time": NOW - MIN_AGE,  # DO NOT ALERT WHEN TOO YOUNG
+                "min_time": Date.MIN if DEBUG_TOUCH_ALL_ALERTS else NOW - LOOK_BACK
             })
+            for a in existing_sustained_alerts:
+                a.details = CNV.JSON2object(a.details)
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 
@@ -238,12 +259,9 @@ def talos_alert_revision(settings):
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": REASON}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
                         {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": settings.param.reason}},
-                        {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]},
@@ -270,7 +288,7 @@ def talos_alert_revision(settings):
             """, {
                 "where": esfilter2sqlwhere(alerts_db, {"and": [
                     {"term": {"p.reason": settings.param.reason}},
-                    {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
+                    {"terms": {"p.revision": set(Q.select(existing_sustained_alerts, "revision"))}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON

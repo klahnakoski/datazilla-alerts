@@ -668,8 +668,9 @@ class StructList(list):
         """
         RETURN LAST ELEMENT IN StructList [-1]
         """
-        if _get(self, "list"):
-            return wrap(_get(self, "list")[-1])
+        lst = _get(self, "list")
+        if lst:
+            return wrap(lst[-1])
         return Null
 
     def map(self, oper, includeNone=True):

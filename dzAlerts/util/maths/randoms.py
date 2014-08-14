@@ -4,7 +4,6 @@
 from __future__ import unicode_literals
 import random
 import string
-from dzAlerts.util.struct import nvl
 
 
 SIMPLE_ALPHABET = string.ascii_letters + string.digits
