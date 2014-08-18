@@ -10,9 +10,11 @@
 from __future__ import unicode_literals
 from datetime import datetime
 from math import log10
+from pynliner import Pynliner
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
+from dzAlerts.util.env.files import File
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
@@ -38,6 +40,7 @@ SEND_REASONS = [b2g_alert_revision.REASON, talos_alert_revision.REASON, eidetick
 DEBUG_TOUCH_ALL_ALERTS = False
 NOW = datetime.utcnow()
 
+
 def send_alerts(settings, db):
     """
     BLINDLY SENDS ALERTS FROM THE ALERTS TABLE, ASSUMING ALL HAVE THE SAME STRUCTURE.
@@ -56,7 +59,8 @@ def send_alerts(settings, db):
                 a.confidence,
                 a.revision,
                 r.email_template,
-                r.email_subject
+                r.email_subject,
+                r.email_style
             FROM
                 alerts a
             JOIN
@@ -108,6 +112,7 @@ def send_alerts(settings, db):
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body) + FOOTER
+            body = Pynliner().from_string(body).with_cssString(File("resources/css/email_style.css").read()).run()
 
             if debug:
                 Log.note("EMAIL: {{email}}", {"email": body})
@@ -133,10 +138,6 @@ def send_alerts(settings, db):
 
     except Exception, e:
         Log.error("Could not send alerts", e)
-
-
-
-
 
 
 if __name__ == '__main__':

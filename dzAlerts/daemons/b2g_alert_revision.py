@@ -95,9 +95,10 @@ def b2g_alert_revision(settings):
 
             # TODO: REMOVE, LEAVE IN DB
             if alerts_db.debug:
-                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
+                    "style": File("resources/css/email_style.css").read(),
                     "reason": REASON
                 })
                 alerts_db.flush()
