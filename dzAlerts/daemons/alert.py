@@ -112,7 +112,7 @@ def send_alerts(settings, db):
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body) + FOOTER
-            body = Pynliner().from_string(body).with_cssString(File("resources/css/email_style.css").read()).run()
+            body = Pynliner().from_string(body).with_cssString(alert.email_style).run()
 
             if debug:
                 Log.note("EMAIL: {{email}}", {"email": body})
