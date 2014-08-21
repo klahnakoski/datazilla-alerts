@@ -26,7 +26,7 @@ ALTER TABLE alerts
 
 
 ALTER TABLE alerts CHANGE create_time date DATETIME;
-ALTER TABLE alerts MODIFY status VARCHAR(64) NOT NULL DEFAULT 'new';
+ALTER TABLE alerts MODIFY status VARCHAR(64) NOT NULL DEFAULT 'NEW';
 ALTER TABLE stati MODIFY code varchar(64);
 
 
