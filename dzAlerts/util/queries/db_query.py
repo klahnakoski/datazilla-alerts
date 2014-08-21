@@ -319,6 +319,7 @@ def _isolate(separator, list):
 def esfilter2sqlwhere(db, esfilter):
     return SQL(_esfilter2sqlwhere(db, esfilter))
 
+
 def _esfilter2sqlwhere(db, esfilter):
     """
     CONVERT ElassticSearch FILTER TO SQL FILTER

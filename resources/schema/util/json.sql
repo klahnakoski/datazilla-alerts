@@ -10,7 +10,7 @@ USE json;;
 -- FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS json;;
 CREATE FUNCTION json (
-	value		VARCHAR(65000) character set latin1,
+	value		longtext character set utf8,
 	tag			VARCHAR(40)
 ) RETURNS
 	varchar(65000) CHARSET latin1
@@ -23,7 +23,7 @@ BEGIN
 	DECLARE d INTEGER; # DEPTH
 	DECLARE begin_tag VARCHAR(50);
 
-	IF value IS NOT NULL THEN 
+	IF value IS NOT NULL THEN
 		SET begin_tag=concat("\"", tag, "\":");
 		SET s=locate(begin_tag, value);
 		IF s=0 THEN

@@ -13,6 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 import sys
+from dzAlerts.util.env.logs import Log
 from ..structs.wraps import listwrap
 from ..struct import nvl
 
@@ -33,7 +34,29 @@ class Emailer:
         }
         """
         self.settings = settings
+        self.server = None
 
+    def __enter__(self):
+        if self.server is not None:
+            Log.error("Got a problem")
+
+        if self.settings.use_ssl:
+            self.server = smtplib.SMTP_SSL(self.settings.host, self.settings.port)
+        else:
+            self.server = smtplib.SMTP(self.settings.host, self.settings.port)
+
+        if self.settings.username and self.settings.password:
+            self.server.login(self.settings.username, self.settings.password)
+
+        return self
+
+    def __exit__(self, type, value, traceback):
+        try:
+            self.server.quit()
+        except Exception, e:
+            Log.warning("Problem with smtp server quit(), ignoring problem", e)
+
+        self.server = None
 
     def send_email(self,
             from_address=None,
@@ -64,14 +87,6 @@ class Emailer:
         if not text_data and not html_data:
             raise Exception("Must specify either text_data or html_data")
 
-        if settings.use_ssl:
-            server = smtplib.SMTP_SSL(settings.host, settings.port)
-        else:
-            server = smtplib.SMTP(settings.host, settings.port)
-
-        if settings.username and settings.password:
-            server.login(settings.username, settings.password)
-
         if not html_data:
             msg = MIMEText(text_data)
         elif not text_data:
@@ -87,9 +102,14 @@ class Emailer:
         msg['From'] = from_address
         msg['To'] = ', '.join(to_addrs)
 
-        server.sendmail(from_address, to_addrs, msg.as_string())
+        if self.server:
+            # CALL AS PART OF A SMTP SESSION
+            self.server.sendmail(from_address, to_addrs, msg.as_string())
+        else:
+            # CALL AS STAND-ALONE
+            with self:
+                self.server.sendmail(from_address, to_addrs, msg.as_string())
 
-        server.quit()
 
 
 if sys.hexversion < 0x020603f0:

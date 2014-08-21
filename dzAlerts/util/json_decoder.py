@@ -14,7 +14,7 @@ from .jsons import json_encoder, use_pypy, UnicodeBuilder
 from .struct import StructList, Null, EmptyList
 from .structs.wraps import wrap, wrap_dot
 
-DEBUG = True
+DEBUG = False
 
 # PARSE MODES
 ARRAY = 1   # PARSING INSIDE AN ARRAY

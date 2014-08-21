@@ -136,7 +136,7 @@ class Log(object):
             params = None
 
         if cause and not isinstance(cause, Except):
-            cause = Except(WARNING, unicode(cause), trace=extract_tb(0))
+            cause = Except(ERROR, unicode(cause), trace=extract_tb(0))
 
         trace = extract_stack(1)
         e = Except(WARNING, template, params, cause, trace)
@@ -309,7 +309,7 @@ class Log(object):
 
     @classmethod
     def stop(cls):
-        from dzAlerts.util.env import profiles
+        from ..env import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
             write_profile(cls.settings.cprofile, cls.cprofiler)
@@ -417,24 +417,24 @@ class Except(Exception):
         return False
 
     def __str__(self):
-        output = self.type + ": " + self.template
+        output = self.type + ": " + self.template +"\n"
         if self.params:
             output = expand_template(output, self.params)
 
         if self.trace:
-            output += "\n" + indent(format_trace(self.trace))
+            output += indent(format_trace(self.trace))
 
         if self.cause:
             cause_strings = []
-            for c in self.cause:
+            for c in listwrap(self.cause):
                 try:
-                    cause_strings.append(c.__str__())
+                    cause_strings.append(unicode(c))
                 except Exception, e:
                     pass
 
-            output += "\ncaused by\n\t" + "\nand caused by\n\t".join(cause_strings)
+            output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 
-        return output + "\n"
+        return output
 
     def __unicode__(self):
         return unicode(str(self))

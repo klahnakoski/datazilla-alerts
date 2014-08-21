@@ -50,22 +50,23 @@ def email_send(db, emailer, debug):
         ## SEND MAILS
         not_done = 0   ## SET TO ONE IF THERE ARE MAIL FAILURES, AND THERE ARE MAILS STILL LEFT TO SEND
         num_done = 0
-        for email in emails:
-            try:
-                emailer.send_email(
-                    to_addrs=email.to.split(','),
-                    subject=email.subject,
-                    html_data=email.body
-                )
+        with emailer:
+            for email in emails:
+                try:
+                    emailer.send_email(
+                        to_addrs=email.to.split(','),
+                        subject=email.subject,
+                        html_data=email.body
+                    )
 
-                db.execute("UPDATE mail.content SET date_sent={{now}} WHERE id={{id}}", {"id": email.id, "now": datetime.utcnow()})
-                db.flush()
-                num_done += len(email.to.split(','))
-            except Exception, e:
-                Log.warning("Problem sending email", e)
-                not_done = 1
+                    db.execute("UPDATE mail.content SET date_sent={{now}} WHERE id={{id}}", {"id": email.id, "now": datetime.utcnow()})
+                    db.flush()
+                    num_done += len(email.to.split(','))
+                except Exception, e:
+                    Log.warning("Problem sending email", e)
+                    not_done = 1
 
-        db.execute("UPDATE mail.notify SET new_mail={{not_done}}", {"not_done": not_done})
+            db.execute("UPDATE mail.notify SET new_mail={{not_done}}", {"not_done": not_done})
 
         Log.note(str(num_done) + " emails have been sent")
     except Exception, e:
