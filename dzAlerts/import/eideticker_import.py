@@ -26,7 +26,7 @@ DEBUG_SHOW_METADATA = False
 
 def get_all_uuid(settings):
     # SNAGGED FROM https://bug985985.bugzilla.mozilla.org/attachment.cgi?id=8415562
-    num_requests=0
+    num_requests = 0
     baseurl = settings.url
 
     output = StructList()
