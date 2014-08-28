@@ -26,6 +26,7 @@ from dzAlerts.util.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
+DEBUG_UPDATE_EMAIL_TEMPLATE = False
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
@@ -41,8 +42,8 @@ TEMPLATE = [
     """
     <div>
     <div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-    <span style="font-size: 120%; display:inline-block">Revision: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision}}">{{revision}}</a></span>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision}}">Previous</a>]
+    <span style="font-size: 120%; display:inline-block">Revision: <a href="https://hg.mozilla.org/integration/mozilla-inbound/rev/{{revision}}">{{revision}}</a></span>
+    [<a href="https://hg.mozilla.org/integration/mozilla-inbound/rev/{{details.example.past_revision}}">Previous</a>]
 
     <br>
     <br>
@@ -64,9 +65,9 @@ TEMPLATE = [
         "template": """<tr>
             <td>{{example.Eideticker.Device|upper}}</td>
             <td>{{example.Eideticker.Test}}</td>
-            <td><a href="http://eideticker.mozilla.org{{example.eideticker.url.path}}/#/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metric}}/90">Eideticker</a></td>
+            <td><a href="http://eideticker.mozilla.org/#{{example.eideticker.url.path}}/{{example.Eideticker.Device}}/{{example.Eideticker.Branch}}/{{example.Eideticker.Test}}/{{example.eideticker.url.metric}}/90">Eideticker</a></td>
             <td><a href="http://people.mozilla.org/~klahnakoski/talos/Alert-Eideticker.html#{{example.charts.url|url}}">charts!</a></td>
-            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.Eideticker.Revision.gaia}}">DIFF</a></td>
+            <td><a href="https://hg.mozilla.org/mozilla-central/pushloghtml?fromchange={{example.past_revision}}&tochange={{example.revision}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
             <td>{{example.future_stats.mean|round(digits=4)}}</td>
@@ -95,25 +96,47 @@ def eideticker_alert_revision(settings):
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
-            if alerts_db.debug:
-                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+            if DEBUG_UPDATE_EMAIL_TEMPLATE:
+                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
+                    "style": File("resources/css/email_style.css").read(),
                     "reason": REASON
                 })
                 alerts_db.flush()
 
             # EXISTING SUSTAINED EXCEPTIONS
-            existing_sustained_alerts = dbq.query({
-                "from": "alerts",
-                "select": "*",
-                "where": {"and": [
-                    {"term": {"reason": settings.param.reason}},
-                    {"not": {"term": {"status": "obsolete"}}},
-                    {"range": {"create_time": {"lt": NOW - MIN_AGE}}},  # DO NOT ALERT WHEN TOO YOUNG
-                    True if DEBUG_TOUCH_ALL_ALERTS else {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
-                ]}
+            existing_sustained_alerts = dbq.db.query("""
+                SELECT
+                    a.*
+                FROM
+                    (# ENSURE ALL ALERTS FOR GIVEN REVISION ARE OVER 2 HOURS OLD
+                    SELECT
+                        revision
+                    FROM
+                        alerts a
+                    WHERE
+                        create_time >= {{min_time}} AND
+                        {{where}}
+                    GROUP BY
+                        revision
+                    HAVING
+                        max(create_time) < {{max_time}}
+                    ) r
+                JOIN
+                    alerts a ON a.revision=r.revision
+                WHERE
+                    {{where}}
+            """, {
+                "where": esfilter2sqlwhere(dbq.db, {"and": [
+                    {"term": {"a.reason": settings.param.reason}},
+                    {"not": {"term": {"a.status": "obsolete"}}}
+                ]}),
+                "max_time": NOW - MIN_AGE,  # DO NOT ALERT WHEN TOO YOUNG
+                "min_time": Date.MIN if DEBUG_TOUCH_ALL_ALERTS else NOW - LOOK_BACK
             })
+            for a in existing_sustained_alerts:
+                a.details = CNV.JSON2object(a.details)
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Eideticker.Test"])
 
@@ -199,12 +222,9 @@ def eideticker_alert_revision(settings):
                 "select": "*",
                 "where": {"and": [
                     {"term": {"reason": REASON}},
-                    {"range": {"create_time": {"gte": NOW - LOOK_BACK}}},
                     {"or": [
                         {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"term": {"reason": SUSTAINED_REASON}},
-                        {"term": {"status": "obsolete"}},
                         {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]},
@@ -231,7 +251,7 @@ def eideticker_alert_revision(settings):
             """, {
                 "where": esfilter2sqlwhere(alerts_db, {"and": [
                     {"term": {"p.reason": settings.param.reason}},
-                    {"terms": {"p.revision": Q.select(existing_sustained_alerts, "revision")}},
+                    {"terms": {"p.revision": set(Q.select(existing_sustained_alerts, "revision"))}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON

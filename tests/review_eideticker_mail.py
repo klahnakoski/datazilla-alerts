@@ -10,32 +10,34 @@ from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl, Struct
 from dzAlerts.util.times.durations import Duration
 
-
 def main():
     settings = startup.read_settings()
     Log.start(settings.debug)
     try:
         Log.note("Setup alert for testing the email template")
 
-        dzAlerts.daemons.eideticker_alert_revision.NOW = datetime(2014, 8, 8)
-        dzAlerts.daemons.alert.NOW = datetime(2014, 8, 8)
+        dzAlerts.daemons.eideticker_alert_revision.DEBUG_UPDATE_EMAIL_TEMPLATE = True
+        dzAlerts.daemons.eideticker_alert_revision.NOW = datetime(2014, 8, 28)
+        dzAlerts.daemons.alert.NOW = datetime(2014, 8, 28)
         dzAlerts.daemons.alert.LOOK_BACK = Duration(days=90)
 
         with DB(settings.alerts) as db:
-            db.execute("DELETE FROM hierarchy WHERE parent IN (SELECT id FROM alerts WHERE revision='2d88803a0b9c')")
-            db.execute("DELETE FROM alerts WHERE revision='2d88803a0b9c'")
+            REVISION = '70ce13bca890'
+            db.execute("DELETE FROM hierarchy WHERE parent IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
+            db.execute("DELETE FROM hierarchy WHERE child IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
+            db.execute("DELETE FROM alerts WHERE revision={{rev}}", {"rev": REVISION})
             db.insert("alerts", Struct(
                 id=SQL("util.newid()"),
                 status="new",
-                create_time=datetime(2014, 7, 9, 6, 6),
-                last_updated=datetime(2014, 8, 8, 0, 17),
+                create_time=datetime(2014, 8, 15, 2, 52),
+                last_updated=datetime(2014, 8, 21, 18, 30),
                 last_sent=None,
-                tdad_id='{"path": "/b2g", "uuid": "fab6e420077f11e4a8d510ddb19eacac"}',
+                tdad_id='{"metric": "timetostableframe", "path": "/b2g", "uuid": "b180c5a8247d11e4b12b10ddb19e8514"}',
                 reason="eideticker_alert_sustained_median",
-                details='{"Eideticker": {"App": "b2g-nightly", "Device": "flame", "Revision": "2d88803a0b9c", "Test": "b2g-gallery-startup", "Branch": "mozilla-central"}, "diff": 0.4541666666666666, "diff_percent": 0.13885350318471334, "future_stats": {"count": 4, "kurtosis": -1.3600001258336032, "mean": 3.725, "samples": [3.8333333333333335, 3.783333333333333, 3.75, 3.716666666666667, 3.7, 3.7333333333333334, 3.683333333333333, 3.7], "skew": 0.0, "variance": 0.00034722222222249854}, "ignored": false, "is_diff": true, "pass": true, "past_revision": "196d05832e12", "past_stats": {"count": 4, "kurtosis": -0.7174301121761535, "mean": 3.2708333333333335, "samples": [3.183333333333333, 3.216666666666667, 3.25, 3.25, 3.3666666666666667, 3.35, 3.4, 3.2333333333333334], "skew": 1.0776051731667742, "variance": 0.002135416666666501}, "path": "/b2g", "push_date": 1404885995000, "push_date_max": 1405000789000, "push_date_min": 1404709699000, "result": {"mstat": 16.0, "score": 2.9453929650517896}, "ttest_result": {"score": 8.790657193438616, "tstat": -13.737419509221672}, "uuid": "fab6e420077f11e4a8d510ddb19eacac", "value": 3.8333333333333335}',
-                revision="2d88803a0b9c",
+                details='{"Eideticker": {"App": "b2g-nightly", "Branch": "b2g-inbound", "Device": "flame-512", "Revision": "70ce13bca890", "Test": "b2g-dialer-startup"}, "diff": -0.5888888888888889, "diff_percent": -1.0, "future_stats": {"count": 6, "mean": 0.0, "samples": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7, 0.0, 0.0, 0.4666666666666667], "variance": 0}, "ignored": false, "is_diff": true, "metric": "timetostableframe", "pass": true, "past_revision": "55c89fcd3b1b", "past_stats": {"count": 6, "kurtosis": -1.9650294009192446, "mean": 0.5888888888888889, "samples": [0.5166666666666667, 0.5, 0.6833333333333333, 0.5, 0.6666666666666666, 0.6833333333333333, 0.6666666666666666, 0.5, 0.48333333333333334, 0.7166666666666667], "skew": 0.0005847782480937579, "variance": 0.007006172839506164}, "path": "/b2g", "push_date": 1408071135000, "push_date_max": 1408251734000, "push_date_min": 1407733928000, "result": {"mstat": 12.8, "score": 2.29330794920446}, "ttest_result": {"score": 4.547369230017969, "tstat": 5.555580184309633}, "uuid": "b180c5a8247d11e4b12b10ddb19e8514", "value": 0.0}',
+                revision=REVISION,
                 severity="0.8",
-                confidence="8.790657193",
+                confidence="4.54736923002",
                 solution=None
             ))
 

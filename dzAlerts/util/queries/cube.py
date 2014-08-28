@@ -182,7 +182,7 @@ class Cube(object):
         # CACHE SOME RESULTS
         keys = [e.name for e in self.edges]
         getKey = [e.domain.getKey for e in self.edges]
-        lookup = [[getKey[i](p) for p in e.domain.partitions] for i, e in enumerate(self.edges)]
+        lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
 
         def coord2term(coord):
             output = wrap_dot({keys[i]: lookup[i][c] for i, c in enumerate(coord)})

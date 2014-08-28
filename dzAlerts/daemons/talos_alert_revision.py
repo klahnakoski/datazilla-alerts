@@ -126,6 +126,7 @@ def talos_alert_revision(settings):
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
+                    "style": File("resources/css/email_style.css").read(),
                     "reason": REASON
                 })
                 alerts_db.flush()
@@ -175,7 +176,7 @@ def talos_alert_revision(settings):
                     "Talos.Revision"
                 ],
                 "where": {"and": [
-                    {"terms": {"Talos.Revision": set(existing_sustained_alerts.revision)}}
+                    {"terms": {"Talos.Revision": list(set(existing_sustained_alerts.revision))}}
                 ]}
             })
 
