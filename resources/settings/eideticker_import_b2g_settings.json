@@ -2,6 +2,7 @@
 	"param": {
 		"url": "http://eideticker.mozilla.org/b2g/",
 		"uuid_url": "http://eideticker.mozilla.org/b2g/metadata/{{uuid}}.json",
+		"threads": 2,
 		"elasticsearch": {
 			"name": "eideticker",
 			"host": "http://localhost",

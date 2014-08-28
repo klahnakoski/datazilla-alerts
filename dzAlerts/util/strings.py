@@ -111,6 +111,7 @@ def outdent(value):
         Log.error("can not outdent value", e)
 
 def round(value, decimal=None, digits=None):
+    value=float(value)
     if digits != None:
         m = pow(10, math.ceil(math.log10(abs(value))))
         return __builtin__.round(value / m, digits) * m

@@ -26,6 +26,7 @@ from dzAlerts.util.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
+DEBUG_UPDATE_EMAIL_TEMPLATE = False
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
 MIN_AGE = Duration(hours=2)
@@ -95,7 +96,7 @@ def b2g_alert_revision(settings):
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
-            if alerts_db.debug:
+            if DEBUG_UPDATE_EMAIL_TEMPLATE:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),

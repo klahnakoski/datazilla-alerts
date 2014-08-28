@@ -32,7 +32,6 @@ FOOTER = "<hr><a style='font-size:70%' href='https://wiki.mozilla.org/FirefoxOS/
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = Duration(days=7)
 LOOK_BACK = Duration(days=30)
-MAX_EMAIL_LENGTH = 15000
 MAIL_LIMIT = 10  # DO NOT SEND TOO MANY MAILS AT ONCE
 EPSILON = 0.0001
 VERBOSE = True
@@ -112,15 +111,13 @@ def send_alerts(settings, db):
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body) + FOOTER
-            body = Pynliner().from_string(body).with_cssString(alert.email_style).run()
+            if alert.email_style == None:
+                Log.note("Email has no style")
+            else:
+                body = Pynliner().from_string(body).with_cssString(alert.email_style).run()
 
             if debug:
                 Log.note("EMAIL: {{email}}", {"email": body})
-
-            if len(body) > MAX_EMAIL_LENGTH:
-                Log.note("Truncated the email body")
-                suffix = "... (has been truncated)"
-                body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   # keep it reasonable
 
             db.call("mail.send", (
                 listeners, # to
