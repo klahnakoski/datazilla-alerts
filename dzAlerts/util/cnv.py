@@ -17,12 +17,10 @@ import datetime
 import json
 import re
 import time
-from urllib import urlencode
 
 from . import struct
 from . import jsons
-import urllib
-from dzAlerts.util.times.dates import Date
+from .times.dates import Date
 from .jsons import json_encoder
 from .collections.multiset import Multiset
 from .env.profiles import Profiler
