@@ -59,6 +59,12 @@ def url(value, use_plus=False):
         # BTW, THIS WOULD BE MUCH FASTER IF urlencode WAS NOT USED
         return urlencode(value).replace("+", "%20")
 
+# def html(value):
+#     """
+#     CONVERT FROM unicode TO HTML OF THE SAME
+#     """
+#     from .cnv import CNV
+#     return CNV.unicode2HTML(value)
 
 def upper(value):
     return value.upper()

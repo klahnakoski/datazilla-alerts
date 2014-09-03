@@ -26,7 +26,7 @@ from dzAlerts.util.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
-DEBUG_UPDATE_EMAIL_TEMPLATE = False
+UPDATE_EMAIL_TEMPLATE = True
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
 MIN_AGE = Duration(hours=2)
@@ -73,7 +73,7 @@ TEMPLATE = [
             <td>{{example.B2G.Device|upper}}</td>
             <td>{{test.suite}}</td>
             <td>{{test.name}}</td>
-            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
+            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch|url}}&device={{example.B2G.Device|url}}&range={{example.date_range|url}}&test={{test.name|url}}&app_list={{test.suite|url}}&gaia_rev={{example.B2G.Revision.gaia|url}}&gecko_rev={{example.B2G.Revision.gecko|url}}&plot=median\">Datazilla!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
@@ -96,7 +96,7 @@ def b2g_alert_revision(settings):
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
-            if DEBUG_UPDATE_EMAIL_TEMPLATE:
+            if UPDATE_EMAIL_TEMPLATE:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
