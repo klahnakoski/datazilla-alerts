@@ -8,6 +8,9 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from __future__ import division
+
+
 from ..collections import PRODUCT, reverse, MAX, MIN, OR
 from ..cnv import CNV
 from ..env.logs import Log

@@ -9,6 +9,8 @@
 
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from dzAlerts.daemons.util.failrate import failure_rate, confident_fail_rate
 from dzAlerts.util.env import startup
 from dzAlerts.util.env.logs import Log

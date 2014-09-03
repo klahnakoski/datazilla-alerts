@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
 
 import unittest
 from dzAlerts.daemons.util.median_test import median_test

@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime, timedelta
 import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
