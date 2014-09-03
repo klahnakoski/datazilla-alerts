@@ -109,6 +109,8 @@ def send_alerts(settings, db):
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  # PICK FIRST v > CURRENT VALUE
 
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
+            if len(subject) > 200:
+                subject = subject[:197] + "..."
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body) + FOOTER
             if alert.email_style == None:
