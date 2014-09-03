@@ -10,9 +10,11 @@
 from __future__ import unicode_literals
 from datetime import datetime
 from math import log10
+from pynliner import Pynliner
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
+from dzAlerts.util.env.files import File
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
@@ -30,13 +32,13 @@ FOOTER = "<hr><a style='font-size:70%' href='https://wiki.mozilla.org/FirefoxOS/
 SEPARATOR = "<hr>\n"
 RESEND_AFTER = Duration(days=7)
 LOOK_BACK = Duration(days=30)
-MAX_EMAIL_LENGTH = 15000
 MAIL_LIMIT = 10  # DO NOT SEND TOO MANY MAILS AT ONCE
 EPSILON = 0.0001
 VERBOSE = True
 SEND_REASONS = [b2g_alert_revision.REASON, talos_alert_revision.REASON, eideticker_alert_revision.REASON]
 DEBUG_TOUCH_ALL_ALERTS = False
 NOW = datetime.utcnow()
+
 
 def send_alerts(settings, db):
     """
@@ -56,7 +58,8 @@ def send_alerts(settings, db):
                 a.confidence,
                 a.revision,
                 r.email_template,
-                r.email_subject
+                r.email_subject,
+                r.email_style
             FROM
                 alerts a
             JOIN
@@ -106,16 +109,17 @@ def send_alerts(settings, db):
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  # PICK FIRST v > CURRENT VALUE
 
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
+            if len(subject) > 200:
+                subject = subject[:197] + "..."
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body) + FOOTER
+            if alert.email_style == None:
+                Log.note("Email has no style")
+            else:
+                body = Pynliner().from_string(body).with_cssString(alert.email_style).run()
 
             if debug:
                 Log.note("EMAIL: {{email}}", {"email": body})
-
-            if len(body) > MAX_EMAIL_LENGTH:
-                Log.note("Truncated the email body")
-                suffix = "... (has been truncated)"
-                body = body[0:MAX_EMAIL_LENGTH - len(suffix)] + suffix   # keep it reasonable
 
             db.call("mail.send", (
                 listeners, # to
@@ -133,10 +137,6 @@ def send_alerts(settings, db):
 
     except Exception, e:
         Log.error("Could not send alerts", e)
-
-
-
-
 
 
 if __name__ == '__main__':

@@ -16,38 +16,50 @@ from dzAlerts.util.env.logs import Log
 from dzAlerts.util.parsers import URL
 from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.strings import expand_template
-from dzAlerts.util.struct import wrap, StructList
+from dzAlerts.util.struct import wrap, StructList, nvl, Struct
 from dzAlerts.util.thread.multithread import Multithread
 from dzAlerts.util.times.timer import Timer
 
 
+DEBUG_SHOW_METADATA = False
+
+
 def get_all_uuid(settings):
     # SNAGGED FROM https://bug985985.bugzilla.mozilla.org/attachment.cgi?id=8415562
+    num_requests = 0
     baseurl = settings.url
 
     output = StructList()
     devices = requests.get(baseurl + '/devices.json').json()['devices']
+    num_requests+=1
     for device_name, device_info in devices.items():
         for branch in device_info["branches"]:
             url = "/".join((baseurl, device_name, branch, "tests.json"))
             tests = requests.get(url)
+            num_requests+=1
             if tests.status_code != 200:
-                Log.warning("Can not find test for {{device}} (url={{url}})", {"device": device_name, "url": url})
+                Log.warning("Can not find test for {{device}} because of {{response.status_code}} {{response.reason}} (url={{url}})", {
+                    "device": device_name,
+                    "url": url,
+                    "response": tests
+                })
                 continue
             for testname, test_info in tests.json()['tests'].items():
                 testdata = requests.get(baseurl + '/%s/%s/%s.json' % (device_name, branch, testname))
+                num_requests+=1
                 try:
                     apps = testdata.json()['testdata']
                     for appname, appdata in apps.items():
                         for date, date_data in appdata.items():
-                            Log.note("Pull data for device={{device}}, test={{test}}, app={{app}}, date={{date}}, num={{num}}", {
-                                "device": device_name,
-                                "branch": branch,
-                                "test": testname,
-                                "app": appname,
-                                "date": int(date)*1000,
-                                "num": len(date_data)
-                            })
+                            if DEBUG_SHOW_METADATA:
+                                Log.note("Pull data for device={{device}}, test={{test}}, app={{app}}, date={{date}}, num={{num}}", {
+                                    "device": device_name,
+                                    "branch": branch,
+                                    "test": testname,
+                                    "app": appname,
+                                    "date": int(date)*1000,
+                                    "num": len(date_data)
+                                })
 
                             for d in date_data:
                                 metadata = {
@@ -62,11 +74,13 @@ def get_all_uuid(settings):
                                 output.append(metadata)
                 except Exception, e:
                     Log.warning("problem with json", e)
+    Log.note("{{num}} requests to pull metadata", {"num": num_requests})
     return output
 
 
 def etl(settings):
     es = ElasticSearch.get_or_create_index(settings.elasticsearch)
+    counter = Struct(num_requests=0)
 
     with Timer("get all uuid"):
         all_tests = get_all_uuid(settings)
@@ -95,7 +109,18 @@ def etl(settings):
             url = expand_template(settings.uuid_url, {"uuid": metadata.uuid})
             try:
                 response = requests.get(url)
-                data = wrap(response.json())
+                counter.num_requests += 1
+                try:
+                    data = wrap(response.json())
+                except Exception, e:
+                    Log.note("Calling\n{{url|indent}}\nfor\n{{slice|indent}}\ngives {{status_code}} {{reason}}", {
+                        "uuid": metadata.uuid,
+                        "slice": metadata,
+                        "status_code": response.status_code,
+                        "reason": response.reason,
+                        "url": url
+                    })
+                    return
                 data.metadata = metadata
                 # FIND DEFAULT VALUE TO TRACK
                 if data.test_info.defaultMeasureId:
@@ -120,11 +145,17 @@ def etl(settings):
                     "response": response
                 }, e)
 
-        with Multithread(get_uuid, threads=10, outbound=False, silent_queues=True) as multi:
-            for metadata in all_tests:
-                if metadata.uuid in existing:
-                    continue  # EXISTING STUFF IS SKIPPED
-                multi.inbound.add({"metadata": metadata})
+        with Timer("get data") as timer:
+            with Multithread(get_uuid, threads=nvl(settings.threads, 10), outbound=False, silent_queues=True) as multi:
+                for metadata in all_tests:
+                    if metadata.uuid in existing:
+                        continue  # EXISTING STUFF IS SKIPPED
+                    multi.inbound.add({"metadata": metadata})
+
+        Log.note("Got data: {{num}} requests made over {{duration}}", {
+            "num": counter.num_requests,
+            "duration": timer.duration
+        })
 
 
 if __name__ == '__main__':
