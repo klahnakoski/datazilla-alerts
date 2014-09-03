@@ -45,26 +45,19 @@ def unix(value):
 
     return str(CNV.datetime2unix(value))
 
-def url(value, use_plus=False):
+def url(value):
     """
-    CONVERT FROM dict TO URL PARAMETERS
+    CONVERT FROM dict OR string TO URL PARAMETERS
     """
-    if use_plus:
-        return urlencode(value)
-    else:
-        # I LOVE ENCODING SPACES AS "+", BECAUSE IT IS HUMANE.  BUT, SINCE
-        # MANY LIBRARIES DO IT WRONG, WE CAN TRUST NOTHING TO INTERPRET URLS
-        # PROPERLY.  SO WE GO WITH LOWEST COMMON DENOMINATOR.
-        #
-        # BTW, THIS WOULD BE MUCH FASTER IF urlencode WAS NOT USED
-        return urlencode(value).replace("+", "%20")
+    from .cnv import CNV
+    return CNV.value2url(value)
 
-# def html(value):
-#     """
-#     CONVERT FROM unicode TO HTML OF THE SAME
-#     """
-#     from .cnv import CNV
-#     return CNV.unicode2HTML(value)
+def html(value):
+    """
+    CONVERT FROM unicode TO HTML OF THE SAME
+    """
+    from .cnv import CNV
+    return CNV.unicode2HTML(value)
 
 def upper(value):
     return value.upper()

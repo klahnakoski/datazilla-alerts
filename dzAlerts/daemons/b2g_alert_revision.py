@@ -72,7 +72,7 @@ TEMPLATE = [
         "template": """<tr>
             <td>{{example.B2G.Device|upper}}</td>
             <td>{{test.suite}}</td>
-            <td>{{test.name}}</td>
+            <td>{{test.name|html}}</td>
             <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch|url}}&device={{example.B2G.Device|url}}&range={{example.date_range|url}}&test={{test.name|url}}&app_list={{test.suite|url}}&gaia_rev={{example.B2G.Revision.gaia|url}}&gecko_rev={{example.B2G.Revision.gecko|url}}&plot=median\">Datazilla!</a></td>
             <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>

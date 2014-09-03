@@ -16,7 +16,7 @@ def main():
     try:
         Log.note("Setup alert for testing the email template")
 
-        dzAlerts.daemons.eideticker_alert_revision.DEBUG_UPDATE_EMAIL_TEMPLATE = True
+        dzAlerts.daemons.eideticker_alert_revision.UPDATE_EMAIL_TEMPLATE = True
         dzAlerts.daemons.eideticker_alert_revision.NOW = datetime(2014, 8, 28)
         dzAlerts.daemons.alert.NOW = datetime(2014, 8, 28)
         dzAlerts.daemons.alert.LOOK_BACK = Duration(days=90)
