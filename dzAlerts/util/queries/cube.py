@@ -13,7 +13,7 @@ from .. import struct
 from ..collections.matrix import Matrix
 from ..collections import MAX, OR
 from ..queries.query import _normalize_edge
-from ..struct import StructList
+from ..struct import StructList, Null
 from ..structs.wraps import wrap, wrap_dot, listwrap
 from ..env.logs import Log
 
@@ -149,7 +149,36 @@ class Cube(object):
         return other / self.value
 
     def __getitem__(self, item):
-        return self.data[item]
+        if isinstance(item, dict):
+            coordinates = [None] * len(self.edges)
+
+            # MAP DICT TO NUMERIC INDICES
+            for name, v in item.items():
+                ei, parts = wrap([(i, e.domain.partitions) for i, e in enumerate(self.edges) if e.name == name])[0]
+                if not parts:
+                    Log.error("Can not find {{name}} in list of edges, maybe this feature is not implemented yet", {"name": name})
+                part = wrap([p for p in parts if p.value == v])[0]
+                if not part:
+                    return Null
+                else:
+                    coordinates[ei] = part.dataIndex
+
+            edges = [e for e, v in zip(self.edges, coordinates) if v is None]
+            if not edges and self.is_value:
+                # ZERO DIMENSIONAL VALUE
+                return self.data.values()[0].__getitem__(coordinates)
+            else:
+                output = Cube(
+                    select=self.select,
+                    edges=[e for e, v in zip(self.edges, coordinates) if v is None],
+                    data={k: c.__getitem__(coordinates) for k, c in self.data.items()}
+                )
+                return output
+        elif isinstance(item, basestring):
+            Log.error("What is this used for?")
+            return self.data[item]
+        else:
+            Log.error("not implemented yet")
 
     def __getattr__(self, item):
         return self.data[item]

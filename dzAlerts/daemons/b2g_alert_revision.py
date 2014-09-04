@@ -62,8 +62,8 @@ TEMPLATE = [
         [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]
         [<a href="https://github.com/mozilla-b2g/gaia/compare/{{details.example.past_revision.gaia}}...{{details.example.B2G.Revision.gaia}}">DIFF</a>]<br>
 
-        <span style="font-size: 120%; display:inline-block">Gecko: <a href="{{revision.gecko_repositoy}}/rev/{{revision.gecko}}">{{revision.gecko}}</a></span>
-        [<a href="{{revision.gecko_repository}}/rev/{{revision.gecko}}">Previous</a>]
+        <span style="font-size: 120%; display:inline-block">Gecko: <a href="{{revision.gecko_repository}}/rev/{{revision.gecko}}">{{revision.gecko}}</a></span>
+        [<a href="{{revision.gecko_repository}}/rev/{{details.example.past_revision.gecko}}">Previous</a>]
         [<a href="{{revision.gecko_repository}}/pushloghtml?fromchange={{details.example.past_revision.gecko}}&tochange={{revision.gecko}}">DIFF</a>]<br>
 
     <br>
@@ -160,14 +160,13 @@ def b2g_alert_revision(settings):
                     {"terms": {"B2G.Revision": list(set(existing_sustained_alerts.revision))}}
                 ]}
             })
-            total_tests = Q.index(total_tests, ["B2G.Revision"])
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             # THIS IS A existing_sustained_alerts LEFT JOIN total_tests ON (revision,)
             for revision, total_exceptions in Q.groupby(existing_sustained_alerts, ["details.B2G.Revision"]):
             # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
                 revision = revision["details.B2G.Revision"]
-                total_test_count = total_tests[(revision,)].count
+                total_test_count = total_tests[{"B2G.Revision": revision}]
 
                 parts = StructList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
@@ -190,23 +189,22 @@ def b2g_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                if worst_in_revision:
-                    alerts.append({
-                        "status": "new",
-                        "create_time": CNV.milli2datetime(worst_in_revision.push_date),
-                        "reason": REASON,
+                alerts.append({
+                    "status": "new",
+                    "create_time": CNV.milli2datetime(worst_in_revision.push_date),
+                    "reason": REASON,
+                    "revision": revision,
+                    "tdad_id": revision,
+                    "details": {
                         "revision": revision,
-                        "tdad_id": revision,
-                        "details": {
-                            "revision": revision,
-                            "total_tests": total_test_count,
-                            "total_exceptions": len(total_exceptions),
-                            "tests": parts,
-                            "example": worst_in_revision
-                        },
-                        "severity": SEVERITY,
-                        "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
-                    })
+                        "total_tests": total_test_count,
+                        "total_exceptions": len(total_exceptions),
+                        "tests": parts,
+                        "example": worst_in_revision
+                    },
+                    "severity": SEVERITY,
+                    "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
+                })
 
 
             # EXISTING REVISION-LEVEL ALERTS

@@ -81,10 +81,7 @@ def index(data, keys=None):
     if isinstance(data, Cube):
         if data.edges[0].name==keys[0]:
             #QUICK PATH
-            if isinstance(data.select, list):
-
-
-                names = list(data.data.keys())
+            names = list(data.data.keys())
             for d in (set_default(struct.zip(names, r), {keys[0]: p}) for r, p in zip(zip(*data.data.values()), data.edges[0].domain.partitions.value)):
                 o.add(d)
             return o
