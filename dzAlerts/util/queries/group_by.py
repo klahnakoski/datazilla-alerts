@@ -9,6 +9,7 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
 import sys
 from .cube import Cube
 from ..queries.index import value2key

@@ -8,6 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from __future__ import division
+
 from dzAlerts.util.collections import OR
 from ..structs.wraps import wrap
 

@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
 import pytest
 from dzAlerts.daemons.email_send import email_send
 from dzAlerts.util.env import startup

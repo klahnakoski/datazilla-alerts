@@ -9,6 +9,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from collections import Iterable
 from types import GeneratorType
 from ..struct import nvl

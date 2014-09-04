@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
@@ -21,11 +23,12 @@ from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
 from dzAlerts.util.struct import nvl, StructList, Struct
-from dzAlerts.util.times.durations import Duration
 from dzAlerts.util.times.dates import Date
+from dzAlerts.util.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
+UPDATE_EMAIL_TEMPLATE = True
 REASON = "talos_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
 MIN_AGE = Duration(hours=2)
@@ -122,8 +125,8 @@ def talos_alert_revision(settings):
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
-            if alerts_db.debug:
-                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}} where code={{reason}}", {
+            if UPDATE_EMAIL_TEMPLATE:
+                alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
                     "style": File("resources/css/email_style.css").read(),
@@ -163,6 +166,10 @@ def talos_alert_revision(settings):
             })
             for a in existing_sustained_alerts:
                 a.details = CNV.JSON2object(a.details)
+                try:
+                    a.revision = CNV.JSON2object(a.revision)
+                except Exception, e:
+                    pass
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 

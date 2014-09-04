@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
@@ -56,17 +58,19 @@ TEMPLATE = [
     """
     <div>
     	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
-    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
+        <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
+        [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]
+        [<a href="https://github.com/mozilla-b2g/gaia/compare/{{details.example.past_revision.gaia}}...{{details.example.B2G.Revision.gaia}}">DIFF</a>]<br>
 
-    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
+        <span style="font-size: 120%; display:inline-block">Gecko: <a href="{{revision.gecko_repository}}/rev/{{revision.gecko}}">{{revision.gecko}}</a></span>
+        [<a href="{{revision.gecko_repository}}/rev/{{details.example.past_revision.gecko}}">Previous</a>]
+        [<a href="{{revision.gecko_repository}}/pushloghtml?fromchange={{details.example.past_revision.gecko}}&tochange={{revision.gecko}}">DIFF</a>]<br>
 
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
@@ -74,7 +78,6 @@ TEMPLATE = [
             <td>{{test.suite}}</td>
             <td>{{test.name|html}}</td>
             <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch|url}}&device={{example.B2G.Device|url}}&range={{example.date_range|url}}&test={{test.name|url}}&app_list={{test.suite|url}}&gaia_rev={{example.B2G.Revision.gaia|url}}&gecko_rev={{example.B2G.Revision.gecko|url}}&plot=median\">Datazilla!</a></td>
-            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
             <td>{{example.future_stats.mean|round(digits=4)}}</td>
@@ -159,10 +162,11 @@ def b2g_alert_revision(settings):
             })
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
-            for revision, total_test_count in Q.groupby(total_tests, ["B2G.Revision"]):
+            # THIS IS A existing_sustained_alerts LEFT JOIN total_tests ON (revision,)
+            for revision, total_exceptions in Q.groupby(existing_sustained_alerts, ["details.B2G.Revision"]):
             # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                revision = revision["B2G.Revision"]
-                total_exceptions = tests[(revision, )]  # FILTER BY revision
+                revision = revision["details.B2G.Revision"]
+                total_test_count = total_tests[{"B2G.Revision": revision}]
 
                 parts = StructList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
@@ -258,5 +262,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

@@ -8,13 +8,14 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from math import log10
 from pynliner import Pynliner
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
-from dzAlerts.util.env.files import File
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
