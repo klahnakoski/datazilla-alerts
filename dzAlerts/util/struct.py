@@ -280,6 +280,7 @@ from __future__ import division</code>
     def setdefault(self, k, d=None):
         if self[k] == None:
             self[k] = d
+        return self
 
 # KEEP TRACK OF WHAT ATTRIBUTES ARE REQUESTED, MAYBE SOME (BUILTIN) ARE STILL USEFUL
 requested = set()

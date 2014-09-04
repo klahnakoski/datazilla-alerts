@@ -126,6 +126,8 @@ class CNV:
 
     @staticmethod
     def milli2datetime(u):
+        if u == None:
+            return None
         return CNV.unix2datetime(u / 1000.0)
 
     @staticmethod

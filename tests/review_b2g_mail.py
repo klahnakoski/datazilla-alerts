@@ -35,9 +35,10 @@ def main():
         dzAlerts.daemons.alert.LOOK_BACK = Duration(days=90)
 
         with DB(settings.alerts) as db:
-            REVISION = '{"gaia": "4f4a6988d65525d07058b2fcb93eb1ae6387d3ac", "gecko": "6b1690ad2cf5"}'
+            REVISION = '{\"gaia\": \"0952f21286deca9901748ce708d632dbcebc1a19\", \"gecko\": \"8005e3ce1ada\", \"gecko_repository\": \"https://hg.mozilla.org/integration/b2g-inbound\"}'
             db.execute("DELETE FROM hierarchy WHERE parent IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
             db.execute("DELETE FROM hierarchy WHERE child IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
+            db.execute("DELETE FROM alerts WHERE tdad_id='{\"B2G\": {\"Test\": {\"name\": \"startup_>_moz-app-visually-complete\", \"suite\": \"video\"}}, \"test_run_id\": 425046}'")
             db.execute("DELETE FROM alerts WHERE revision={{rev}}", {"rev": REVISION})
             db.insert("alerts", Struct(
                 id=SQL("util.newid()"),
