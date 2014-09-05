@@ -167,7 +167,8 @@ def talos_alert_revision(settings):
             for a in existing_sustained_alerts:
                 a.details = CNV.JSON2object(a.details)
                 try:
-                    a.revision = CNV.JSON2object(a.revision)
+                    if a.revision.rtrim()[0] in ["{", "["]:
+                        a.revision = CNV.JSON2object(a.revision)
                 except Exception, e:
                     pass
 

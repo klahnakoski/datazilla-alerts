@@ -50,7 +50,7 @@ Raw data:  {{details}}
 </div>"""
 
 VERBOSE = True
-DEBUG = False  # SETTINGS CAN TURN OFF DEBUGGING
+DEBUG = False  # SETTINGS CAN TURN ON/OFF DEBUGGING
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
 
 
@@ -74,7 +74,11 @@ def alert_sustained_median(settings, qb, alerts_db):
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
     oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
+    if settings.param.debug == None:
+        debug = DEBUG or DEBUG_TOUCH_ALL_ALERTS
+    else:
+        debug = settings.param.debug
+
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query
@@ -142,26 +146,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"and": disabled},
                 {"or": [
                     {"not": debug},
-                    {"and": [
-                        # FOR DEBUGGING SPECIFIC SERIES
-                        # {"term": {"metadata.device": "flame"}},
-                        # {"term": {"metadata.test": "b2g-gallery-startup"}},
-                        # {"exists": {"field": "metadata.value"}}
-                        # {"term": {"result.test_name": "fps"}}
-                        # {"term": {"test_machine.type": "flame"}},
-                        # {"term": {"metadata.app": "b2g-nightly"}}
-                        # {"term":{"metadata.branch":"mozilla-central"}},
-                        # {"term": {"metadata.test": "imgur"}},
-                        # {"term": {"metadata.device": "samsung-gn"}},
-                        # {"term": {"metadata.app": "nightly"}},
-                        # {"term": {"testrun.suite": "tcanvasmark"}},
-                        # {"term": {"result.test_name": "canvasmark"}},
-                        # {"term": {"test_machine.platform": "x86_64"}},
-                        # {"term": {"test_build.name": "Firefox"}},
-                        # {"term": {"test_machine.osversion": "6.2.9200"}},
-                        # {"term": {"test_build.branch": "Mozilla-Aurora"}}
-
-                    ]}
+                    nvl(settings.param.debug_filter, True)
                 ]}
             ]},
             "limit": nvl(settings.param.combo_limit, 1000)
