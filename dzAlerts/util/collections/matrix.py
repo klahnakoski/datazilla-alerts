@@ -164,6 +164,12 @@ class Matrix(object):
     def __rdiv__(self, other):
         return other / self.value
 
+    def __truediv__(self, other):
+        return self.value / other
+
+    def __rtruediv__(self, other):
+        return other / self.value
+
     def __iter__(self):
         # TODO: MAKE THIS FASTER BY NOT CALLING __getitem__ (MAKES CUBE OBJECTS)
         return (self[c] for c in self._all_combos())

@@ -148,6 +148,12 @@ class Cube(object):
     def __rdiv__(self, other):
         return other / self.value
 
+    def __truediv__(self, other):
+        return self.value / other
+
+    def __rtruediv__(self, other):
+        return other / self.value
+
     def __getitem__(self, item):
         # TODO: SOLVE FUNDAMENTAL QUESTION OF IF SELECTING A PART OF AN
         # EDGE REMOVES THAT EDGE FROM THIS RESULT, OR ADDS THE PART
