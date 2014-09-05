@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
 
 import StringIO
 import base64
@@ -16,12 +17,10 @@ import datetime
 import json
 import re
 import time
-from urllib import urlencode
 
 from . import struct
 from . import jsons
-import urllib
-from dzAlerts.util.times.dates import Date
+from .times.dates import Date
 from .jsons import json_encoder
 from .collections.multiset import Multiset
 from .env.profiles import Profiler
@@ -127,6 +126,8 @@ class CNV:
 
     @staticmethod
     def milli2datetime(u):
+        if u == None:
+            return None
         return CNV.unix2datetime(u / 1000.0)
 
     @staticmethod

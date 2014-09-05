@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from math import log
 from dzAlerts.util.env.logs import Log
 

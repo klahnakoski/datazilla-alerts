@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 
@@ -23,7 +25,7 @@ from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, split_field
+from dzAlerts.util.struct import nvl, StructList, literal_field, split_field, Null
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
@@ -50,6 +52,18 @@ Raw data:  {{details}}
 VERBOSE = True
 DEBUG = False  # SETTINGS CAN TURN OFF DEBUGGING
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
+
+
+def diff_percent(r):
+    try:
+        if r.past_stats.mean==0:
+            return 1
+        else:
+            if r.past_stats.mean==None:
+                Log.note("")
+            return (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
+    except Exception, e:
+        Log.error("" + str(Null / Null), e)
 
 
 def alert_sustained_median(settings, qb, alerts_db):
@@ -325,7 +339,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: r.future_stats.mean - r.past_stats.mean
                     }, {
                         "name": "diff_percent",
-                        "value": lambda r: 1 if r.past_stats.mean==0 else (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
+                        "value": diff_percent
                     }, {
                         "name": "is_diff",
                         "value": lambda r: is_bad(r, test_param)

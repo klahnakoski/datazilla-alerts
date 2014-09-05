@@ -9,14 +9,16 @@
 #
 
 from __future__ import unicode_literals
-import sys
-from ..vendor import strangman
+from __future__ import division
 
+import sys
 from math import sqrt
+
 from ..cnv import CNV
 from ..collections import OR
-from ..struct import nvl, Struct, Null
 from ..env.logs import Log
+from ..struct import nvl, Struct, Null
+from ..vendor import strangman
 
 
 DEBUG = True
@@ -27,7 +29,7 @@ ABS_EPSILON = sys.float_info.min*2  # *2 FOR SAFETY
 
 if DEBUG_STRANGMAN:
     try:
-        import numpy
+        import numpy as np
         from scipy import stats
         import scipy
     except Exception, e:
@@ -45,8 +47,8 @@ def chisquare(f_obs, f_exp):
 
     if DEBUG_STRANGMAN:
         sp_result = scipy.stats.chisquare(
-            numpy.array(f_obs),
-            f_exp=numpy.array(f_exp)
+            np.array(f_obs),
+            f_exp=np.array(f_exp)
         )
         if not closeEnough(sp_result[0], py_result[0]) and closeEnough(sp_result[1], py_result[1]):
             Log.error("problem with stats lib")
@@ -232,10 +234,39 @@ class Z_moment(object):
         self.S = tuple(args)
 
     def __add__(self, other):
-        return Z_moment(*map(add, self.S, other.S))
+        if isinstance(other, Z_moment):
+            return Z_moment(*map(add, self.S, other.S))
+        elif hasattr(other, "__iter__"):
+            return Z_moment(*map(add, self.S, Z_moment.new_instance(other)))
+        elif other == None:
+            return self
+        else:
+            return Z_moment(*map(add, self.S, (
+                1,
+                other,
+                pow(other, 2),
+                pow(other, 3),
+                pow(other, 4),
+                pow(other, 2)
+            )))
+
 
     def __sub__(self, other):
-        return Z_moment(*map(sub, self.S, other.S))
+        if isinstance(other, Z_moment):
+            return Z_moment(*map(sub, self.S, other.S))
+        elif hasattr(other, "__iter__"):
+            return Z_moment(*map(sub, self.S, Z_moment.new_instance(other)))
+        elif other == None:
+            return self
+        else:
+            return Z_moment(*map(sub, self.S, (
+                1,
+                other,
+                pow(other, 2),
+                pow(other, 3),
+                pow(other, 4)
+            )))
+
 
     @property
     def tuple(self):
@@ -255,11 +286,15 @@ class Z_moment(object):
 
         return Z_moment(
             len(values),
-            sum([n for n in values]),
+            sum(values),
             sum([pow(n, 2) for n in values]),
             sum([pow(n, 3) for n in values]),
             sum([pow(n, 4) for n in values])
         )
+
+    @property
+    def stats(self, *args, **kwargs):
+        return z_moment2stats(self, *args, **kwargs)
 
 
 def add(a, b):
@@ -300,7 +335,7 @@ def median(values, simple=True, mean_weight=0.0):
         l = len(values)
         _sorted = sorted(values)
 
-        middle = l / 2
+        middle = int(l / 2)
         _median = float(_sorted[middle])
 
         if len(_sorted) == 1:
@@ -308,7 +343,7 @@ def median(values, simple=True, mean_weight=0.0):
 
         if simple:
             if l % 2 == 0:
-                return float(_sorted[middle - 1] + _median) / 2
+                return (_sorted[middle - 1] + _median) / 2
             return _median
 
         # FIND RANGE OF THE median
@@ -324,14 +359,14 @@ def median(values, simple=True, mean_weight=0.0):
 
         if l % 2 == 0:
             if num_middle == 1:
-                return float(_sorted[middle - 1] + _median) / 2
+                return (_sorted[middle - 1] + _median) / 2
             else:
-                return (_median - 0.5) + float(middle - start_index) / float(num_middle)
+                return (_median - 0.5) + (middle - start_index) / num_middle
         else:
             if num_middle == 1:
                 return (1 - mean_weight) * _median + mean_weight * (_sorted[middle - 1] + _sorted[middle + 1]) / 2
             else:
-                return (_median - 0.5) + float(middle + 0.5 - start_index) / float(num_middle)
+                return (_median - 0.5) + (middle + 0.5 - start_index) / num_middle
     except Exception, e:
         Log.error("problem with median of {{values}}", {"values": values}, e)
 
