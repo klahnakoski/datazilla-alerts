@@ -149,6 +149,10 @@ class Cube(object):
         return other / self.value
 
     def __getitem__(self, item):
+        # TODO: SOLVE FUNDAMENTAL QUESTION OF IF SELECTING A PART OF AN
+        # EDGE REMOVES THAT EDGE FROM THIS RESULT, OR ADDS THE PART
+        # AS A select {"name":edge.name, "value":edge.domain.partitions[coord]}
+        # PROBABLY NOT, THE value IS IDENTICAL OVER THE REMAINING
         if isinstance(item, dict):
             coordinates = [None] * len(self.edges)
 
@@ -175,8 +179,21 @@ class Cube(object):
                 )
                 return output
         elif isinstance(item, basestring):
-            Log.error("What is this used for?")
-            return self.data[item]
+            # RETURN A VALUE CUBE
+            if self.is_value:
+                if item != self.select.name:
+                    Log.error("{{name}} not found in cube", {"name": item})
+                return self
+
+            if item not in self.select.name:
+                Log.error("{{name}} not found in cube", {"name": item})
+
+            output = Cube(
+                select=[s for s in self.select if s.name == item][0],
+                edges=self.edges,
+                data={item: self.data[item]}
+            )
+            return output
         else:
             Log.error("not implemented yet")
 
@@ -185,6 +202,29 @@ class Cube(object):
 
     def get_columns(self):
         return self.edges + listwrap(self.select)
+
+    def forall(self, method):
+        """
+        TODO: I AM NOT HAPPY THAT THIS WILL NOT WORK WELL WITH WINDOW FUNCTIONS
+        THE parts GIVE NO INDICATION OF NEXT ITEM OR PREVIOUS ITEM LIKE rownum
+        DOES.  MAYBE ALGEBRAIC EDGES SHOULD BE LOOPED DIFFERENTLY?  ON THE
+        OTHER HAND, MAYBE WINDOW FUNCTIONS ARE RESPONSIBLE FOR THIS COMPLICATION
+
+        IT IS EXPECTED THE method ACCEPTS (value, coord, cube), WHERE
+        value - VALUE FOUND AT ELEMENT
+        parts - THE ONE PART CORRESPONDING TO EACH EDGE
+        cube - THE WHOLE CUBE, FOR USE IN WINDOW FUNCTIONS
+        """
+        if not self.is_value:
+            Log.error("Not dealing with this case yet")
+
+        matrix = self.data.values()[0]
+        parts = [e.domain.partitions for e in self.edges]
+        for c in matrix._all_combos():
+            method(matrix[c], [parts[i][cc] for i, cc in enumerate(c)], self)
+
+
+
 
     def _select(self, select):
         selects = listwrap(select)

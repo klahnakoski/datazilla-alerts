@@ -87,7 +87,6 @@ class Multithread(object):
             for t in self.threads:
                 t.join()
 
-
     def execute(self, requests):
         """
         RETURN A GENERATOR THAT HAS len(requests) RESULTS (ANY ORDER)

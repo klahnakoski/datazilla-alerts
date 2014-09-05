@@ -10,7 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from dzAlerts.util.collections import OR
+from ..collections import OR
 from ..structs.wraps import wrap
 
 TRUE_FILTER = True

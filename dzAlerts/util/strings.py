@@ -279,7 +279,7 @@ def edit_distance(s1, s2):
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
 
-    return float(previous_row[-1]) / len(s1)
+    return previous_row[-1] / len(s1)
 
 
 DIFF_PREFIX = re.compile(r"@@ -(\d+(?:\s*,\d+)?) \+(\d+(?:\s*,\d+)?) @@")
@@ -323,7 +323,7 @@ def apply_diff(text, diff, reverse=False):
         add = [add[0], 1]
 
     # UNUSUAL CASE WHERE @@ -x +x, n @@ AND FIRST LINE HAS NOT CHANGED
-    half = len(diff[1]) / 2
+    half = int(len(diff[1]) / 2)
     first_half = diff[1][:half]
     last_half = diff[1][half:half * 2]
     if remove[1] == 1 and add[0] == remove[0] and first_half[1:] == last_half[1:]:

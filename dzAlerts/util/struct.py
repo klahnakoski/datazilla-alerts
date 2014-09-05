@@ -52,7 +52,7 @@ class Struct(dict):
        <code>from __future__ import unicode_literals
 from __future__ import division</code>
 
-    More on missing values: http://www.numpy.org/NA-overview.html
+    More on missing values: http://www.np.org/NA-overview.html
     it only considers the legitimate-field-with-missing-value (Statistical Null)
     and does not look at field-does-not-exist-in-this-context (Database Null)
 
@@ -359,10 +359,25 @@ def _getdefault(obj, key):
     try:
         return obj.__getattribute__(key)
     except Exception, e:
-        try:
-            return obj[key]
-        except Exception, f:
-            return NullType(obj, key)
+        pass
+
+    try:
+        return obj[key]
+    except Exception, f:
+        pass
+
+    try:
+        if float(key) == round(float(key), 0):
+            return eval("obj["+key+"]")
+    except Exception, f:
+        pass
+
+    try:
+        return eval("obj."+unicode(key))
+    except Exception, f:
+        pass
+
+    return NullType(obj, key)
 
 
 def _assign(obj, path, value, force=True):

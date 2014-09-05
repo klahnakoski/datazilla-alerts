@@ -140,7 +140,7 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
 
     if isinstance(data, (bytearray, basestring, list)):
         def _iter():
-            num = (len(data) - 1) / max_size + 1
+            num = int((len(data) - 1) / max_size) + 1
             for i in range(0, num):
                 output = (i, data[i * max_size:i * max_size + max_size:])
                 yield output
