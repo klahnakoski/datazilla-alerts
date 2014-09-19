@@ -42,7 +42,7 @@ def main():
             db.insert("alerts", Struct(
                 id=SQL("util.newid()"),
                 status="new",
-                create_time=datetime(2014, 8, 25, 12, 11),
+                push_date=datetime(2014, 8, 25, 12, 11),
                 last_updated=datetime(2014, 8, 25, 12, 11),
                 last_sent=None,
                 tdad_id='{"Talos": {"Test": {"name": "56.com", "suite": "tp5o"}}, "test_run_id": 6712677}',
@@ -51,7 +51,12 @@ def main():
                 revision=REVISION,
                 severity="0.8",
                 confidence="7.27",
-                solution=None
+                comment=None,
+                branch="Mozilla-Inbound",
+                test='{"name": "56.com", "suite": "tp5o"}}',
+                platform='{"name": "mac", "version": "OS X 10.8"}',
+                percent="23.5%",
+                keyrevision=REVISION
             ))
 
         talos_alert_revision(settings)

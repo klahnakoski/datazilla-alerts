@@ -14,7 +14,7 @@ from __future__ import division
 from ..collections import PRODUCT, reverse, MAX, MIN, OR
 from ..cnv import CNV
 from ..env.logs import Log
-from ..struct import Null, Struct
+from ..struct import Null, Struct, nvl
 from ..structs.wraps import wrap
 
 
@@ -234,8 +234,14 @@ class Matrix(object):
         if not combos:
             return
 
+        test = self._all_combos2()
+
         c = [0]*num  # THE CORRECT SIZE
         while True:
+            t = test.next()
+            if list(t) != c:
+                Log.error("problem with new all_combo()")
+
             yield c
 
             for i in range(num-1, -1, -1):
@@ -245,6 +251,19 @@ class Matrix(object):
                 c[i] = 0
             else:
                 break
+
+    def _all_combos2(self):
+        """
+        RETURN AN ITERATOR OF ALL COORDINATES
+        """
+        combos = PRODUCT(self.shape)
+        if not combos:
+            return
+
+        calc = [(nvl(PRODUCT(self.shape[i+1:]), 1), mm) for i, mm in enumerate(self.shape)]
+
+        for c in xrange(combos):
+            yield tuple(int(c / dd) % mm for dd, mm in calc)
 
 
     def __str__(self):

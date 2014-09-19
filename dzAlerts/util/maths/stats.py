@@ -24,8 +24,7 @@ from ..vendor import strangman
 DEBUG = True
 DEBUG_STRANGMAN = True
 EPSILON = 0.000000001
-ABS_EPSILON = sys.float_info.min*2  # *2 FOR SAFETY
-
+ABS_EPSILON = sys.float_info.min * 2  # *2 FOR SAFETY
 
 if DEBUG_STRANGMAN:
     try:
@@ -46,15 +45,16 @@ def chisquare(f_obs, f_exp):
         Log.error("problem with call", e)
 
     if DEBUG_STRANGMAN:
+        from util.testing.fuzzytestcase import assertAlmostEqualValue
+
         sp_result = scipy.stats.chisquare(
             np.array(f_obs),
             f_exp=np.array(f_exp)
         )
-        if not closeEnough(sp_result[0], py_result[0]) and closeEnough(sp_result[1], py_result[1]):
+        if not assertAlmostEqualValue(sp_result[0], py_result[0]) and assertAlmostEqualValue(sp_result[1], py_result[1]):
             Log.error("problem with stats lib")
 
     return py_result
-
 
 
 def stats2z_moment(stats):
@@ -72,38 +72,21 @@ def stats2z_moment(stats):
 
     m = Z_moment(mz0, mz1, mz2, mz3, mz4)
     if DEBUG:
+        from util.testing.fuzzytestcase import assertAlmostEqualValue
+
         globals()["DEBUG"] = False
         try:
             v = z_moment2stats(m, unbiased=False)
-            assert closeEnough(v.count, stats.count)
-            assert closeEnough(v.mean, stats.mean)
-            assert closeEnough(v.variance, stats.variance)
-            assert closeEnough(v.skew, stats.skew)
-            assert closeEnough(v.kurtosis, stats.vkurtosis)
+            assertAlmostEqualValue(v.count, stats.count)
+            assertAlmostEqualValue(v.mean, stats.mean)
+            assertAlmostEqualValue(v.variance, stats.variance)
+            assertAlmostEqualValue(v.skew, stats.skew)
+            assertAlmostEqualValue(v.kurtosis, stats.vkurtosis)
         except Exception, e:
             v = z_moment2stats(m, unbiased=False)
             Log.error("programmer error")
         globals()["DEBUG"] = True
     return m
-
-
-def closeEnough(a, b):
-    if a == None and b == None:
-        return True
-    if a == None or b == None:
-        return False
-
-    if abs(a - b) < ABS_EPSILON:
-        return True
-
-    if abs(b) > abs(a):
-        err = abs((a - b) / b)
-    else:
-        err = abs((a - b) / a)
-
-    if err < EPSILON:
-        return True
-    return False
 
 
 def z_moment2stats(z_moment, unbiased=True):
@@ -147,14 +130,16 @@ def z_moment2stats(z_moment, unbiased=True):
     )
 
     if DEBUG:
+        from util.testing.fuzzytestcase import assertAlmostEqualValue
+
         globals()["DEBUG"] = False
-        v=Null
+        v = Null
         try:
             v = stats2z_moment(stats)
             for i in range(5):
-                assert closeEnough(v.S[i], Z[i])
+                assertAlmostEqualValue(v.S[i], Z[i])
         except Exception, e:
-            Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected parem={{expected|indent}}", {
+            Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected param={{expected|indent}}", {
                 "from": Z,
                 "stats": stats,
                 "expected": v.S

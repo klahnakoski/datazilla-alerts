@@ -93,10 +93,10 @@ END;;
 DROP FUNCTION IF EXISTS string.locate;;
 CREATE FUNCTION string.locate(
 	find	VARCHAR(300) character set latin1,
-	value	VARCHAR(65000) character set latin1,
+	value	longtext,
 	start   INTEGER
-)
-	RETURNS INTEGER
+) RETURNS 
+	INTEGER
 	NO SQL
 	DETERMINISTIC
 BEGIN
@@ -111,12 +111,12 @@ END;;
 
 DROP FUNCTION IF EXISTS string.between;;
 CREATE FUNCTION string.between(
-	value		VARCHAR(60000) character set latin1,
+	value		mediumtext,
 	begin_tag	VARCHAR(40),
 	end_tag		VARCHAR(40),
 	start_index	INTEGER
 )
-	RETURNS VARCHAR(60000) character set latin1
+	RETURNS mediumtext
 	NO SQL
 	DETERMINISTIC
 BEGIN
