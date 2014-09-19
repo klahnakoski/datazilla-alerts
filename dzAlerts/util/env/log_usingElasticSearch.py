@@ -12,7 +12,7 @@ from __future__ import division
 
 from datetime import timedelta, datetime
 from ..cnv import CNV
-from .elasticsearch import ElasticSearch
+from .elasticsearch import Index, Cluster
 from ..structs.wraps import wrap
 from ..thread.threads import Thread, Queue
 from .logs import BaseLog, Log
@@ -21,13 +21,8 @@ from .logs import BaseLog, Log
 class Log_usingElasticSearch(BaseLog):
     def __init__(self, settings):
         settings = wrap(settings)
-        self.es = ElasticSearch(settings)
 
-        aliases = self.es.get_aliases()
-        if settings.index not in [a.index for a in aliases]:
-            schema = CNV.JSON2object(CNV.object2JSON(SCHEMA), paths=True)
-            self.es = ElasticSearch.create_index(settings, schema, limit_replicas=True)
-
+        self.es = Cluster(settings).get_or_create_index(settings, schema=CNV.JSON2object(CNV.object2JSON(SCHEMA), paths=True))
         self.queue = Queue()
         self.thread = Thread("log to " + settings.index, time_delta_pusher, es=self.es, queue=self.queue, interval=timedelta(seconds=1))
         self.thread.start()

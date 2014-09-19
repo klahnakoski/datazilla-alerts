@@ -41,7 +41,7 @@ def main():
             db.insert("alerts", Struct(
                 id=SQL("util.newid()"),
                 status="new",
-                create_time=datetime(2014, 8, 15, 2, 52),
+                push_date=datetime(2014, 8, 15, 2, 52),
                 last_updated=datetime(2014, 8, 21, 18, 30),
                 last_sent=None,
                 tdad_id='{"metric": "timetostableframe", "path": "/b2g", "uuid": "b180c5a8247d11e4b12b10ddb19e8514"}',
@@ -50,7 +50,12 @@ def main():
                 revision=REVISION,
                 severity="0.8",
                 confidence="4.54736923002",
-                solution=None
+                comment=None,
+                branch="b2g-inbound",
+                test='b2g-dialer-startup',
+                platform='flame-512',
+                percent="100%",
+                keyrevision=REVISION
             ))
 
         eideticker_alert_revision(settings)

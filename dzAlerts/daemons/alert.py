@@ -69,9 +69,9 @@ def send_alerts(settings, db):
                 a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
                 math.bayesian_add(a.severity, 1-power(10, -a.confidence)) > {{alert_limit}} AND
-                a.solution IS NULL AND
+                a.comment IS NULL AND
                 a.reason in {{reasons}} AND
-                a.create_time > {{min_time}}
+                a.push_date > {{min_time}}
             ORDER BY
                 math.bayesian_add(a.severity, 1-power(10, -a.confidence)) DESC,
                 json.number(left(details, 65000), "diff_percent") DESC

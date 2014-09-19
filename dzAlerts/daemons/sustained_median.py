@@ -14,11 +14,10 @@ from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 
 from dzAlerts.util.collections import MIN, MAX
-from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.env import startup
+from dzAlerts.util.env import startup, elasticsearch
 from dzAlerts.util.queries.db_query import DBQuery
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
@@ -379,7 +378,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     continue
                 alert = Struct(
                     status="new",
-                    create_time=CNV.milli2datetime(v[test_param.sort.name]),
+                    push_date=CNV.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
                         s.name: v[s.name] for s in source_ref
                     }),
@@ -387,7 +386,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                     revision=v[settings.param.revision_dimension],
                     details=v,
                     severity=settings.param.severity,
-                    confidence=v.ttest_result.score
+                    confidence=v.ttest_result.score,
+                    branch=v.Branch,
+                    test=nvl(v.Test.name, v.Test),
+                    platform=nvl(v.OS.version, v.Device),
+                    percent=str(round(v.diff_percent * 100, 1)) + "%",
+                    keyrevision=v[settings.param.revision_dimension],
+                    mergedfrom=''
                 )
                 alerts.append(alert)
 
@@ -414,7 +419,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "severity",
                 "confidence",
                 "details",
-                "solution"
+                "comment"
             ],
             "where": {"and": [
                 {"terms": {"tdad_id": evaled_tests}},
@@ -459,7 +464,7 @@ def main():
             # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-            with ESQuery(ElasticSearch(settings.query["from"])) as qb:
+            with ESQuery(elasticsearch.Index(settings.query["from"])) as qb:
                 qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
                 with DB(settings.alerts) as alerts_db:
