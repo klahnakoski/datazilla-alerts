@@ -43,7 +43,7 @@ class test_alert_threshold:
             SELECT
                 id,
                 status,
-                create_time,
+                push_date,
                 tdad_id,
                 reason,
                 details,

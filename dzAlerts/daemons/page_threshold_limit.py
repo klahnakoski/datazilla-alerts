@@ -73,7 +73,7 @@ def page_threshold_limit(db, debug):
             alert = {
                 "id": SQL("util.newid()"),
                 "status": "new",
-                "create_time": datetime.utcnow(),
+                "push_date": datetime.utcnow(),
                 "last_updated": datetime.utcnow(),
                 "tdad_id": page.tdad_id,
                 "reason": REASON,

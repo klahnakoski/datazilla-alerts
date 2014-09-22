@@ -13,8 +13,7 @@ from __future__ import division
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.env.elasticsearch import ElasticSearch
+from dzAlerts.util.env import startup, elasticsearch
 from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
@@ -119,7 +118,7 @@ def talos_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
     with DB(settings.alerts) as alerts_db:
-        with ESQuery(ElasticSearch(settings.query["from"])) as esq:
+        with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
 
             dbq = DBQuery(alerts_db)
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
@@ -145,12 +144,12 @@ def talos_alert_revision(settings):
                     FROM
                         alerts a
                     WHERE
-                        create_time >= {{min_time}} AND
+                        push_date >= {{min_time}} AND
                         {{where}}
                     GROUP BY
                         revision
                     HAVING
-                        max(create_time) < {{max_time}}
+                        max(push_date) < {{max_time}}
                     ) r
                 JOIN
                     alerts a ON a.revision=r.revision
@@ -167,7 +166,8 @@ def talos_alert_revision(settings):
             for a in existing_sustained_alerts:
                 a.details = CNV.JSON2object(a.details)
                 try:
-                    a.revision = CNV.JSON2object(a.revision)
+                    if a.revision.rtrim()[0] in ["{", "["]:
+                        a.revision = CNV.JSON2object(a.revision)
                 except Exception, e:
                     pass
 
@@ -243,22 +243,27 @@ def talos_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                alerts.append({
-                    "status": "new",
-                    "create_time": CNV.milli2datetime(worst_in_revision.push_date),
-                    "reason": REASON,
-                    "revision": revision,
-                    "tdad_id": revision,
-                    "details": {
+                alerts.append(Struct(
+                    status= "new",
+                    push_date= CNV.milli2datetime(worst_in_revision.push_date),
+                    reason= REASON,
+                    revision= revision,
+                    tdad_id= revision,
+                    details={
                         "revision": revision,
                         "total_tests": total_test_count,
                         "total_exceptions": len(total_exceptions),
                         "tests": parts,
                         "example": worst_in_revision
                     },
-                    "severity": SEVERITY,
-                    "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
-                })
+                    severity=SEVERITY,
+                    confidence=nvl(worst_in_revision.result.score, -Math.log10(1 - worst_in_revision.result.confidence), 8), # confidence was never more accurate than 8 decimal places
+                    branch=worst_in_revision.Talos.Branch,
+                    test=worst_in_revision.Talos.Test,
+                    platform=worst_in_revision.Talos.Platform,
+                    percent=worst_in_revision.diff_percent,
+                    keyrevision=worst_in_revision.Talos.Revision
+                ))
 
 
             # EXISTING REVISION-LEVEL ALERTS
@@ -270,7 +275,7 @@ def talos_alert_revision(settings):
                     {"or": [
                         {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                        {"range": {"push_date": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]},
                 # "sort":"status",

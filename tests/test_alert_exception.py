@@ -48,7 +48,7 @@ class test_alert_exception():
             SELECT
                 id,
                 status,
-                create_time,
+                push_date,
                 tdad_id,
                 reason,
                 details,

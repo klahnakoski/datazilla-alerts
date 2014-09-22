@@ -7,13 +7,13 @@ FROM
 	alerts a
 WHERE
 	a.status<>'obsolete' and
-	a.solution is not null and
-	trim(a.solution) <> ''
+	a.comment is not null and
+	trim(a.comment) <> ''
 GROUP BY
 	json.string(details, "revision")
 ORDER BY
 	count(1) desc
-LIMIT 
+LIMIT
 	20
 ;
 
@@ -24,4 +24,3 @@ FROM
 	alerts a
 WHERE
 	json.string(details, "revision") = '1426ffa9caf2'
-	
