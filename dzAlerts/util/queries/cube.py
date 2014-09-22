@@ -266,7 +266,7 @@ class Cube(object):
         if len(stacked) + len(remainder) != len(self.edges):
             Log.error("can not find some edges to group by")
         # CACHE SOME RESULTS
-        keys = [e.name for e in self.edges]
+        keys = edges.name
         getKey = [e.domain.getKey for e in self.edges]
         lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
 

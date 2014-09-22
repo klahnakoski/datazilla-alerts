@@ -387,9 +387,9 @@ def alert_sustained_median(settings, qb, alerts_db):
                     details=v,
                     severity=settings.param.severity,
                     confidence=v.ttest_result.score,
-                    branch=v.Branch,
-                    test=nvl(v.Test.name, v.Test),
-                    platform=nvl(v.OS.version, v.Device),
+                    branch=v[settings.param.branch_dimension],
+                    test=v[settings.param.test_dimension],
+                    platform=nvl(v.B2G.Device, v.Eideticker.Device, v.Talos.OS.name + " " + v.Talos.OS.version, v.Device),
                     percent=str(round(v.diff_percent * 100, 1)) + "%",
                     keyrevision=v[settings.param.revision_dimension],
                     mergedfrom=''
@@ -419,7 +419,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "severity",
                 "confidence",
                 "details",
-                "comment"
+                "comment",
+                "branch",
+                "test",
+                "platform",
+                "percent",
+                "keyrevision",
+                "mergedfrom"
             ],
             "where": {"and": [
                 {"terms": {"tdad_id": evaled_tests}},

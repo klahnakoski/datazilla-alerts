@@ -14,7 +14,6 @@ import __builtin__
 from ..struct import Null, nvl
 from ..env.logs import Log
 from ..strings import find_first
-from . import stats
 
 
 class Math(object):
@@ -132,9 +131,12 @@ class Math(object):
         else:
             value = float(value)
 
-        if digits is None:
+        if digits != None:
             m = pow(10, math.ceil(math.log10(value)))
-            return __builtin__.round(value / m, digits) * m
+            try:
+                return __builtin__.round(value / m, digits) * m
+            except Exception, e:
+                raise e
 
         return __builtin__.round(value, decimal)
 

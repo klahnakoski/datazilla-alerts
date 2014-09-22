@@ -152,6 +152,9 @@ class SetDomain(Domain):
         self.NULL = Struct(value=None)
         self.partitions = StructList()
 
+        if isinstance(desc.key, set):
+            Log.error("problem")
+
         if isinstance(desc.partitions[0], basestring):
             # ASSMUE PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = ("value", )
@@ -159,7 +162,7 @@ class SetDomain(Domain):
                 part = {"name": p, "value": p}
                 self.partitions.append(part)
                 self.map[p] = part
-        elif desc.partitions and desc.dimension.fields and len(desc.dimension.fields)>1:
+        elif desc.partitions and desc.dimension.fields and len(desc.dimension.fields) > 1:
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.dimension.fields)
         elif desc.partitions and isinstance(desc.key, (list, set)):
@@ -167,8 +170,10 @@ class SetDomain(Domain):
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
         elif desc.partitions and isinstance(desc.partitions[0][desc.key], dict):
-            self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
-            self.map = UniqueIndex(keys=self.key)
+            self.key = desc.key
+            self.map = UniqueIndex(keys=desc.key)
+            # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
+            # self.map = UniqueIndex(keys=self.key)
         elif desc.key == None:
             Log.error("Domains must have keys")
         else:
