@@ -3,4 +3,4 @@ pymysql
 pytest
 python-dateutil
 pynliner
-
+scipy

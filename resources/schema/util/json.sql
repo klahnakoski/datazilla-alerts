@@ -13,7 +13,7 @@ CREATE FUNCTION json (
 	value		longtext character set utf8,
 	tag			VARCHAR(40)
 ) RETURNS
-	varchar(65000) CHARSET latin1
+	longtext
     NO SQL
     DETERMINISTIC
 BEGIN
@@ -76,9 +76,9 @@ SELECT json(NULL, "datzilla") result, NULL expected from dual;;
 -- FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS string;;
 CREATE FUNCTION string (
-	value		longtext character set utf8,
+	value		longtext,
 	tag			VARCHAR(40)
-) RETURNS varchar(65000) CHARSET latin1
+) RETURNS longtext
     NO SQL
     DETERMINISTIC
 BEGIN
@@ -98,9 +98,10 @@ END;;
 -- FINDS FIRST INSTANCE WITH NO REGARD FOR DEPTH
 DROP FUNCTION IF EXISTS number;;
 CREATE FUNCTION number (
-	value		longtext character set utf8,
+	value		longtext,
 	tag			VARCHAR(40)
-) RETURNS varchar(65000) CHARSET latin1
+) RETURNS 
+	longtext
     NO SQL
     DETERMINISTIC
 BEGIN

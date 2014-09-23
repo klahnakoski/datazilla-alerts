@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -95,7 +97,7 @@ class test_alert:
         # WE CAN SEE THEM IN THE EMAIL DELIVERED
         test_data = struct.wrap({
             "header":
-                ("id", "status", "create_time", "last_updated", "last_sent", "tdad_id", "reason", "details", "severity", "confidence", "solution"),
+                ("id", "status", "push_date", "last_updated", "last_sent", "tdad_id", "reason", "details", "severity", "confidence", "comment"),
             "data": [
                 # TEST last_sent IS NOT TOO YOUNG
                 (self.uid + 0, "new", self.far_past, self.far_past, self.recent_past, self.series, self.reason, CNV.object2JSON({"id": 0, "expect": "fail"}), self.high_severity, self.high_confidence,
@@ -111,7 +113,7 @@ class test_alert:
                 (self.uid + 6, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 6, "expect": "fail"}), self.low_severity, self.high_confidence, None),
                 (self.uid + 7, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 7, "expect": "fail"}), self.high_severity, self.low_confidence, None),
                 # TEST ONES WITH SOLUTION ARE NOT SENT
-                (self.uid + 8, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 8, "expect": "fail"}), self.high_severity, self.high_confidence, "a solution!")
+                (self.uid + 8, "new", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 8, "expect": "fail"}), self.high_severity, self.high_confidence, "a comment!")
             ]
         })
 

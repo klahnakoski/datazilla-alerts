@@ -8,11 +8,13 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.env.elasticsearch import ElasticSearch
+from dzAlerts.util.env import startup, elasticsearch
+
 from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
@@ -20,13 +22,13 @@ from dzAlerts.util.queries.es_query import ESQuery
 from dzAlerts.util.sql.db import DB
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl, StructList
+from dzAlerts.util.struct import nvl, StructList, Struct
 from dzAlerts.util.times.dates import Date
 from dzAlerts.util.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
-DEBUG_UPDATE_EMAIL_TEMPLATE = False
+UPDATE_EMAIL_TEMPLATE = True
 REASON = "b2g_alert_revision"   # name of the reason in alert_reason
 LOOK_BACK = Duration(days=90)
 MIN_AGE = Duration(hours=2)
@@ -56,25 +58,26 @@ TEMPLATE = [
     """
     <div>
     	<div style="font-size: 150%;font-weight: bold;">Score: {{score|round(digits=3)}}</div><br>
-    <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
-    [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]<br>
+        <span style="font-size: 120%; display:inline-block">Gaia: <a href="https://github.com/mozilla-b2g/gaia/commit/{{revision.gaia}}">{{revision.gaia|left(12)}}...</a></span>
+        [<a href="https://github.com/mozilla-b2g/gaia/commit/{{details.example.past_revision.gaia}}">Previous</a>]
+        [<a href="https://github.com/mozilla-b2g/gaia/compare/{{details.example.past_revision.gaia}}...{{details.example.B2G.Revision.gaia}}">DIFF</a>]<br>
 
-    <span style="font-size: 120%; display:inline-block">Gecko: <a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{revision.gecko}}">{{revision.gecko}}</a></span>
-    [<a href="http://git.mozilla.org/?p=releases/gecko.git;a=commit;h={{details.example.past_revision.gecko}}">Previous</a>]
+        <span style="font-size: 120%; display:inline-block">Gecko: <a href="{{revision.gecko_repository}}/rev/{{revision.gecko}}">{{revision.gecko}}</a></span>
+        [<a href="{{revision.gecko_repository}}/rev/{{details.example.past_revision.gecko}}">Previous</a>]
+        [<a href="{{revision.gecko_repository}}/pushloghtml?fromchange={{details.example.past_revision.gecko}}&tochange={{revision.gecko}}">DIFF</a>]<br>
 
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
     <table>
-    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Github Diff</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
+    <thead><tr><td>Device</td><td>Suite</td><td>Test Name</td><td>DZ Link</td><td>Date/Time</td><td>Before</td><td>After</td><td>Diff</td></tr></thead>
     """, {
         "from": "details.tests",
         "template": """<tr>
             <td>{{example.B2G.Device|upper}}</td>
             <td>{{test.suite}}</td>
-            <td>{{test.name}}</td>
-            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch}}&device={{example.B2G.Device}}&range={{example.date_range}}&test={{test.name}}&app_list={{test.suite}}&gaia_rev={{example.B2G.Revision.gaia}}&gecko_rev={{example.B2G.Revision.gecko}}&plot=median\">Datazilla!</a></td>
-            <td><a href="https://github.com/mozilla-b2g/gaia/compare/{{example.past_revision.gaia}}...{{example.B2G.Revision.gaia}}">DIFF</a></td>
+            <td>{{test.name|html}}</td>
+            <td><a href="https://datazilla.mozilla.org/b2g/?branch={{example.B2G.Branch|url}}&device={{example.B2G.Device|url}}&range={{example.date_range|url}}&test={{test.name|url}}&app_list={{test.suite|url}}&gaia_rev={{example.B2G.Revision.gaia|url}}&gecko_rev={{example.B2G.Revision.gecko|url}}&plot=median\">Datazilla!</a></td>
             <td>{{example.push_date|datetime}}</td>
             <td>{{example.past_stats.mean|round(digits=4)}}</td>
             <td>{{example.future_stats.mean|round(digits=4)}}</td>
@@ -90,13 +93,13 @@ def b2g_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
     with DB(settings.alerts) as alerts_db:
-        with ESQuery(ElasticSearch(settings.query["from"])) as esq:
+        with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
             dbq = DBQuery(alerts_db)
 
             esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
-            if DEBUG_UPDATE_EMAIL_TEMPLATE:
+            if UPDATE_EMAIL_TEMPLATE:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
                     "template": CNV.object2JSON(TEMPLATE),
                     "subject": CNV.object2JSON(SUBJECT),
@@ -116,12 +119,12 @@ def b2g_alert_revision(settings):
                     FROM
                         alerts a
                     WHERE
-                        create_time >= {{min_time}} AND
+                        push_date >= {{min_time}} AND
                         {{where}}
                     GROUP BY
                         revision
                     HAVING
-                        max(create_time) < {{max_time}}
+                        max(push_date) < {{max_time}}
                     ) r
                 JOIN
                     alerts a ON a.revision=r.revision
@@ -138,7 +141,8 @@ def b2g_alert_revision(settings):
             for a in existing_sustained_alerts:
                 a.details = CNV.JSON2object(a.details)
                 try:
-                    a.revision = CNV.JSON2object(a.revision)
+                    if a.revision.rstrip()[0] in ["{", "["]:
+                        a.revision = CNV.JSON2object(a.revision)
                 except Exception, e:
                     pass
 
@@ -159,10 +163,11 @@ def b2g_alert_revision(settings):
             })
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
-            for revision, total_test_count in Q.groupby(total_tests, ["B2G.Revision"]):
+            # THIS IS A existing_sustained_alerts LEFT JOIN total_tests ON (revision,)
+            for revision, total_exceptions in Q.groupby(existing_sustained_alerts, ["details.B2G.Revision"]):
             # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
-                revision = revision["B2G.Revision"]
-                total_exceptions = tests[(revision, )]  # FILTER BY revision
+                revision = revision["details.B2G.Revision"]
+                total_test_count = total_tests[{"B2G.Revision": revision}]
 
                 parts = StructList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
@@ -185,22 +190,27 @@ def b2g_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                alerts.append({
-                    "status": "new",
-                    "create_time": CNV.milli2datetime(worst_in_revision.push_date),
-                    "reason": REASON,
-                    "revision": revision,
-                    "tdad_id": revision,
-                    "details": {
+                alerts.append(Struct(
+                    status= "new",
+                    push_date= CNV.milli2datetime(worst_in_revision.push_date),
+                    reason= REASON,
+                    revision= revision,
+                    tdad_id= revision,
+                    details={
                         "revision": revision,
                         "total_tests": total_test_count,
                         "total_exceptions": len(total_exceptions),
                         "tests": parts,
                         "example": worst_in_revision
                     },
-                    "severity": SEVERITY,
-                    "confidence": nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8)  # confidence was never more accurate than 8 decimal places
-                })
+                    severity= SEVERITY,
+                    confidence= nvl(worst_in_revision.result.score, -Math.log10(1-worst_in_revision.result.confidence), 8),  # confidence was never more accurate than 8 decimal places
+                    branch=worst_in_revision.B2G.Branch,
+                    test=worst_in_revision.B2G.Test,
+                    platform=worst_in_revision.B2G.Platform,
+                    percent=unicode(worst_in_revision.diff_percent*100)+"%",
+                    keyrevision=worst_in_revision.B2G.Revision
+                ))
 
 
             # EXISTING REVISION-LEVEL ALERTS
@@ -212,7 +222,7 @@ def b2g_alert_revision(settings):
                     {"or": [
                         {"terms": {"tdad_id": set(alerts.tdad_id)}},
                         {"terms": {"revision": set(existing_sustained_alerts.revision)}},
-                        {"range": {"create_time": {"gte": NOW - LOOK_BACK}}}
+                        {"range": {"push_date": {"gte": NOW - LOOK_BACK}}}
                     ]}
                 ]},
                 # "sort":"status",
@@ -258,5 +268,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

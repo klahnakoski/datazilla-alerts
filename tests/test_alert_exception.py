@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime, timedelta
 from math import sqrt
 import pytest
@@ -46,7 +48,7 @@ class test_alert_exception():
             SELECT
                 id,
                 status,
-                create_time,
+                push_date,
                 tdad_id,
                 reason,
                 details,

@@ -8,22 +8,23 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 
 from dzAlerts.util.collections import MIN, MAX
-from dzAlerts.util.env.elasticsearch import ElasticSearch
 from dzAlerts.util.env.files import File
 from dzAlerts.util.maths import Math
 from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.env import startup
+from dzAlerts.util.env import startup, elasticsearch
 from dzAlerts.util.queries.db_query import DBQuery
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.queries import windows
 from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, split_field
+from dzAlerts.util.struct import nvl, StructList, literal_field, split_field, Null
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.struct import Struct, set_default
 from dzAlerts.util.queries import Q
@@ -48,8 +49,20 @@ Raw data:  {{details}}
 </div>"""
 
 VERBOSE = True
-DEBUG = False  # SETTINGS CAN TURN OFF DEBUGGING
+DEBUG = False  # SETTINGS CAN TURN ON/OFF DEBUGGING
 DEBUG_TOUCH_ALL_ALERTS = False  # True IF ALERTS WILL BE UPDATED, EVEN IF THE QUALITY IS NO DIFFERENT
+
+
+def diff_percent(r):
+    try:
+        if r.past_stats.mean==0:
+            return 1
+        else:
+            if r.past_stats.mean==None:
+                return Null
+            return (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
+    except Exception, e:
+        Log.error("" + str(Null / Null), e)
 
 
 def alert_sustained_median(settings, qb, alerts_db):
@@ -60,7 +73,11 @@ def alert_sustained_median(settings, qb, alerts_db):
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
     oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
-    debug = False if settings.param.debug is False else DEBUG or DEBUG_TOUCH_ALL_ALERTS  # SETTINGS CAN TURN OFF DEBUGGING
+    if settings.param.debug == None:
+        debug = DEBUG or DEBUG_TOUCH_ALL_ALERTS
+    else:
+        debug = settings.param.debug
+
     if debug:
         Log.warning("Debugging is ON")
     query = settings.query
@@ -128,26 +145,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 {"and": disabled},
                 {"or": [
                     {"not": debug},
-                    {"and": [
-                        # FOR DEBUGGING SPECIFIC SERIES
-                        # {"term": {"metadata.device": "flame"}},
-                        # {"term": {"metadata.test": "b2g-gallery-startup"}},
-                        # {"exists": {"field": "metadata.value"}}
-                        # {"term": {"result.test_name": "fps"}}
-                        # {"term": {"test_machine.type": "flame"}},
-                        # {"term": {"metadata.app": "b2g-nightly"}}
-                        # {"term":{"metadata.branch":"mozilla-central"}},
-                        # {"term": {"metadata.test": "imgur"}},
-                        # {"term": {"metadata.device": "samsung-gn"}},
-                        # {"term": {"metadata.app": "nightly"}},
-                        # {"term": {"testrun.suite": "tcanvasmark"}},
-                        # {"term": {"result.test_name": "canvasmark"}},
-                        # {"term": {"test_machine.platform": "x86_64"}},
-                        # {"term": {"test_build.name": "Firefox"}},
-                        # {"term": {"test_machine.osversion": "6.2.9200"}},
-                        # {"term": {"test_build.branch": "Mozilla-Aurora"}}
-
-                    ]}
+                    nvl(settings.param.debug_filter, True)
                 ]}
             ]},
             "limit": nvl(settings.param.combo_limit, 1000)
@@ -325,7 +323,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         "value": lambda r: r.future_stats.mean - r.past_stats.mean
                     }, {
                         "name": "diff_percent",
-                        "value": lambda r: 1 if r.past_stats.mean==0 else (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
+                        "value": diff_percent
                     }, {
                         "name": "is_diff",
                         "value": lambda r: is_bad(r, test_param)
@@ -380,7 +378,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     continue
                 alert = Struct(
                     status="new",
-                    create_time=CNV.milli2datetime(v[test_param.sort.name]),
+                    push_date=CNV.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
                         s.name: v[s.name] for s in source_ref
                     }),
@@ -388,7 +386,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                     revision=v[settings.param.revision_dimension],
                     details=v,
                     severity=settings.param.severity,
-                    confidence=v.ttest_result.score
+                    confidence=v.ttest_result.score,
+                    branch=v[settings.param.branch_dimension],
+                    test=v[settings.param.test_dimension],
+                    platform=nvl(v.B2G.Device, v.Eideticker.Device, v.Talos.OS.name + " " + v.Talos.OS.version, v.Device),
+                    percent=str(round(v.diff_percent * 100, 1)) + "%",
+                    keyrevision=v[settings.param.revision_dimension],
+                    mergedfrom=''
                 )
                 alerts.append(alert)
 
@@ -415,7 +419,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "severity",
                 "confidence",
                 "details",
-                "solution"
+                "comment",
+                "branch",
+                "test",
+                "platform",
+                "percent",
+                "keyrevision",
+                "mergedfrom"
             ],
             "where": {"and": [
                 {"terms": {"tdad_id": evaled_tests}},
@@ -460,7 +470,7 @@ def main():
             # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-            with ESQuery(ElasticSearch(settings.query["from"])) as qb:
+            with ESQuery(elasticsearch.Index(settings.query["from"])) as qb:
                 qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
 
                 with DB(settings.alerts) as alerts_db:

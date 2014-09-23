@@ -1,8 +1,18 @@
 # encoding: utf-8
 #
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+#
+
+from __future__ import unicode_literals
+from __future__ import division
+
 from .. import struct
 from ..cnv import CNV
-from ..env.elasticsearch import ElasticSearch
+from ..env.elasticsearch import Index, Cluster
 from ..env.logs import Log
 from ..env.files import File
 from ..queries import Q
@@ -28,10 +38,10 @@ def open_test_instance(name, settings):
             "type": name
         })
 
-        ElasticSearch.delete_index(settings)
+        Index(settings).delete()
 
         schema = CNV.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
-        es = ElasticSearch.create_index(settings, schema, limit_replicas=True)
+        es = Cluster(settings).create_index(settings, schema, limit_replicas=True)
         return es
 
 

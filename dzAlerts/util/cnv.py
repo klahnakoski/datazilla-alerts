@@ -8,18 +8,19 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
 
 import StringIO
 import base64
+import cgi
 import datetime
 import json
 import re
 import time
-from urllib import urlencode
 
 from . import struct
 from . import jsons
-from dzAlerts.util.times.dates import Date
+from .times.dates import Date
 from .jsons import json_encoder
 from .collections.multiset import Multiset
 from .env.profiles import Profiler
@@ -51,10 +52,12 @@ class CNV:
     def JSON2object(json_string, params=None, flexible=False, paths=False):
         with Profiler("JSON2Object"):
             try:
-                # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
                 if flexible:
+                    # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
                     # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
                     json_string = re.sub(r"\"\"\".*?\"\"\"|[ \t]+//.*\n|^//.*\n|#.*?\n", r"\n", json_string, flags=re.MULTILINE)
+                    # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
+                    json_string = re.sub(r",\s*\}", r"}", json_string)
                 if params:
                     params = dict([(k, CNV.value2quote(v)) for k, v in params.items()])
                     json_string = expand_template(json_string, params)
@@ -125,6 +128,8 @@ class CNV:
 
     @staticmethod
     def milli2datetime(u):
+        if u == None:
+            return None
         return CNV.unix2datetime(u / 1000.0)
 
     @staticmethod
@@ -185,9 +190,33 @@ class CNV:
     def string2quote(value):
         return jsons.quote(value)
 
+
     @staticmethod
     def value2url(value):
-        return urlencode(value)
+        if value == None:
+            output = ""
+        elif isinstance(value, dict):
+            output = "&".join([CNV.value2url(k)+"="+CNV.value2url(v) for k, v in value.items()])
+        elif isinstance(value, unicode):
+            output = "".join([map2url[c] for c in CNV.unicode2latin1(value)])
+        elif isinstance(value, str):
+            output = "".join([map2url[c] for c in value])
+        elif hasattr(value, "__iter__"):
+            output = ",".join(CNV.value2url(v) for v in value)
+        else:
+            output = unicode(value)
+        return output
+
+
+    @staticmethod
+    def unicode2html(value):
+        return cgi.escape(value)
+
+
+    @staticmethod
+    def unicode2latin1(value):
+        output = value.encode("latin1")
+        return output
 
     @staticmethod
     def quote2string(value):
@@ -321,6 +350,11 @@ class CNV:
             return output
 
         return [CNV.pipe2value(v) for v in output.split("|")]
+
+
+map2url = {chr(i): CNV.latin12unicode(chr(i)) for i in range(32, 256)}
+for c in " {}<>;/?:@&=+$,":
+    map2url[c] = "%" + CNV.int2hex(ord(c), 2)
 
 
 def unPipe(value):

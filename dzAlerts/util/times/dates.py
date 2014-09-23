@@ -12,14 +12,16 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime, date
 import math
 
 
 class Date(object):
 
-    MIN = None
-    MAX = None
+    MIN = datetime(1, 1, 1)
+    MAX = datetime(2286, 11, 20, 17, 46, 39)
 
     def __init__(self, *args):
         try:
@@ -89,8 +91,5 @@ class Date(object):
     def __str__(self):
         return str(self.value)
 
-
-Date.MIN = datetime(1, 1, 1)
-Date.MAX = datetime(2286, 11, 20, 17, 46, 39)
 
 from ..env.logs import Log

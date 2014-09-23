@@ -5,6 +5,5 @@
     {"name":"Branch", "field":"test_build.branch", "type":"set", "limit":100},
     {"name":"Test", "field":{"suite":"testrun.suite", "name":"result.test_name"}, "type":"set", "esfilter": true, "limit":1000},
     {"name":"Platform", "field":"test_machine.platform", "type":"set", "limit":100},
-    {"name":"Revision", "field":{"gaia": "test_build.gaia_revision", "gecko": "test_build.gecko_revision"}, "type":"uid"},
-    {"name":"Revision2", "field":["test_build.build_revision", "test_build.revision"], "type":"uid"}
+    {"name":"Revision", "field":{"gaia": "test_build.gaia_revision", "gecko": "test_build.gecko_revision", "gecko_repository":"test_build.gecko_repository"}, "type":"uid"}
 ]}

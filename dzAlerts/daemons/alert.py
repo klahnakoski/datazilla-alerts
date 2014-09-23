@@ -8,13 +8,14 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from math import log10
 from pynliner import Pynliner
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from dzAlerts.util.cnv import CNV
 from dzAlerts.util.env import startup
-from dzAlerts.util.env.files import File
 from dzAlerts.util.queries import Q
 from dzAlerts.util.queries.db_query import esfilter2sqlwhere
 from dzAlerts.util.strings import expand_template
@@ -22,6 +23,7 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
+from dzAlerts.util.testing.fuzzytestcase import assertAlmostEqualValue
 from dzAlerts.util.thread.threads import Thread
 from dzAlerts.util.times.durations import Duration
 
@@ -68,9 +70,9 @@ def send_alerts(settings, db):
                 a.last_sent IS NULL AND
                 a.status <> 'obsolete' AND
                 math.bayesian_add(a.severity, 1-power(10, -a.confidence)) > {{alert_limit}} AND
-                a.solution IS NULL AND
+                a.comment IS NULL AND
                 a.reason in {{reasons}} AND
-                a.create_time > {{min_time}}
+                a.push_date > {{min_time}}
             ORDER BY
                 math.bayesian_add(a.severity, 1-power(10, -a.confidence)) DESC,
                 json.number(left(details, 65000), "diff_percent") DESC
@@ -99,7 +101,16 @@ def send_alerts(settings, db):
                 alert.revision = CNV.JSON2object(alert.revision)
             except Exception, e:
                 pass
-            alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1 - (10 ** (-alert.confidence)))))  # SHOW NUMBER OF NINES
+
+            if alert.confidence > 4:
+                alert.score = alert.confidence + log10(alert.severity + pow(10, -alert.confidence) * (1 - 2 * alert.severity)) - log10(1 - alert.severity)
+                try:
+                    temp = -log10(1.0 - Math.bayesian_add(alert.severity, 1.0 - (10.0 ** (-alert.confidence))))
+                    assertAlmostEqualValue(alert.score, temp, digits=6)
+                except Exception:
+                    pass
+            else:
+                alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1.0 - (10.0 ** (-alert.confidence)))))  # SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
             example = alert.details.example
             for e in alert.details.tests.example + [example]:
@@ -109,6 +120,8 @@ def send_alerts(settings, db):
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  # PICK FIRST v > CURRENT VALUE
 
             subject = expand_template(CNV.JSON2object(alert.email_subject), alert)
+            if len(subject) > 200:
+                subject = subject[:197] + "..."
             body.append(expand_template(CNV.JSON2object(alert.email_template), alert))
             body = "".join(body) + FOOTER
             if alert.email_style == None:

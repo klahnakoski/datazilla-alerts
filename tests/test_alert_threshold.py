@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime, timedelta
 import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
@@ -41,7 +43,7 @@ class test_alert_threshold:
             SELECT
                 id,
                 status,
-                create_time,
+                push_date,
                 tdad_id,
                 reason,
                 details,

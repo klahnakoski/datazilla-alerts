@@ -8,6 +8,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import datetime
 from dzAlerts.util.collections import OR
 from dzAlerts.util.env.logs import Log
@@ -72,7 +74,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
     # CURRENT ALERTS, UPDATE IF DIFFERENT
     for new_alert in changed_alerts:
         old_alert = old_alerts[new_alert]
-        if len(nvl(old_alert.solution, "").strip()) != 0:
+        if len(nvl(old_alert.comment, "").strip()) != 0:
             continue  # DO NOT TOUCH SOLVED ALERTS
 
         if new_alert == None:

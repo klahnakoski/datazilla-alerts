@@ -8,6 +8,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from __future__ import division
+
 from datetime import timedelta
 
 from .. import regex
@@ -102,6 +104,11 @@ class Duration(object):
         else:
             return self.milli / amount.milli
 
+    def __truediv__(self, other):
+        return self.__div__(other)
+
+    def __rtruediv__(self, other):
+        return self.__rdiv__(other)
 
     def __sub__(self, duration):
             output = Duration(0)
@@ -127,12 +134,12 @@ class Duration(object):
         output = Duration(0)
         if interval.month:
             if self.month:
-                output.month = Math.floor(self.month / interval.month) * interval.month
+                output.month = int(Math.floor(self.month / interval.month) * interval.month)
                 output.milli = output.month * MILLI_VALUES.month
                 return output
 
             # A MONTH OF DURATION IS BIGGER THAN A CANONICAL MONTH
-            output.month = Math.floor(self.milli * 12 / MILLI_VALUES["year"] / interval.month) * interval.month
+            output.month = int(Math.floor(self.milli * 12 / MILLI_VALUES["year"] / interval.month) * interval.month)
             output.milli = output.month * MILLI_VALUES.month
         else:
             output.milli = Math.floor(self.milli / (interval.milli)) * (interval.milli)

@@ -9,6 +9,8 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+
 from collections import Iterable
 from types import GeneratorType
 from ..struct import nvl
@@ -60,7 +62,13 @@ class Multithread(object):
         try:
             if isinstance(value, Exception):
                 self.inbound.close()
-            self.inbound.add(Thread.STOP)
+
+                for t in self.threads:
+                    t.keep_running = False
+            else:
+                # ADD STOP MESSAGE, ONE FOR EACH THREAD, FOR ORDERLY SHUTDOWN
+                for t in self.threads:
+                    self.inbound.add(Thread.STOP)
             self.join()
         except Exception, e:
             Log.warning("Problem sending stops", e)
@@ -85,14 +93,15 @@ class Multithread(object):
             for t in self.threads:
                 t.join()
 
-
     def execute(self, requests):
         """
         RETURN A GENERATOR THAT HAS len(requests) RESULTS (ANY ORDER)
         EXPECTING requests TO BE A list OF dicts, EACH dict IS USED AS kwargs TO GIVEN functions
         """
-        if not isinstance(requests,(list, tuple, GeneratorType)):
+        if not isinstance(requests, (list, tuple, GeneratorType, Iterable)):
             Log.error("Expecting requests to be a list or generator", offset=1)
+        else:
+            requests = list(requests)
 
         # FILL QUEUE WITH WORK
         self.inbound.extend(requests)
@@ -130,11 +139,13 @@ class worker_thread(Thread):
         self.start()
 
     def event_loop(self, please_stop):
-        got_stop = False
+        got_stop_message = False
         while not please_stop.is_go():
             request = self.in_queue.pop()
             if request == Thread.STOP:
-                got_stop = True
+                if DEBUG:
+                    Log.note("{{name}} got a stop message", {"name": self.name})
+                got_stop_message = True
                 if self.in_queue.queue:
                     Log.warning("programmer error, queue not empty. {{num}} requests lost:\n{{requests}}", {
                         "num": len(self.in_queue.queue),
@@ -160,14 +171,17 @@ class worker_thread(Thread):
         please_stop.go()
         del self.function
 
-        if self.num_runs == 0:
-            Log.warning("{{name}} thread did no work", {"name": self.name})
-        if DEBUG and self.num_runs != 1:
-            Log.note("{{name}} thread did {{num}} units of work", {
-                "name": self.name,
-                "num": self.num_runs
-            })
-        if got_stop and self.in_queue.queue:
+        if DEBUG:
+            if self.num_runs == 0:
+                if DEBUG:
+                    Log.note("{{name}} thread did no work", {"name": self.name})
+            else:
+                Log.note("{{name}} thread did {{num}} units of work", {
+                    "name": self.name,
+                    "num": self.num_runs
+                })
+                
+        if got_stop_message and self.in_queue.queue:
             Log.warning("multithread programmer error, queue not empty. {{num}} requests lost", {"num": len(self.in_queue.queue)})
         if DEBUG:
             Log.note("{{thread}} DONE", {"thread": self.name})

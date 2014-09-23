@@ -8,6 +8,7 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
 import requests
 
 from dzAlerts.util.env import startup

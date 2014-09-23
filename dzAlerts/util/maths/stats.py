@@ -9,25 +9,27 @@
 #
 
 from __future__ import unicode_literals
-import sys
-from ..vendor import strangman
+from __future__ import division
 
+import sys
 from math import sqrt
+
 from ..cnv import CNV
 from ..collections import OR
-from ..struct import nvl, Struct, Null
+from __init__ import Math, almost_equal
 from ..env.logs import Log
+from ..struct import nvl, Struct, Null
+from ..vendor import strangman
 
 
 DEBUG = True
 DEBUG_STRANGMAN = True
 EPSILON = 0.000000001
-ABS_EPSILON = sys.float_info.min*2  # *2 FOR SAFETY
-
+ABS_EPSILON = sys.float_info.min * 2  # *2 FOR SAFETY
 
 if DEBUG_STRANGMAN:
     try:
-        import numpy
+        import numpy as np
         from scipy import stats
         import scipy
     except Exception, e:
@@ -44,15 +46,16 @@ def chisquare(f_obs, f_exp):
         Log.error("problem with call", e)
 
     if DEBUG_STRANGMAN:
+        from ..testing.fuzzytestcase import assertAlmostEqualValue
+
         sp_result = scipy.stats.chisquare(
-            numpy.array(f_obs),
-            f_exp=numpy.array(f_exp)
+            np.array(f_obs),
+            f_exp=np.array(f_exp)
         )
-        if not closeEnough(sp_result[0], py_result[0]) and closeEnough(sp_result[1], py_result[1]):
+        if not assertAlmostEqualValue(sp_result[0], py_result[0], digits=9) and assertAlmostEqualValue(sp_result[1], py_result[1], delta=1e-8):
             Log.error("problem with stats lib")
 
     return py_result
-
 
 
 def stats2z_moment(stats):
@@ -70,38 +73,21 @@ def stats2z_moment(stats):
 
     m = Z_moment(mz0, mz1, mz2, mz3, mz4)
     if DEBUG:
+        from ..testing.fuzzytestcase import assertAlmostEqualValue
+
         globals()["DEBUG"] = False
         try:
             v = z_moment2stats(m, unbiased=False)
-            assert closeEnough(v.count, stats.count)
-            assert closeEnough(v.mean, stats.mean)
-            assert closeEnough(v.variance, stats.variance)
-            assert closeEnough(v.skew, stats.skew)
-            assert closeEnough(v.kurtosis, stats.vkurtosis)
+            assertAlmostEqualValue(v.count, stats.count)
+            assertAlmostEqualValue(v.mean, stats.mean)
+            assertAlmostEqualValue(v.variance, stats.variance)
+            assertAlmostEqualValue(v.skew, stats.skew)
+            assertAlmostEqualValue(v.kurtosis, stats.vkurtosis)
         except Exception, e:
             v = z_moment2stats(m, unbiased=False)
             Log.error("programmer error")
         globals()["DEBUG"] = True
     return m
-
-
-def closeEnough(a, b):
-    if a == None and b == None:
-        return True
-    if a == None or b == None:
-        return False
-
-    if abs(a - b) < ABS_EPSILON:
-        return True
-
-    if abs(b) > abs(a):
-        err = abs((a - b) / b)
-    else:
-        err = abs((a - b) / a)
-
-    if err < EPSILON:
-        return True
-    return False
 
 
 def z_moment2stats(z_moment, unbiased=True):
@@ -120,16 +106,12 @@ def z_moment2stats(z_moment, unbiased=True):
         skew = None
         kurtosis = None
     else:
-        variance = (Z2 - mean * mean)
-        error = -EPSILON * (abs(Z2) + 1)  # EXPECTED FLOAT ERROR
-
-        if error < variance <= 0:  # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
+        if almost_equal(Z2, mean * mean, digits=9):
             variance = 0
             skew = None
             kurtosis = None
-        elif variance < error:
-            Log.error("variance can not be negative ({{var}})", {"var": variance})
         else:
+            variance = (Z2 - mean * mean)
             mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
             mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
             skew = mc3 / (variance ** 1.5)
@@ -145,14 +127,16 @@ def z_moment2stats(z_moment, unbiased=True):
     )
 
     if DEBUG:
+        from ..testing.fuzzytestcase import assertAlmostEqualValue
+
         globals()["DEBUG"] = False
-        v=Null
+        v = Null
         try:
             v = stats2z_moment(stats)
             for i in range(5):
-                assert closeEnough(v.S[i], Z[i])
+                assertAlmostEqualValue(v.S[i], Z[i], digits=6)
         except Exception, e:
-            Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected parem={{expected|indent}}", {
+            Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected param={{expected|indent}}", {
                 "from": Z,
                 "stats": stats,
                 "expected": v.S
@@ -232,10 +216,39 @@ class Z_moment(object):
         self.S = tuple(args)
 
     def __add__(self, other):
-        return Z_moment(*map(add, self.S, other.S))
+        if isinstance(other, Z_moment):
+            return Z_moment(*map(add, self.S, other.S))
+        elif hasattr(other, "__iter__"):
+            return Z_moment(*map(add, self.S, Z_moment.new_instance(other)))
+        elif other == None:
+            return self
+        else:
+            return Z_moment(*map(add, self.S, (
+                1,
+                other,
+                pow(other, 2),
+                pow(other, 3),
+                pow(other, 4),
+                pow(other, 2)
+            )))
+
 
     def __sub__(self, other):
-        return Z_moment(*map(sub, self.S, other.S))
+        if isinstance(other, Z_moment):
+            return Z_moment(*map(sub, self.S, other.S))
+        elif hasattr(other, "__iter__"):
+            return Z_moment(*map(sub, self.S, Z_moment.new_instance(other)))
+        elif other == None:
+            return self
+        else:
+            return Z_moment(*map(sub, self.S, (
+                1,
+                other,
+                pow(other, 2),
+                pow(other, 3),
+                pow(other, 4)
+            )))
+
 
     @property
     def tuple(self):
@@ -255,11 +268,15 @@ class Z_moment(object):
 
         return Z_moment(
             len(values),
-            sum([n for n in values]),
+            sum(values),
             sum([pow(n, 2) for n in values]),
             sum([pow(n, 3) for n in values]),
             sum([pow(n, 4) for n in values])
         )
+
+    @property
+    def stats(self, *args, **kwargs):
+        return z_moment2stats(self, *args, **kwargs)
 
 
 def add(a, b):
@@ -300,7 +317,7 @@ def median(values, simple=True, mean_weight=0.0):
         l = len(values)
         _sorted = sorted(values)
 
-        middle = l / 2
+        middle = int(l / 2)
         _median = float(_sorted[middle])
 
         if len(_sorted) == 1:
@@ -308,7 +325,7 @@ def median(values, simple=True, mean_weight=0.0):
 
         if simple:
             if l % 2 == 0:
-                return float(_sorted[middle - 1] + _median) / 2
+                return (_sorted[middle - 1] + _median) / 2
             return _median
 
         # FIND RANGE OF THE median
@@ -324,14 +341,14 @@ def median(values, simple=True, mean_weight=0.0):
 
         if l % 2 == 0:
             if num_middle == 1:
-                return float(_sorted[middle - 1] + _median) / 2
+                return (_sorted[middle - 1] + _median) / 2
             else:
-                return (_median - 0.5) + float(middle - start_index) / float(num_middle)
+                return (_median - 0.5) + (middle - start_index) / num_middle
         else:
             if num_middle == 1:
                 return (1 - mean_weight) * _median + mean_weight * (_sorted[middle - 1] + _sorted[middle + 1]) / 2
             else:
-                return (_median - 0.5) + float(middle + 0.5 - start_index) / float(num_middle)
+                return (_median - 0.5) + (middle + 0.5 - start_index) / num_middle
     except Exception, e:
         Log.error("problem with median of {{values}}", {"values": values}, e)
 

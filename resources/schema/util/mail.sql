@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS mail.connection;;
 
 CREATE TABLE mail.content (
 	id			INTEGER primary key not null,
-	subject		VARCHAR(200),
+	subject		VARCHAR(200) character set utf8,
 	date_sent	DATETIME,
 	body		MEDIUMTEXT
 );;
@@ -50,8 +50,8 @@ INSERT INTO mail.connection VALUES ("20000101000000");;
 DROP PROCEDURE IF EXISTS mail.send;;
 CREATE PROCEDURE mail.send(
 	to_			VARCHAR(8000),##SEMICOLON SEPARATED EMAIL ADDRESSES
-	subject_	VARCHAR(200),
-	body_		VARCHAR(16000),
+	subject_	VARCHAR(200) character set utf8,
+	body_		MEDIUMTEXT,
 	attachment_	VARCHAR(200)
 )
 es: BEGIN
