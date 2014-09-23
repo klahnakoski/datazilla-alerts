@@ -377,7 +377,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 if v.ignored:
                     continue
                 alert = Struct(
-                    status="new",
+                    status="NEW",
                     push_date=CNV.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
                         s.name: v[s.name] for s in source_ref
