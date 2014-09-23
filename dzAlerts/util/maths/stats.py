@@ -16,7 +16,7 @@ from math import sqrt
 
 from ..cnv import CNV
 from ..collections import OR
-from __init__ import Math
+from __init__ import Math, almost_equal
 from ..env.logs import Log
 from ..struct import nvl, Struct, Null
 from ..vendor import strangman
@@ -106,16 +106,12 @@ def z_moment2stats(z_moment, unbiased=True):
         skew = None
         kurtosis = None
     else:
-        variance = (Z2 - mean * mean)
-        error = -EPSILON * (abs(Z2) + 1)  # EXPECTED FLOAT ERROR
-
-        if Math.round(variance, digits=9) == 0:  # TODO: MAKE THIS A TEST ON SIGNIFICANT DIGITS
+        if almost_equal(Z2, mean * mean, digits=9):
             variance = 0
             skew = None
             kurtosis = None
-        elif variance < error:
-            Log.error("variance can not be negative ({{var}})", {"var": variance})
         else:
+            variance = (Z2 - mean * mean)
             mc3 = (Z3 - (3 * mean * variance + mean ** 3))  # 3rd central moment
             mc4 = (Z4 - (4 * mean * mc3 + 6 * mean * mean * variance + mean ** 4))
             skew = mc3 / (variance ** 1.5)

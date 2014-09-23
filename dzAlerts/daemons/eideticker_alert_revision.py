@@ -222,7 +222,7 @@ def eideticker_alert_revision(settings):
                     branch=worst_in_revision.Eideticker.Branch,
                     test=worst_in_revision.Eideticker.Test,
                     platform=worst_in_revision.Eideticker.Device,
-                    percent=worst_in_revision.diff_percent,
+                    percent=unicode(worst_in_revision.diff_percent*100)+"%",
                     keyrevision=worst_in_revision.Eideticker.Revision
                 ))
 
