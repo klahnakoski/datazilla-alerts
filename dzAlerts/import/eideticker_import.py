@@ -11,8 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import requests
 
-from dzAlerts.util.env import startup
-from dzAlerts.util.env.elasticsearch import ElasticSearch
+from dzAlerts.util.env import startup, elasticsearch
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.parsers import URL
 from dzAlerts.util.queries.es_query import ESQuery
@@ -80,7 +79,7 @@ def get_all_uuid(settings):
 
 
 def etl(settings):
-    es = ElasticSearch.get_or_create_index(settings.elasticsearch)
+    es = elasticsearch.Cluster(settings.elasticsearch).get_or_create_index(settings.elasticsearch)
     counter = Struct(num_requests=0)
 
     with Timer("get all uuid"):
