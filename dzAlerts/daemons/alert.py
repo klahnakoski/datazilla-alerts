@@ -23,6 +23,7 @@ from dzAlerts.util.maths import Math
 from dzAlerts.util.env.logs import Log
 from dzAlerts.util.sql.db import DB, SQL
 from dzAlerts.util.struct import nvl
+from dzAlerts.util.testing.fuzzytestcase import assertAlmostEqualValue
 from dzAlerts.util.thread.threads import Thread
 from dzAlerts.util.times.durations import Duration
 
@@ -100,7 +101,16 @@ def send_alerts(settings, db):
                 alert.revision = CNV.JSON2object(alert.revision)
             except Exception, e:
                 pass
-            alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1 - (10 ** (-alert.confidence)))))  # SHOW NUMBER OF NINES
+
+            if alert.confidence > 4:
+                alert.score = alert.confidence + log10(alert.severity + pow(10, -alert.confidence) * (1 - 2 * alert.severity)) - log10(1 - alert.severity)
+                try:
+                    temp = -log10(1.0 - Math.bayesian_add(alert.severity, 1.0 - (10.0 ** (-alert.confidence))))
+                    assertAlmostEqualValue(alert.score, temp, digits=6)
+                except Exception:
+                    pass
+            else:
+                alert.score = str(-log10(1.0 - Math.bayesian_add(alert.severity, 1.0 - (10.0 ** (-alert.confidence)))))  # SHOW NUMBER OF NINES
             alert.details.url = alert.details.page_url
             example = alert.details.example
             for e in alert.details.tests.example + [example]:

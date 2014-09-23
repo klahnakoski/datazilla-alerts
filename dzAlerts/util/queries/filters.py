@@ -18,11 +18,17 @@ FALSE_FILTER = False
 
 
 def simplify(esfilter):
-    output = normalize(esfilter)
-    if output is TRUE_FILTER:
-        return {"match_all": {}}
-    output.isNormal = None
-    return output
+    try:
+        output = normalize(esfilter)
+        if output is TRUE_FILTER:
+            return {"match_all": {}}
+        output.isNormal = None
+        return output
+    except Exception, e:
+        from ..env.logs import Log
+
+        raise Log.unexpected("programmer error")
+
 
 
 def removeOr(esfilter):

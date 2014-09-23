@@ -7,6 +7,7 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+from math import log10
 
 import unittest
 from dzAlerts.util.struct import nvl
@@ -61,9 +62,8 @@ def assertAlmostEqualValue(first, second, digits=None, places=None, msg=None, de
         if places is None:
             places = 18
 
-        r_first = Math.round(first, digits=places)
-        r_second = Math.round(second, digits=places)
-        if r_first == r_second:
+        diff = log10(abs(first-second))
+        if diff < Math.ceiling(log10(first))-places:
             return
 
         standardMsg = '%s != %s within %r places' % (

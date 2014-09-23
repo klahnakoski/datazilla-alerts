@@ -193,7 +193,9 @@ class CNV:
 
     @staticmethod
     def value2url(value):
-        if isinstance(value, dict):
+        if value == None:
+            output = ""
+        elif isinstance(value, dict):
             output = "&".join([CNV.value2url(k)+"="+CNV.value2url(v) for k, v in value.items()])
         elif isinstance(value, unicode):
             output = "".join([map2url[c] for c in CNV.unicode2latin1(value)])

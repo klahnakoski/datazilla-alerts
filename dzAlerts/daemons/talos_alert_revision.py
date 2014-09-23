@@ -261,7 +261,7 @@ def talos_alert_revision(settings):
                     branch=worst_in_revision.Talos.Branch,
                     test=worst_in_revision.Talos.Test,
                     platform=worst_in_revision.Talos.Platform,
-                    percent=worst_in_revision.diff_percent,
+                    percent=unicode(worst_in_revision.diff_percent*100)+"%",
                     keyrevision=worst_in_revision.Talos.Revision
                 ))
 

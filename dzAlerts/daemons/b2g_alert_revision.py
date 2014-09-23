@@ -141,7 +141,7 @@ def b2g_alert_revision(settings):
             for a in existing_sustained_alerts:
                 a.details = CNV.JSON2object(a.details)
                 try:
-                    if a.revision.rtrim()[0] in ["{", "["]:
+                    if a.revision.rstrip()[0] in ["{", "["]:
                         a.revision = CNV.JSON2object(a.revision)
                 except Exception, e:
                     pass
@@ -208,7 +208,7 @@ def b2g_alert_revision(settings):
                     branch=worst_in_revision.B2G.Branch,
                     test=worst_in_revision.B2G.Test,
                     platform=worst_in_revision.B2G.Platform,
-                    percent=worst_in_revision.diff_percent,
+                    percent=unicode(worst_in_revision.diff_percent*100)+"%",
                     keyrevision=worst_in_revision.B2G.Revision
                 ))
 

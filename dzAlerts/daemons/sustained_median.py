@@ -59,7 +59,7 @@ def diff_percent(r):
             return 1
         else:
             if r.past_stats.mean==None:
-                Log.note("")
+                return Null
             return (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
     except Exception, e:
         Log.error("" + str(Null / Null), e)
