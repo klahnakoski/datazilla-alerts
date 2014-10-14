@@ -42,7 +42,7 @@ def main():
             db.execute("DELETE FROM alerts WHERE revision={{rev}}", {"rev": REVISION})
             db.insert("alerts", Struct(
                 id=SQL("util.newid()"),
-                status="new",
+                status="NEW",
                 push_date=datetime(2014, 8, 29, 11, 21),
                 last_updated=datetime(2014, 9, 03, 12, 31),
                 last_sent=None,

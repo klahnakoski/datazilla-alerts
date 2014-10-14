@@ -58,7 +58,7 @@ class test_alert_threshold:
         })
 
         assert len(alert) == 1
-        assert alert[0].status == 'new'
+        assert alert[0].status == 'NEW'
         assert alert[0].severity == self.severity
         assert alert[0].confidence == 1.0
 
