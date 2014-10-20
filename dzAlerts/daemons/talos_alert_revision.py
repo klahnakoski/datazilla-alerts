@@ -221,7 +221,7 @@ def talos_alert_revision(settings):
                     example.charts.url = Struct(
                         sampleMin=Date(start).floor().format("%Y-%m-%d"),
                         sampleMax=Date(stop).floor().format("%Y-%m-%d"),
-                        test=example.Talos.Test.name,
+                        suite=example.Talos.Test.suite + "." + example.Talos.Test.name,
                         branch=example.Talos.Branch,
                         os=example.Talos.OS.name + "." + example.Talos.OS.version,
                         platform=example.Talos.Platform
@@ -244,7 +244,7 @@ def talos_alert_revision(settings):
                 worst_in_revision = parts[0].example
 
                 alerts.append(Struct(
-                    status= "new",
+                    status= "NEW",
                     push_date= CNV.milli2datetime(worst_in_revision.push_date),
                     reason= REASON,
                     revision= revision,

@@ -205,7 +205,7 @@ def eideticker_alert_revision(settings):
                 worst_in_revision = parts[0].example
 
                 alerts.append(Struct(
-                    status= "new",
+                    status= "NEW",
                     push_date= CNV.milli2datetime(worst_in_revision.push_date),
                     reason= REASON,
                     revision= revision,
