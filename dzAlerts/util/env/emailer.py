@@ -92,9 +92,7 @@ class Emailer:
         if not html_data:
             msg = MIMEText(text_data)
         elif not text_data:
-            msg = MIMEMultipart()
-            msg.preamble = nvl(subject, settings.subject, 'No Subject')
-            msg.attach(MIMEText(html_data, 'html'))
+            msg = MIMEText(html_data, 'html')
         else:
             msg = MIMEMultipart('alternative')
             msg.attach(MIMEText(text_data, 'plain'))
