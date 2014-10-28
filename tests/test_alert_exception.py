@@ -15,14 +15,14 @@ from math import sqrt
 import pytest
 import dzAlerts
 from dzAlerts.daemons.alert_exception import alert_exception, REASON
-from dzAlerts.util import struct
+from pyLibrary import struct
 
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.sql.db import SQL, DB
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import Q
-from dzAlerts.util.maths.stats import closeEnough
+from pyLibrary.cnv import CNV
+from pyLibrary.env import startup
+from pyLibrary.sql.db import SQL, DB
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.maths.stats import closeEnough
 from util.testing import make_test_database
 
 

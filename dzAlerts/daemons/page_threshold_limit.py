@@ -12,13 +12,13 @@ from __future__ import division
 
 from datetime import datetime
 
-from dzAlerts.util.queries import Q
-from dzAlerts.util.queries.db_query import esfilter2sqlwhere
-from dzAlerts.util.struct import nvl
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.sql.db import SQL
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.times.durations import Duration
+from pyLibrary.queries import Q
+from pyLibrary.queries.db_query import esfilter2sqlwhere
+from pyLibrary.struct import nvl
+from pyLibrary.cnv import CNV
+from pyLibrary.sql.db import SQL
+from pyLibrary.env.logs import Log
+from pyLibrary.times.durations import Duration
 
 
 REASON = "page_threshold_limit"     # name of the reason in alert_reason

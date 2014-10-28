@@ -13,26 +13,26 @@ from __future__ import division
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 
-from dzAlerts.util.collections import MIN, MAX
-from dzAlerts.util.env.files import File
-from dzAlerts.util.maths import Math
-from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.env import startup, elasticsearch
-from dzAlerts.util.queries.db_query import DBQuery
+from pyLibrary.collections import MIN, MAX
+from pyLibrary.env.files import File
+from pyLibrary.maths import Math
+from pyLibrary.queries.es_query import ESQuery
+from pyLibrary.env import startup, elasticsearch
+from pyLibrary.queries.db_query import DBQuery
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.queries import windows
-from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, split_field, Null
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.struct import Struct, set_default
-from dzAlerts.util.queries import Q
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.structs.wraps import wrap_dot, listwrap
-from dzAlerts.util.thread.threads import Thread
-from dzAlerts.util.times.durations import Duration
-from dzAlerts.util.times.timer import Timer
+from pyLibrary.cnv import CNV
+from pyLibrary.queries import windows
+from pyLibrary.queries.query import Query
+from pyLibrary.struct import nvl, StructList, literal_field, split_field, Null
+from pyLibrary.env.logs import Log
+from pyLibrary.struct import Struct, set_default
+from pyLibrary.queries import Q
+from pyLibrary.sql.db import DB
+from pyLibrary.structs.wraps import wrap_dot, listwrap
+from pyLibrary.thread.threads import Thread
+from pyLibrary.times.durations import Duration
+from pyLibrary.times.timer import Timer
 
 
 NOW = datetime.utcnow()

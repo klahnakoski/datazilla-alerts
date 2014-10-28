@@ -11,11 +11,11 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from datetime import datetime
-from dzAlerts.util.env import startup
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.env.emailer import Emailer
-from dzAlerts.util.struct import nvl
+from pyLibrary.env import startup
+from pyLibrary.env.logs import Log
+from pyLibrary.sql.db import DB
+from pyLibrary.env.emailer import Emailer
+from pyLibrary.struct import nvl
 
 
 def email_send(db, emailer, debug):

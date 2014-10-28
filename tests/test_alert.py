@@ -16,15 +16,15 @@ import pytest
 
 import dzAlerts
 from dzAlerts.daemons.alert import send_alerts
-from dzAlerts.util import struct
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import Q
-from dzAlerts.util.maths import Math
-from dzAlerts.util.strings import between, expand_template
-from dzAlerts.util.times.durations import Duration
+from pyLibrary import struct
+from pyLibrary.cnv import CNV
+from pyLibrary.env import startup
+from pyLibrary.sql.db import DB
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.maths import Math
+from pyLibrary.strings import between, expand_template
+from pyLibrary.times.durations import Duration
 from util.testing import make_test_database
 
 

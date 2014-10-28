@@ -11,9 +11,9 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import Struct
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.struct import Struct
 
 
 def partition(series, score_threshold):

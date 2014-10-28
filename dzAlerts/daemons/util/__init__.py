@@ -11,16 +11,16 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from datetime import datetime
-from dzAlerts.util.collections import OR
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.maths import Math
+from pyLibrary.collections import OR
+from pyLibrary.env.logs import Log
+from pyLibrary.maths import Math
 
 
 # ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
 # UPDATE?
-from dzAlerts.util.queries import Q
-from dzAlerts.util.sql.db import SQL
-from dzAlerts.util.struct import nvl
+from pyLibrary.queries import Q
+from pyLibrary.sql.db import SQL
+from pyLibrary.struct import nvl
 
 SIGNIFICANT = 0.2
 DEBUG_TOUCH_ALL_ALERTS = False

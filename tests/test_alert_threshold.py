@@ -13,11 +13,11 @@ from __future__ import division
 from datetime import datetime, timedelta
 import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
-from dzAlerts.util import struct
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.sql.db import SQL, DB
-from dzAlerts.util.env.logs import Log
+from pyLibrary import struct
+from pyLibrary.cnv import CNV
+from pyLibrary.env import startup
+from pyLibrary.sql.db import SQL, DB
+from pyLibrary.env.logs import Log
 from util import testing
 
 

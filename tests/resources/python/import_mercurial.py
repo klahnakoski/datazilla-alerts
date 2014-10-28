@@ -15,20 +15,20 @@ from datetime import timedelta
 import os
 import subprocess
 import urllib
-from dzAlerts.util import struct
-from dzAlerts.util.sql.sql import find_holes
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.maths.randoms import Random
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.env.elasticsearch import ElasticSearch
-from dzAlerts.util.env.files import File
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import Q
-from dzAlerts.util.strings import between
-from dzAlerts.util.struct import nvl
-from dzAlerts.util.thread.multithread import Multithread
-from dzAlerts.util.times.timer import Timer
+from pyLibrary import struct
+from pyLibrary.sql.sql import find_holes
+from pyLibrary.cnv import CNV
+from pyLibrary.env import startup, elasticsearch
+from pyLibrary.maths.randoms import Random
+from pyLibrary.sql.db import DB
+from pyLibrary.env.files import File
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.strings import between
+from pyLibrary.struct import nvl
+from pyLibrary.thread.multithread import Multithread
+from pyLibrary.times.durations import Duration
+from pyLibrary.times.timer import Timer
 
 DEBUG = True
 
@@ -51,8 +51,8 @@ def pull_repo(repo):
                 while True:
                     line = proc.stdout.readline()
                     if line.startswith("abort:"):
-                        Log.error("Can not clone {{repo.url}}, because {{problem}}", {
-                            "repo": repo,
+                        Log.error("Can not clone {{repos.url}}, because {{problem}}", {
+                            "repos": repo,
                             "problem": line
                         })
                     if line == '':
@@ -83,7 +83,8 @@ def pull_repo(repo):
                 pull_repo(repo)
                 return
             if output.find("abort: abandoned transaction found") >= 0:
-                Log.error("Problem pulling repo, try \"hg recover\"\n{{reason|indent}}", {"reason": output})
+                repair_repo()
+                Log.error("Problem pulling repos, try \"hg recover\"\n{{reason|indent}}", {"reason": output})
                 File(repo.directory).delete()
                 pull_repo(repo)
                 return
@@ -180,7 +181,7 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                 file_dels = set(file_dels.split("\n")) - {""}
                 files = set(files.split("\n")) - set()
                 doc = {
-                    "repo": repo.name,
+                    "repos": repo.name,
                     "date": CNV.unix2datetime(CNV.value2number(date.split(" ")[0])),
                     "node": node,
                     "revision": rev,
@@ -194,7 +195,7 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                     "tags": set(tags.split("\n")) - {""},
                     "description": desc
                 }
-                doc = ElasticSearch.scrub(doc)
+                doc = elasticsearch.scrub(doc)
                 yield doc
         except Exception, e:
             if isinstance(e, ValueError) and e.message.startswith("need more than "):
@@ -223,11 +224,11 @@ def update_repo(repo, settings):
                         FROM
                             changesets
                         WHERE
-                            repo={{repo}}
-                    """, {"repo": repo.name})[0]
+                            repos={{repos}}
+                    """, {"repos": repo.name})[0]
 
             ranges = struct.wrap([
-                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + Duration(0, 1)},
+                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + timedelta(days=1)},
                 {"max": existing_range.min}
             ])
 
@@ -242,7 +243,7 @@ def update_repo(repo, settings):
                     db.insert_list("changesets", docs)
                     db.flush()
 
-            missing_revisions = find_holes(db, "changesets", "revision",  {"min": 0, "max": existing_range.max_rev + 1}, {"term": {"repo": repo.name}})
+            missing_revisions = find_holes(db, "changesets", "revision",  {"min": 0, "max": existing_range.max_rev + 1}, {"term": {"repos": repo.name}})
             for _range in missing_revisions:
                 for g, docs in Q.groupby(get_changesets(revision_range=_range, repo=repo), size=100):
                     for doc in docs:
@@ -257,7 +258,7 @@ def update_repo(repo, settings):
 
 
         except Exception, e:
-            Log.warning("Failure to pull from {{repo.name}}", {"repo": repo}, e)
+            Log.warning("Failure to pull from {{repos.name}}", {"repos": repo}, e)
 
 
 def main():
@@ -266,7 +267,7 @@ def main():
     try:
         with Multithread(update_repo, threads=10, outbound=False) as multi:
             for repo in Random.combination(settings.param.repos):
-                multi.execute([{"repo": repo, "settings": settings}])
+                multi.execute([{"repos": repo, "settings": settings}])
     finally:
         Log.stop()
 

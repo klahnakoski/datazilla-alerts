@@ -16,12 +16,12 @@ from dzAlerts.daemons.alert import send_alerts
 from dzAlerts.daemons.eideticker_alert_revision import eideticker_alert_revision
 from dzAlerts.daemons.email_send import email_send
 from dzAlerts.daemons.talos_alert_revision import talos_alert_revision
-from dzAlerts.util.env import startup
-from dzAlerts.util.env.emailer import Emailer
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.sql.db import DB, SQL
-from dzAlerts.util.struct import nvl, Struct
-from dzAlerts.util.times.durations import Duration
+from pyLibrary.env import startup
+from pyLibrary.env.emailer import Emailer
+from pyLibrary.env.logs import Log
+from pyLibrary.sql.db import DB, SQL
+from pyLibrary.struct import nvl, Struct
+from pyLibrary.times.durations import Duration
 
 def main():
     settings = startup.read_settings()

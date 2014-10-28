@@ -14,18 +14,18 @@ from datetime import datetime
 from math import log10
 from pynliner import Pynliner
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.queries import Q
-from dzAlerts.util.queries.db_query import esfilter2sqlwhere
-from dzAlerts.util.strings import expand_template
-from dzAlerts.util.maths import Math
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.sql.db import DB, SQL
-from dzAlerts.util.struct import nvl
-from dzAlerts.util.testing.fuzzytestcase import assertAlmostEqualValue
-from dzAlerts.util.thread.threads import Thread
-from dzAlerts.util.times.durations import Duration
+from pyLibrary.cnv import CNV
+from pyLibrary.env import startup
+from pyLibrary.queries import Q
+from pyLibrary.queries.db_query import esfilter2sqlwhere
+from pyLibrary.strings import expand_template
+from pyLibrary.maths import Math
+from pyLibrary.env.logs import Log
+from pyLibrary.sql.db import DB, SQL
+from pyLibrary.struct import nvl
+from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
+from pyLibrary.thread.threads import Thread
+from pyLibrary.times.durations import Duration
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  # SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"

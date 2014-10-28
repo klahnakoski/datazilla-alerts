@@ -1,6 +1,6 @@
-from dzAlerts.util.env import startup
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.sql.db import DB
+from pyLibrary.env import startup
+from pyLibrary.env.logs import Log
+from pyLibrary.sql.db import DB
 
 
 def main():

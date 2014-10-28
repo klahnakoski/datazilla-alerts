@@ -12,11 +12,11 @@ from __future__ import division
 
 from math import log, exp
 import dzAlerts
-from dzAlerts.util import maths
-from dzAlerts.util.collections import AND
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.maths import Math
-from dzAlerts.util.struct import Struct
+from pyLibrary import maths
+from pyLibrary.collections import AND
+from pyLibrary.env.logs import Log
+from pyLibrary.maths import Math
+from pyLibrary.struct import Struct
 
 
 def median_test(samples1, samples2, resolution=None, interpolate=True):
@@ -26,7 +26,7 @@ def median_test(samples1, samples2, resolution=None, interpolate=True):
     """
     if len(samples1) < 3 or len(samples2) < 3:
         return {"diff": 0, "score": 0}
-    median = dzAlerts.util.maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
+    median = pyLibrary.maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
 
     if resolution == None:
         if AND([Math.is_integer(v) for v in samples1 + samples2]):
