@@ -10,6 +10,7 @@
 from __future__ import unicode_literals
 
 import functools
+import hashlib
 import requests
 from dzAlerts.imports.mozilla_hg import MozillaGraph
 from pyLibrary.collections import MAX
@@ -18,7 +19,8 @@ from pyLibrary.env.files import File
 from pyLibrary.env.profiles import Profiler
 from pyLibrary.queries import Q
 from pyLibrary.queries.es_query import ESQuery
-from pyLibrary.struct import nvl, Struct
+from pyLibrary.strings import expand_template
+from pyLibrary.struct import nvl, Struct, StructList, set_default
 from pyLibrary.env.logs import Log
 from pyLibrary.env import startup
 from pyLibrary.cnv import CNV
@@ -29,43 +31,73 @@ from pyLibrary.times.timer import Timer
 from pyLibrary.thread.multithread import Multithread
 
 
-
 NUM_PER_BATCH = 1000
+JOB_ID_MODULO = 10000
 COUNTER = Struct(count=0)
-# GC_LOCKER = Lock()
 
-def etl(es_sink, file_sink, settings, transformer, max_id, id):
+
+def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
     """
     PULL FROM DZ AND PUSH TO es AND file_sink
     """
-
-    url = settings.production.blob_url + "/" + str(id)
+    test_results = StructList()
+    url = expand_template(settings.treeherder.blob_url, {"min": job_id * settings.treeherder.step, "max": (job_id + 1) * settings.treeherder.step - 1, "branch": branch})
     try:
-        with Timer("read {{id}} from DZ", {"id": id}):
-            content = requests.get(url, timeout=nvl(settings.production.timeout, 30)).content
+        with Timer("read {{id}} for branch {{branch}}", {"id": job_id, "branch": branch}):
+            content = requests.get(url, timeout=nvl(settings.treeherder.timeout, 30)).content
+            data = CNV.JSON2object(content.decode('utf8'))
+            if not data:
+                #ADD PLACEHOLDERS FOR JOB-IDS WITH NO DATA
+                test_results.append({
+                    "treeherder": {
+                        "branch": branch,
+                        "job_id": job_id
+                    }
+                })
+            else:
+                for d in data:
+                    for t in d.blob.talos_data:
+                        try:
+                            if isinstance(t, unicode):
+                                t = CNV.JSON2object(t)
+                            elif isinstance(t, str):
+                                t = CNV.JSON2object(t.decode("utf8"))
+                            else:
+                                pass
+                            uid = test_result_to_uid(t)
+                            t.treeherder = {
+                                "branch": branch,
+                                "job_id": job_id,
+                                "uid": uid
+                            }
+                            test_results.append(t)
+                        except Exception, e:
+                            Log.note("Corrupted test results for job_id {{job_id}}  reason={{reason}}", {"job_id": d.job_id, "reason":e.message})
+
     except Exception, e:
         Log.warning("Failure to read from {{url}}", {"url": url}, e)
         return False
 
     try:
-        if content.startswith("Id not found"):
-            if id < max_id:
-                return True
-            else:
-                Log.note("{{id}} not found {{url}}", {"id": id, "url": url})
-                return False
+        num_results = 0
+        for t in test_results:
+            id = (branch, t.treeherder.job_id, t.treeherder.uid)
+            content = CNV.object2JSON(t)  #ENSURE content HAS NO crlf
 
-        data = CNV.JSON2object(content.decode('utf-8'))
-        content = CNV.object2JSON(data)  #ENSURE content HAS NO crlf
+            if not t.treeherder.uid:
+                es_sink.add({"value": t})
+                file_sink.add(CNV.object2JSON(id) + "\t" + content + "\n")
+                continue
 
-        if data.test_run_id:
+            num_results += 1
+
             Log.println("Add {{id}} for revision {{revision}} ({{bytes}} bytes)", {
                 "id": id,
-                "revision": data.json_blob.test_build.revision,
+                "revision": t.test_build.revision,
                 "bytes": len(content)
             })
             with Profiler("transform"):
-                result = transformer.transform(id, data)
+                result = transformer.transform(id, t)
 
             if result:
                 Log.println("{{num}} records to add", {
@@ -73,54 +105,59 @@ def etl(es_sink, file_sink, settings, transformer, max_id, id):
                 })
                 es_sink.extend({"value": d} for d in result)
 
-            file_sink.add(str(id) + "\t" + content + "\n")
-        elif data.error_flag == 'Y':
-            error = data.json_blob
-            error.datazilla = data
-            error.results = None
-            data.json_blob = None
-            es_sink.add({"value": error})
-        else:
-            Log.println("No test run id for {{id}}", {"id": id})
+            file_sink.add(CNV.object2JSON(id) + "\t" + content + "\n")
 
-        del data
+        if num_results == 0:
+            return False
         return True
     except Exception, e:
         Log.warning("Failure to etl (content length={{length}})", {"length": len(content)}, e)
         return False
 
 
-def get_existing_ids(es, settings, branches):
+def test_result_to_uid(test_result):
+    return hashlib.sha1(CNV.object2JSON(test_result, pretty=True).encode("utf8")).hexdigest()
+
+
+def get_existing_ids(es, settings, branch):
     #FIND WHAT'S IN ES
     bad_ids = []
     int_ids = set()
 
-    demand_pushlog = {"or": [
-        {"exists": {"field": "test_build.push_date"}},
-        {"exists": {"field": "test_build.no_pushlog"}}
+    demand_pushlog = {"and": [
+        {"term": {"treeherder.branch": branch}},
+        {"or": [
+            {"exists": {"field": "test_build.push_date"}},
+            {"exists": {"field": "test_build.no_pushlog"}}
+        ]}
     ]}
 
-    if settings.elasticsearch.debug and settings.production.step < 10:
+    if settings.elasticsearch.debug and settings.treeherder.step < 10:
         # SIMPLY RELOAD THIS SMALL NUMBER
         return set([])
 
     with ESQuery(es) as esq:
-        max_id = esq.query({
-            "from": es.settings.alias,
-            "select": {"name": "max_id", "value": "treeherder.job_id", "aggregate": "max"},
-            "edges": [
-                {"value": "test_build.branch"}
-            ]
-        })
+        try:
+            max_id = esq.query({
+                "from": es.settings.alias,
+                "select": {"value": "treeherder.job_id", "aggregate": "max"}
+            })
+        except Exception, e:
+            if e.contains("failed to find mapping for treeherder.job_id"):  # HAPPENS DURING NEW INDEX AND NO TEST DATA
+                max_id = settings.treeherder.min
+            elif e.contains("No mapping found for field [treeherder.job_id]"):
+                max_id = settings.treeherder.min
+            else:
+                raise e
 
-        interval_size = 200000
-        for mini, maxi in Q.intervals(settings.production.min, max_id+interval_size, interval_size):
+        es_interval_size = 200000
+        for mini, maxi in Q.intervals(settings.treeherder.min, max_id + es_interval_size, es_interval_size):
             existing_ids = es.search({
                 "query": {
                     "filtered": {
                         "query": {"match_all": {}},
                         "filter": {"and": [
-                            {"range": {"datazilla.id": {"gte": mini, "lt": maxi}}},
+                            {"range": {"treeherder.job_id": {"gte": mini, "lt": maxi}}},
                             demand_pushlog
                         ]}
                     }
@@ -129,7 +166,7 @@ def get_existing_ids(es, settings, branches):
                 "size": 0,
                 "sort": [],
                 "facets": {
-                    "ids": {"terms": {"field": "datazilla.id", "size": interval_size}}
+                    "ids": {"terms": {"field": "treeherder.job_id", "size": es_interval_size}}
                 }
             })
 
@@ -145,12 +182,11 @@ def get_existing_ids(es, settings, branches):
         return existing_ids
 
 
-def extract_from_datazilla_using_id(es, settings, transformer):
-
-    existing_ids = get_existing_ids(es, settings, transformer.pushlog.settings.branches)
-    max_existing_id = nvl(MAX(existing_ids), settings.production.min)
-    holes = set(range(settings.production.min, max_existing_id)) - existing_ids
-    missing_ids = set(range(settings.production.min, max_existing_id+nvl(settings.production.step, NUM_PER_BATCH))) - existing_ids
+def extract_from_datazilla_using_id(es, settings, transformer, branch):
+    existing_ids = get_existing_ids(es, settings, branch)
+    max_existing_id = nvl(MAX(existing_ids), settings.treeherder.min)
+    holes = set(range(settings.treeherder.min, max_existing_id)) - existing_ids
+    missing_ids = set(range(settings.treeherder.min, max_existing_id + settings.treeherder.step)) - existing_ids
 
     Log.note("Max Existing ID: {{max}}", {"max": max_existing_id})
     Log.note("Number missing: {{num}}", {"num": len(missing_ids)})
@@ -170,15 +206,15 @@ def extract_from_datazilla_using_id(es, settings, transformer):
                 simple_etl = functools.partial(etl, *[es_sink, file_sink, settings, transformer, max_existing_id])
 
                 num_not_found = 0
-                with Multithread(simple_etl, threads=settings.production.threads) as many:
+                with Multithread(simple_etl, threads=settings.treeherder.threads) as many:
                     results = many.execute([
-                        {"id": id}
-                        for id in Q.sort(missing_ids)[:nvl(settings.production.step, NUM_PER_BATCH):]
+                        {"job_id": job_id, "branch": branch}
+                        for job_id in Q.sort(missing_ids)
                     ])
                     for result in results:
                         if not result:
                             num_not_found += 1
-                            if num_not_found > nvl(settings.production.max_tries, 10):
+                            if num_not_found > nvl(settings.treeherder.max_tries, 10):
                                 many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
                                 many.stop()
                                 break
@@ -195,7 +231,6 @@ def extract_from_datazilla_using_id(es, settings, transformer):
     es.add_alias()
 
 
-
 def load_from_file(settings, es, existing_ids, transformer):
     #ASYNCH PUSH TO ES IN BLOCKS OF 1000
     with Timer("Scan file for missing ids"):
@@ -209,12 +244,12 @@ def load_from_file(settings, es, existing_ids, transformer):
                     id = int(col[0])
                     # if id==3003529:
                     #     Log.debug()
-                    if id < settings.production.min:
+                    if id < settings.treeherder.min:
                         continue
                     if id in existing_ids:
                         continue
 
-                    if num > settings.production.step:
+                    if num > settings.treeherder.step:
                         return
                     num += 1
 
@@ -242,7 +277,7 @@ def load_from_file(settings, es, existing_ids, transformer):
 def get_branches(settings):
     response = requests.get(settings.branches.url)
     branches = CNV.JSON2object(CNV.utf82unicode(response.content))
-    return wrap({branch.name:unwrap(branch) for branch in branches})
+    return wrap({branch.name: unwrap(branch) for branch in branches if branch.name == "mozilla-inbound"})
 
 
 def main():
@@ -271,13 +306,14 @@ def main():
         Log.start(settings.debug)
 
         with startup.SingleInstance(flavor_id=settings.args.filename):
-            settings.production.threads = nvl(settings.production.threads, 1)
+            settings.treeherder.step = nvl(settings.treeherder.step, NUM_PER_BATCH)
+            settings.treeherder.threads = nvl(settings.treeherder.threads, 1)
             settings.param.output_file = nvl(settings.param.output_file, "./results/raw_json_blobs.tab")
 
             #GET BRANCHES
             branches = get_branches(settings.treeherder)
             #SETUP PUSHLOG PULLER
-            hg = MozillaGraph({"branches": branches})
+            hg = MozillaGraph(set_default(settings.mozillaHG, {"branches": branches}))
             transformer = DZ_to_ES(hg)
 
             #RESET ONLY IF NEW Transform IS USED
@@ -285,10 +321,12 @@ def main():
                 es = Cluster(settings.elasticsearch).create_index(settings.elasticsearch)
                 es.add_alias()
                 es.delete_all_but_self()
-                extract_from_datazilla_using_id(es, settings, transformer)
             else:
                 es = Cluster(settings.elasticsearch).get_or_create_index(settings.elasticsearch)
-                extract_from_datazilla_using_id(es, settings, transformer)
+
+            for b in branches.keys():
+                extract_from_datazilla_using_id(es, settings, transformer, b)
+
     except Exception, e:
         Log.error("Problem with etl", e)
     finally:

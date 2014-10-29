@@ -34,7 +34,7 @@ PUSHLOG_TOO_OLD = NOW - datetime.timedelta(days=7)
 
 class DZ_to_ES():
     def __init__(self, hg):
-        self.pushlog = hg
+        self.repo = hg
         self.locker = Lock()
         self.unknown_branches = set()
 
@@ -48,19 +48,9 @@ class DZ_to_ES():
     # A SIMPLE TRANSFORM OF DATA:  I WOULD ALSO LIKE TO ADD DIMENSIONAL TYPE INFORMATION
     # WHICH WOULD GIVE DEAR READER A BETTER FEEL FOR THE TOTALITY OF THIS DATA
     # BUT THEN AGAIN, SIMPLE IS BETTER, YES?
-    def transform(self, id, datazilla):
+    def transform(self, uid, talos_test_result):
         try:
-            r = datazilla.json_blob
-
-            #ADD DATAZILLA MARKUP
-            r.datazilla = {
-                "id": id,
-                "date_loaded": datazilla.date_loaded * 1000,
-                "error_flag": datazilla.error_flag,
-                "test_run_id": datazilla.test_run_id,
-                "processed_flag": datazilla.processed_flag,
-                "error_msg": datazilla.error_msg
-            }
+            r = talos_test_result
 
             #CONVERT UNIX TIMESTAMP TO MILLISECOND TIMESTAMP
             r.testrun.date *= 1000
@@ -107,10 +97,11 @@ class DZ_to_ES():
                     r.test_build.pgo = True
 
                 with Profiler("get from pushlog"):
-                    if self.pushlog.get_node(Revision({"branch":branch, "changeset":{"id":r.test_build.revision}})):
-                        possible_dates = self.pushlog[branch][r.test_build.revision]
-                        if possible_dates:
-                            r.test_build.push_date = int(Math.round(possible_dates[0].date * 1000))
+                    revision = self.repo.get_node(Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}}))
+                    if revision:
+                        push = self.repo.get_push(revision)
+                        if push:
+                            r.test_build.push_date = int(Math.round(push.date * 1000))
                         else:
                             if r.test_build.revision == 'NULL':
                                 r.test_build.no_pushlog = True  # OOPS! SOMETHING BROKE
@@ -220,7 +211,7 @@ class DZ_to_ES():
 
             return new_records
         except Exception, e:
-            Log.error("Transformation failure on id={{id}}", {"id": id}, e)
+            Log.error("Transformation failure on id={{uid}}", {"uid": uid}, e)
 
 
 def stats(values):

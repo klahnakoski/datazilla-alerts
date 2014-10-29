@@ -9,19 +9,19 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from pyLibrary.struct import nvl
 from pyLibrary.structs.wraps import wrap
 
 
 class Changeset(object):
-    def __init__(self, id, push, **kwargs):
+    def __init__(self, id, **kwargs):
         self.id = id
-        self.push = push
-        kwargs=wrap(kwargs)
-        self.files=kwargs.files
-        self.tags=kwargs.tags
-        self.author=kwargs.author
-        self.desciption=kwargs.description
-        self.files=kwargs.files
+        kwargs = wrap(kwargs)
+        self.files = kwargs.files
+        self.tags = kwargs.tags
+        self.author = kwargs.author
+        self.desciption = nvl(kwargs.description, kwargs.desc)
+        self.files = kwargs.files
 
     def __hash__(self):
         return hash(self.id)

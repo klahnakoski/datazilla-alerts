@@ -9,14 +9,21 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from pyLibrary.structs.wraps import wrap
+
+
 class Revision(object):
-   def __init__(self, branch, changeset, index=None):
-       self.branch = branch
-       self.changeset = changeset
-       self.index = index
+    def __init__(self, branch, changeset, index=None, push=None, parents=None, children=None):
+        self.branch = wrap(branch)
+        self.changeset = wrap(changeset)
+        self.index = index
+        self.push = push
+        self.parents = parents
+        self.children = children
 
-   def __hash__(self):
-       return hash((self.branch.name, self.changeset.id))
 
-   def __eq__(self, other):
-       return (self.branch.name, self.changeset.id) == (other.branch.name, other.changeset.id)
+    def __hash__(self):
+        return hash((self.branch.name.lower(), self.changeset.id[:12]))
+
+    def __eq__(self, other):
+        return (self.branch.name.lower(), self.changeset.id[:12]) == (other.branch.name.lower(), other.changeset.id[:12])

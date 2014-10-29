@@ -13,12 +13,16 @@ from __future__ import division
 from test.test_deque import Deque
 from BeautifulSoup import BeautifulSoup
 import requests
+from dzAlerts.imports.repos.changesets import Changeset
+from dzAlerts.imports.repos.pushs import Push
+from dzAlerts.imports.repos.revisions import Revision
 from pyLibrary.cnv import CNV
 from pyLibrary.collections import UNION
 from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.struct import Struct
+from pyLibrary.struct import Struct, nvl
 from pyLibrary.structs.wraps import unwrap, wrap
+from pyLibrary.times.durations import Duration
 
 
 class MozillaHG(object):
@@ -70,14 +74,12 @@ class MozillaHG(object):
             self.test_graph.add_edge((test_result, t))
         test_result.ordering = self.repo_graph.node({""})
 
-
         return previous_tests
 
     def get_ordering(self, test_result):
         revision = self.repo_graph.get_node(test_result.revision)
         children = self.repo_graph.get_children(revision)
         children = Q.sort(children, ["push.date", "index"])
-
 
 
 class Graph(object):
@@ -176,6 +178,7 @@ class MozillaGraph(object):
 
     def __init__(self, settings):
         self.settings = wrap(settings)
+        self.settings.timeout = Duration(nvl(self.settings.timeout, "30second"))
         self.nodes = {}  # DUMB CACHE FROM (branch, changeset_id) TO REVISOIN
         self.pushes = {}  # MAP FROM (branch, changeset_id) TO Push
 
@@ -183,36 +186,37 @@ class MozillaGraph(object):
         """
         EXPECTING revision TO BE A TUPLE OF (branch_name, changeset_id)
         """
+        revision.branch = self.settings.branches[revision.branch.name.lower()]
         if revision in self.nodes:
             return self.nodes[revision]
-        branch = self.settings.branch[revision.branch.name]
 
         try:
-            details = _read_revision(branch.url + "/rev/" + revision[1], self.settings)
-            details.branch = branch
+            details = _read_revision(revision.branch.url + "/rev/" + revision.changeset.id, self.settings)
+            details.branch = revision.branch
 
             self.nodes[revision] = details
             return details
         except Exception, e:
             return None
 
-    def _get_push(self, revision):
-        # http://hg.mozilla.org/mozilla-central/json-pushes?full=1&57c461500a0c
+    def get_push(self, revision):
+        # http://hg.mozilla.org/mozilla-central/json-pushes?full=1&changeset=57c461500a0c
         if revision in self.pushes:
             return self.pushes[revision]
 
-        branch = self.settings.branches[revision]
-        response = requests.get(branch.url + "/json-pushes?full=1&" + revision[1])
-        data = CNV.JSON2object(response)
-        for index, push in data.items():
-            push = Push(index, branch, push.date, push.user)
-            for c in push.changesets:
-                changeset = Changeset(id=c.node, push=push, **unwrap(c))
-                self.pushes[changeset.id] = push
+        url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
+        response = requests.get(url, timeout=self.settings.timeout.seconds).content
+        data = CNV.JSON2object(response.decode("utf8"))
+        for index, _push in data.items():
+            push = Push(index, revision.branch, _push.date, _push.user)
+            for c in _push.changesets:
+                changeset = Changeset(id=c.node, **unwrap(c))
+                rev = self.get_node(Revision(revision.branch, changeset))
+                rev.push = push
+                self.pushes[rev] = push
                 push.changesets.append(changeset)
 
         return self.pushes[revision]
-
 
 
     def get_children(self, revision):
@@ -247,11 +251,6 @@ class MozillaGraph(object):
                     if node:
                         output.append(node)
             return output
-
-
-
-
-
 
 
 def dfs(graph, func, head, reverse=None):
@@ -295,6 +294,7 @@ def dominator(graph, head):
     # STATISTICALLY IDENTICAL PERF RESULTS, WE CAN ASSUME THEY ARE A DOMINATOR
     pass
 
+
 def _read_revision(url, settings):
     """
     READ THE HTML OF THE REVISION
@@ -321,35 +321,40 @@ def _read_revision(url, settings):
         changeset_id = None
         author = None
 
-        response = requests.get(url, timeout=settings.timeout)
-        html = BeautifulSoup(response)
+        Log.note("Reading details for from {{url}}", {"url": url})
 
-        branch = html.find(class_="page_header").a.get_text()
-        message = html.find_all(class_="page_body")[0].get_text()
+        response = requests.get(url, timeout=settings.timeout.seconds)
+        html = BeautifulSoup(response.content)
 
-        rows = html.find_all(class_="title_text").tr
+        branch = html.find(**{"class": "page_header"}).findAll("a")[1].string
+        message = html.find(**{"class": "page_body"}).getText()
+
+        rows = html.find(**{"class": "title_text"}).findAll("tr")
         for r in rows:
-            name = r.td[0].get_text()
-            link = r.td[1].a["href"]
+            tds = r.findAll("td")
+            name = tds[0].getText()
             if name.startswith("parent"):
+                link = tds[1].a["href"]
                 parents.append(link.split("/")[-1])
             elif name.startswith("child"):
+                link = tds[1].a["href"]
                 children.append(link.split("/")[-1])
             elif name.startswith("changeset"):
                 index = int(name.split(" ")[-1])
-                changeset_id = r.td[1].get_text()
+                changeset_id = tds[1].getText()
             elif name.startswith("author"):
-                author = r.td[1].get_text()
+                author = CNV.html2unicode(tds[1].getText())
 
-
-        return Struct(
+        return Revision(
             branch=branch,
             index=index,
-            changeset={"id": changeset_id},
-            author=author,
+            changeset={
+                "id": changeset_id,
+                "author": author,
+                "message": message
+            },
             parents=parents,
-            children=children,
-            message=message
+            children=children
         )
     except Exception, e:
         Log.error("Can not get revision info", e)

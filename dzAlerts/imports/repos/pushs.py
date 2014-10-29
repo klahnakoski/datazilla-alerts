@@ -11,9 +11,9 @@ from __future__ import unicode_literals
 from __future__ import division
 
 class Push(object):
-    def __init__(self, id, branch, date, user):
+    def __init__(self, id, branch, date, pusher):
         self.id = id
         self.branch = branch
         self.date = date
-        self.user = user
-        self.changesets = None
+        self.pusher = pusher
+        self.changesets = []

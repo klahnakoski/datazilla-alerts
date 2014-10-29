@@ -18,7 +18,7 @@ from ..struct import nvl
 from ..env.logs import Log
 from ..thread.threads import Queue, Thread
 
-DEBUG = True
+DEBUG = False
 
 
 class Multithread(object):

@@ -17,6 +17,7 @@ import datetime
 import json
 import re
 import time
+import HTMLParser
 
 from . import struct
 from . import jsons
@@ -215,6 +216,10 @@ class CNV:
     def unicode2html(value):
         return cgi.escape(value)
 
+    @staticmethod
+    def html2unicode(value):
+        # http://stackoverflow.com/questions/57708/convert-xml-html-entities-into-unicode-string-in-python
+        return HTMLParser.HTMLParser().unescape(value)
 
     @staticmethod
     def unicode2latin1(value):
