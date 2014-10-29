@@ -32,7 +32,7 @@ TOO_OLD = NOW - datetime.timedelta(days=30)
 PUSHLOG_TOO_OLD = NOW - datetime.timedelta(days=7)
 
 
-class DZ_to_ES():
+class Talos2ES():
     def __init__(self, hg):
         self.repo = hg
         self.locker = Lock()
@@ -97,9 +97,12 @@ class DZ_to_ES():
                     r.test_build.pgo = True
 
                 with Profiler("get from pushlog"):
-                    revision = self.repo.get_node(Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}}))
+                    with self.locker:
+                        revision = self.repo.get_node(Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}}))
                     if revision:
-                        push = self.repo.get_push(revision)
+                        with self.locker:
+                            push = self.repo.get_push(revision)
+
                         if push:
                             r.test_build.push_date = int(Math.round(push.date * 1000))
                         else:
@@ -143,6 +146,7 @@ class DZ_to_ES():
                         new_record = Struct(
                             test_machine=r.test_machine,
                             datazilla=r.datazilla,
+                            treeherder=r.treeherder,
                             testrun=r.testrun,
                             test_build=r.test_build,
                             result={
@@ -163,6 +167,7 @@ class DZ_to_ES():
                     new_record = Struct(
                         test_machine=r.test_machine,
                         datazilla=r.datazilla,
+                        treeherder=r.treeherder,
                         testrun=r.testrun,
                         test_build=r.test_build,
                         result={
@@ -185,6 +190,7 @@ class DZ_to_ES():
                 new_record = Struct(
                     test_machine=r.test_machine,
                     datazilla=r.datazilla,
+                    treeherder=r.treeherder,
                     testrun=r.testrun,
                     test_build=r.test_build,
                     result={
@@ -199,6 +205,7 @@ class DZ_to_ES():
                 new_record = Struct(
                     test_machine=r.test_machine,
                     datazilla=r.datazilla,
+                    treeherder=r.treeherder,
                     testrun=r.testrun,
                     test_build=r.test_build,
                     result={

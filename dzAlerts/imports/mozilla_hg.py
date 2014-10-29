@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from test.test_deque import Deque
-from BeautifulSoup import BeautifulSoup
 import requests
 from dzAlerts.imports.repos.changesets import Changeset
 from dzAlerts.imports.repos.pushs import Push
@@ -22,6 +21,7 @@ from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.struct import Struct, nvl
 from pyLibrary.structs.wraps import unwrap, wrap
+from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
 
@@ -191,32 +191,56 @@ class MozillaGraph(object):
             return self.nodes[revision]
 
         try:
-            details = _read_revision(revision.branch.url + "/rev/" + revision.changeset.id, self.settings)
-            details.branch = revision.branch
+            url = revision.branch.url + "/json-info?node=" + revision.changeset.id
+            Log.note("Reading details for from {{url}}", {"url": url})
 
-            self.nodes[revision] = details
-            return details
+            response = requests.get(url, timeout=self.settings.timeout.seconds)
+            revs = CNV.JSON2object(response.content.decode("utf8"))
+
+            if len(revs.keys()) != 1:
+                Log.error("Do not know how to handle")
+
+            r = list(revs.values())[0]
+            output = Revision(
+                branch=revision.branch,
+                index=r.rev,
+                changeset=Changeset(
+                    id=r.node,
+                    author=r.user,
+                    description=r.description,
+                    date=Date(r.date).milli
+                ),
+                parents=r.parents,
+                children=r.children,
+                files=r.files
+            )
+            self.nodes[revision]=revision
+            return output
         except Exception, e:
-            return None
+            Log.error("Can not get revision info", e)
 
     def get_push(self, revision):
         # http://hg.mozilla.org/mozilla-central/json-pushes?full=1&changeset=57c461500a0c
-        if revision in self.pushes:
-            return self.pushes[revision]
+        if revision not in self.pushes:
+            Log.note("Reading pushlog for revision ({{branch}}, {{changeset}})", {
+                "branch": revision.branch.name,
+                "changeset": revision.changeset.id
+            })
 
-        url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
-        response = requests.get(url, timeout=self.settings.timeout.seconds).content
-        data = CNV.JSON2object(response.decode("utf8"))
-        for index, _push in data.items():
-            push = Push(index, revision.branch, _push.date, _push.user)
-            for c in _push.changesets:
-                changeset = Changeset(id=c.node, **unwrap(c))
-                rev = self.get_node(Revision(revision.branch, changeset))
-                rev.push = push
-                self.pushes[rev] = push
-                push.changesets.append(changeset)
+            url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
+            response = requests.get(url, timeout=self.settings.timeout.seconds).content
+            data = CNV.JSON2object(response.decode("utf8"))
+            for index, _push in data.items():
+                push = Push(index, revision.branch, _push.date, _push.user)
+                for c in _push.changesets:
+                    changeset = Changeset(id=c.node, **unwrap(c))
+                    rev = Revision(branch=revision.branch, changeset=changeset)
+                    self.pushes[rev] = push
+                    push.changesets.append(changeset)
 
-        return self.pushes[revision]
+        push = self.pushes[revision]
+        revision.push = push
+        return push
 
 
     def get_children(self, revision):
@@ -293,70 +317,4 @@ def dominator(graph, head):
     # PARENT BRANCHES, AND AS LONG AS THEY ALL ARE PART OF A LONG LINE OF
     # STATISTICALLY IDENTICAL PERF RESULTS, WE CAN ASSUME THEY ARE A DOMINATOR
     pass
-
-
-def _read_revision(url, settings):
-    """
-    READ THE HTML OF THE REVISION
-
-    <div class="page_header">
-    <a href="http://developer.mozilla.org/en/docs/Mercurial" title="Mercurial" style="float: right;">Mercurial</a><a href="/integration/mozilla-inbound/summary">mozilla-inbound</a> - changeset - 211512:cbfb7abec255
-    </div>
-
-    <div class="title_text">
-    <table cellspacing="0">
-    <tr><td>author</td><td>&#65;&#97;&#114;&#111;&#110;&#32;&#75;&#108;&#111;&#116;&#122;&#32;&#60;&#97;&#107;&#108;&#111;&#116;&#122;&#64;&#109;&#111;&#122;&#105;&#108;&#108;&#97;&#46;&#99;&#111;&#109;&#62;</td></tr>
-    <tr><td></td><td>Tue Oct 21 12:18:27 2014 -0600 (at Tue Oct 21 12:18:27 2014 -0600)</td></tr>
-
-    <tr><td>changeset 211512</td><td style="font-family:monospace">cbfb7abec255</td></tr>
-    <tr><td>parent 211511</td><td style="font-family:monospace"><a class="list" href="/integration/mozilla-inbound/rev/d6721fea9ad9">d6721fea9ad9</a></td></tr>
-    <tr><td>child 211513</td><td style="font-family:monospace"><a class="list" href="/integration/mozilla-inbound/rev/911b01751ad5">911b01751ad5</a></td></tr>
-    <tr><td>pushlog:</td><td><a href="/integration/mozilla-inbound/pushloghtml?changeset=cbfb7abec255">cbfb7abec255</a></td></tr>
-    </table></div>
-    """
-    try:
-        children = []
-        parents = []
-        index = None
-        changeset_id = None
-        author = None
-
-        Log.note("Reading details for from {{url}}", {"url": url})
-
-        response = requests.get(url, timeout=settings.timeout.seconds)
-        html = BeautifulSoup(response.content)
-
-        branch = html.find(**{"class": "page_header"}).findAll("a")[1].string
-        message = html.find(**{"class": "page_body"}).getText()
-
-        rows = html.find(**{"class": "title_text"}).findAll("tr")
-        for r in rows:
-            tds = r.findAll("td")
-            name = tds[0].getText()
-            if name.startswith("parent"):
-                link = tds[1].a["href"]
-                parents.append(link.split("/")[-1])
-            elif name.startswith("child"):
-                link = tds[1].a["href"]
-                children.append(link.split("/")[-1])
-            elif name.startswith("changeset"):
-                index = int(name.split(" ")[-1])
-                changeset_id = tds[1].getText()
-            elif name.startswith("author"):
-                author = CNV.html2unicode(tds[1].getText())
-
-        return Revision(
-            branch=branch,
-            index=index,
-            changeset={
-                "id": changeset_id,
-                "author": author,
-                "message": message
-            },
-            parents=parents,
-            children=children
-        )
-    except Exception, e:
-        Log.error("Can not get revision info", e)
-
 

@@ -26,7 +26,7 @@ from pyLibrary.env import startup
 from pyLibrary.cnv import CNV
 from pyLibrary.structs.wraps import wrap, unwrap
 from pyLibrary.thread.threads import ThreadedQueue
-from transform import DZ_to_ES
+from transform import Talos2ES
 from pyLibrary.times.timer import Timer
 from pyLibrary.thread.multithread import Multithread
 
@@ -59,12 +59,13 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
                     for t in d.blob.talos_data:
                         try:
                             if isinstance(t, unicode):
+                                uid = hashlib.sha1(t).hexdigest()
                                 t = CNV.JSON2object(t)
-                            elif isinstance(t, str):
-                                t = CNV.JSON2object(t.decode("utf8"))
+                            elif isinstance(t, dict):
+                                uid = test_result_to_uid(t)
                             else:
-                                pass
-                            uid = test_result_to_uid(t)
+                                Log.error("not expected")
+
                             t.treeherder = {
                                 "branch": branch,
                                 "job_id": job_id,
@@ -72,7 +73,15 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
                             }
                             test_results.append(t)
                         except Exception, e:
-                            Log.note("Corrupted test results for job_id {{job_id}}  reason={{reason}}", {"job_id": d.job_id, "reason":e.message})
+                            Log.note("CORRUPTED: job_id {{job_id}}  reason={{reason}}", {"job_id": d.job_id, "reason": e.message})
+                            test_results.append({
+                                "treeherder": {
+                                    "branch": branch,
+                                    "job_id": job_id,
+                                    "corrupt_json": t
+                                }
+                            })
+
 
     except Exception, e:
         Log.warning("Failure to read from {{url}}", {"url": url}, e)
@@ -84,7 +93,12 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
             id = (branch, t.treeherder.job_id, t.treeherder.uid)
             content = CNV.object2JSON(t)  #ENSURE content HAS NO crlf
 
-            if not t.treeherder.uid:
+            if t.treeherder.corrupt_json:
+                es_sink.add({"value": t})
+                file_sink.add(CNV.object2JSON(id) + "\t" + content + "\n")
+                num_results += 1  #WE WANT OT COUNT THIS
+                continue
+            elif not t.treeherder.uid:
                 es_sink.add({"value": t})
                 file_sink.add(CNV.object2JSON(id) + "\t" + content + "\n")
                 continue
@@ -149,6 +163,8 @@ def get_existing_ids(es, settings, branch):
                 max_id = settings.treeherder.min
             else:
                 raise e
+
+        max_id = MAX(max_id, settings.treeherder.min)
 
         es_interval_size = 200000
         for mini, maxi in Q.intervals(settings.treeherder.min, max_id + es_interval_size, es_interval_size):
@@ -314,7 +330,7 @@ def main():
             branches = get_branches(settings.treeherder)
             #SETUP PUSHLOG PULLER
             hg = MozillaGraph(set_default(settings.mozillaHG, {"branches": branches}))
-            transformer = DZ_to_ES(hg)
+            transformer = Talos2ES(hg)
 
             #RESET ONLY IF NEW Transform IS USED
             if settings.args.restart:

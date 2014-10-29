@@ -20,6 +20,7 @@ from ..cnv import CNV
 from ..env.logs import Log
 from ..maths.randoms import Random
 from ..maths import Math
+from pyLibrary.queries import Q
 from ..strings import utf82unicode
 from ..struct import nvl, Null
 from ..structs.wraps import wrap, unwrap
@@ -69,7 +70,7 @@ class Index(object):
 
         try:
             index = self.get_index(settings.index)
-            if index:
+            if index and settings.alias==None:
                 settings.alias = settings.index
                 settings.index = index
         except Exception, e:
@@ -137,8 +138,11 @@ class Index(object):
         output = sort([
             a.index
             for a in self.cluster.get_aliases()
-            if a.alias == alias
+            if a.alias == alias or
+                a.index == alias or
+               (re.match(re.escape(alias) + "\\d{8}_\\d{6}", a.index) and a.index != alias)
         ])
+
         if len(output) > 1:
             Log.error("only one index with given alias==\"{{alias}}\" expected", {"alias": alias})
 
@@ -304,14 +308,22 @@ class Cluster(object):
 
     def get_or_create_index(self, settings, schema=None, limit_replicas=None):
         aliases = self.get_aliases()
-        indexes = [a for a in aliases if a.alias == settings.index or a.index == settings.index]
+
+        indexes = Q.sort([
+            a
+            for a in aliases
+            if (a.alias == settings.index and settings.alias == None) or
+               (re.match(re.escape(settings.index) + "\\d{8}_\\d{6}", a.index) and settings.alias == None) or
+               (a.index == settings.index and a.alias == settings.alias )
+        ], "index")
         if not indexes:
             self.create_index(settings, schema, limit_replicas=limit_replicas)
-        elif len(indexes) > 1:
-            Log.error("More than one match")
-        elif indexes[0].alias != None:
-            settings.alias = indexes[0].alias
-            settings.index = indexes[0].index
+        elif indexes.last().alias != None:
+            settings.alias = indexes.last().alias
+            settings.index = indexes.last().index
+        elif settings.alias == None:
+            settings.alias = settings.index
+            settings.index = indexes.last().index
         return Index(settings)
 
     def get_index(self, settings):

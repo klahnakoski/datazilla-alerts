@@ -22,6 +22,7 @@ class Changeset(object):
         self.author = kwargs.author
         self.desciption = nvl(kwargs.description, kwargs.desc)
         self.files = kwargs.files
+        self.date=kwargs.date
 
     def __hash__(self):
         return hash(self.id)

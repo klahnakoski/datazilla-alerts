@@ -13,14 +13,14 @@ from pyLibrary.structs.wraps import wrap
 
 
 class Revision(object):
-    def __init__(self, branch, changeset, index=None, push=None, parents=None, children=None):
+    def __init__(self, branch, changeset, index=None, push=None, parents=None, children=None, files=None):
         self.branch = wrap(branch)
         self.changeset = wrap(changeset)
         self.index = index
         self.push = push
         self.parents = parents
         self.children = children
-
+        self.files = files
 
     def __hash__(self):
         return hash((self.branch.name.lower(), self.changeset.id[:12]))
