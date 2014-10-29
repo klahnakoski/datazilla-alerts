@@ -172,8 +172,6 @@ class Graph(object):
 class MozillaGraph(object):
     """
     VERY SLOW, PURE hg.moziila.org GRAPH IMPLEMENTATION
-
-    NODES ARE Structs
     """
 
     def __init__(self, settings):
@@ -184,7 +182,8 @@ class MozillaGraph(object):
 
     def get_node(self, revision):
         """
-        EXPECTING revision TO BE A TUPLE OF (branch_name, changeset_id)
+        EXPECTING INCOMPLETE revision
+        RETURNS revision
         """
         revision.branch = self.settings.branches[revision.branch.name.lower()]
         if revision in self.nodes:

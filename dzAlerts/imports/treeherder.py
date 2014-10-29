@@ -11,12 +11,14 @@ from __future__ import unicode_literals
 
 import functools
 import hashlib
+import json
 import requests
 from dzAlerts.imports.mozilla_hg import MozillaGraph
 from pyLibrary.collections import MAX
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.files import File
 from pyLibrary.env.profiles import Profiler
+from pyLibrary.jsons import json_scrub
 from pyLibrary.queries import Q
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
@@ -39,6 +41,8 @@ COUNTER = Struct(count=0)
 def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
     """
     PULL FROM DZ AND PUSH TO es AND file_sink
+
+    job_id IS FIRST ID IN BLOCK OF job_ids OF SIZE settings.treeherder.step
     """
     test_results = StructList()
     url = expand_template(settings.treeherder.blob_url, {"min": job_id * settings.treeherder.step, "max": (job_id + 1) * settings.treeherder.step - 1, "branch": branch})
@@ -47,11 +51,11 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
             content = requests.get(url, timeout=nvl(settings.treeherder.timeout, 30)).content
             data = CNV.JSON2object(content.decode('utf8'))
             if not data:
-                #ADD PLACEHOLDERS FOR JOB-IDS WITH NO DATA
+                #ADD PLACEHOLDERS FOR NO DATA
                 test_results.append({
                     "treeherder": {
                         "branch": branch,
-                        "job_id": job_id
+                        "job_id": job_id* settings.treeherder.step
                     }
                 })
             else:
@@ -68,8 +72,9 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
 
                             t.treeherder = {
                                 "branch": branch,
-                                "job_id": job_id,
-                                "uid": uid
+                                "job_id": d.job_id,
+                                "uid": uid,
+                                "logurl": d.blob.logurl
                             }
                             test_results.append(t)
                         except Exception, e:
@@ -77,8 +82,9 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
                             test_results.append({
                                 "treeherder": {
                                     "branch": branch,
-                                    "job_id": job_id,
-                                    "corrupt_json": t
+                                    "job_id": d.job_id,
+                                    "corrupt_json": t,
+                                    "logurl": d.blob.logurl
                                 }
                             })
 
@@ -129,22 +135,26 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
         return False
 
 
+uid_json_encoder = json.JSONEncoder(
+    skipkeys=False,
+    ensure_ascii=False,  # DIFF FROM DEFAULTS
+    check_circular=True,
+    allow_nan=True,
+    indent=None,
+    separators=None,
+    encoding='utf-8',
+    default=None,
+    sort_keys=True   # <-- SEE?!  sort_keys==True
+)
+
+
 def test_result_to_uid(test_result):
-    return hashlib.sha1(CNV.object2JSON(test_result, pretty=True).encode("utf8")).hexdigest()
+    return hashlib.sha1(uid_json_encoder.encode(json_scrub(test_result))).hexdigest()
 
 
 def get_existing_ids(es, settings, branch):
     #FIND WHAT'S IN ES
-    bad_ids = []
     int_ids = set()
-
-    demand_pushlog = {"and": [
-        {"term": {"treeherder.branch": branch}},
-        {"or": [
-            {"exists": {"field": "test_build.push_date"}},
-            {"exists": {"field": "test_build.no_pushlog"}}
-        ]}
-    ]}
 
     if settings.elasticsearch.debug and settings.treeherder.step < 10:
         # SIMPLY RELOAD THIS SMALL NUMBER
@@ -174,7 +184,7 @@ def get_existing_ids(es, settings, branch):
                         "query": {"match_all": {}},
                         "filter": {"and": [
                             {"range": {"treeherder.job_id": {"gte": mini, "lt": maxi}}},
-                            demand_pushlog
+                            {"term": {"treeherder.branch": branch}}
                         ]}
                     }
                 },
@@ -187,22 +197,20 @@ def get_existing_ids(es, settings, branch):
             })
 
             for t in existing_ids.facets.ids.terms:
-                try:
-                    int_ids.add(int(t.term))
-                except Exception, e:
-                    bad_ids.append(t.term)
+                int_ids.add(int(t.term/settings.treeherder.step))
 
         existing_ids = int_ids
-        Log.println("Number of ids in ES: " + str(len(existing_ids)))
-        Log.println("BAD ids in ES: " + str(bad_ids))
+        Log.println("Number of ids in ES: {{num}}", {"num": len(existing_ids)})
         return existing_ids
 
 
 def extract_from_datazilla_using_id(es, settings, transformer, branch):
+    # WE ARE WOKRING WITH BLOCKS OF SIZE settings.treeherder.step
     existing_ids = get_existing_ids(es, settings, branch)
-    max_existing_id = nvl(MAX(existing_ids), settings.treeherder.min)
-    holes = set(range(settings.treeherder.min, max_existing_id)) - existing_ids
-    missing_ids = set(range(settings.treeherder.min, max_existing_id + settings.treeherder.step)) - existing_ids
+    min_k = int(settings.treeherder.min/settings.treeherder.step)
+    max_existing_id = nvl(MAX(existing_ids), min_k)
+    holes = set(range(min_k, max_existing_id)) - existing_ids
+    missing_ids = set(range(min_k, max_existing_id + settings.treeherder.max_tries)) - existing_ids
 
     Log.note("Max Existing ID: {{max}}", {"max": max_existing_id})
     Log.note("Number missing: {{num}}", {"num": len(missing_ids)})
