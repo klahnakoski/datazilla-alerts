@@ -94,7 +94,7 @@ class Multithread(object):
         EXPECTING requests TO BE A list OF dicts, EACH dict IS USED AS kwargs TO GIVEN functions
         """
         if not isinstance(requests, (list, tuple, GeneratorType, Iterable)):
-            Log.error("Expecting requests to be a list or generator", offset=1)
+            Log.error("Expecting requests to be a list or generator", stack_depth=1)
         else:
             requests = list(requests)
 

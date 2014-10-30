@@ -255,7 +255,7 @@ class DB(object):
         except Exception, e:
             if isinstance(e, InterfaceError) or e.message.find("InterfaceError") >= 0:
                 Log.error("Did you close the db connection?", e)
-            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, offset=1)
+            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, stack_depth=1)
 
     def column_query(self, sql, param=None):
         """
@@ -289,7 +289,7 @@ class DB(object):
         except Exception, e:
             if isinstance(e, InterfaceError) or e.message.find("InterfaceError") >= 0:
                 Log.error("Did you close the db connection?", e)
-            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, offset=1)
+            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, stack_depth=1)
 
 
 
@@ -322,7 +322,7 @@ class DB(object):
                 self.cursor = None
 
         except Exception, e:
-            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, offset=1)
+            Log.error("Problem executing SQL:\n" + indent(sql.strip()), e, stack_depth=1)
 
         return num
 
@@ -421,7 +421,7 @@ class DB(object):
                     self.cursor.close()
                     self.cursor = self.db.cursor()
                 except Exception, e:
-                    Log.error("Problem executing SQL:\n{{sql}}", {"sql": indent(sql.strip())}, e, offset=1)
+                    Log.error("Problem executing SQL:\n{{sql}}", {"sql": indent(sql.strip())}, e, stack_depth=1)
 
 
     ## Insert dictionary of values into table

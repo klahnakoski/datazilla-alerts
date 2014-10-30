@@ -167,7 +167,7 @@ class Log(object):
         template, # human readable template
         params=None, # parameters for template
         cause=None, # pausible cause
-        offset=0        # stack trace offset (==1 if you do not want to report self)
+        stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         """
         raise an exception with a trace for the cause too
@@ -186,11 +186,11 @@ class Log(object):
         else:
             add_to_trace = True
             if hasattr(cause, "message"):
-                cause = [Except(ERROR, unicode(cause.message), trace=extract_tb(offset))]
+                cause = [Except(ERROR, unicode(cause.message), trace=extract_tb(stack_depth))]
             else:
-                cause = [Except(ERROR, unicode(cause), trace=extract_tb(offset))]
+                cause = [Except(ERROR, unicode(cause), trace=extract_tb(stack_depth))]
 
-        trace = extract_stack(1 + offset)
+        trace = extract_stack(1 + stack_depth)
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
@@ -203,7 +203,7 @@ class Log(object):
         template, # human readable template
         params=None, # parameters for template
         cause=None, # pausible cause
-        offset=0    # stack trace offset (==1 if you do not want to report self)
+        stack_depth=0    # stack trace offset (==1 if you do not want to report self)
     ):
         """
         SEND TO STDERR
@@ -219,9 +219,9 @@ class Log(object):
         elif isinstance(cause, Except):
             cause = [cause]
         else:
-            cause = [Except(ERROR, unicode(cause), trace=extract_tb(offset))]
+            cause = [Except(ERROR, unicode(cause), trace=extract_tb(stack_depth))]
 
-        trace = extract_stack(1 + offset)
+        trace = extract_stack(1 + stack_depth)
         e = Except(ERROR, template, params, cause, trace)
         str_e = unicode(e)
 

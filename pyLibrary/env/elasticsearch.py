@@ -9,6 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from copy import deepcopy
 
 from datetime import datetime
 import re
@@ -174,7 +175,8 @@ class Index(object):
 
         self.cluster.delete(
             self.path + "/_query",
-            data=CNV.object2JSON(query)
+            data=CNV.object2JSON(query),
+            timeout=60
         )
 
     def extend(self, records):
@@ -307,6 +309,7 @@ class Cluster(object):
         self.path = settings.host + ":" + unicode(settings.port)
 
     def get_or_create_index(self, settings, schema=None, limit_replicas=None):
+        settings = deepcopy(settings)
         aliases = self.get_aliases()
 
         indexes = Q.sort([
