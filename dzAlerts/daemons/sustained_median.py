@@ -169,7 +169,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         try:
             # FIND SPECIFIC PARAMETERS FOR THIS SLICE
             lookup = []
-            for f in listwrap(qb.edges[settings.param.test_dimension].fields):
+            for f in listwrap(Q.reverse(qb.edges[settings.param.test_dimension].fields)):
                 if isinstance(f, basestring):
                     lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
                 else:

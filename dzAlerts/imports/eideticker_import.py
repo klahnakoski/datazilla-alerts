@@ -12,7 +12,8 @@ from __future__ import division
 import requests
 
 from pyLibrary.env import startup
-from pyLibrary.env.elasticsearch import ElasticSearch
+from pyLibrary.env.elasticsearch import Cluster
+
 from pyLibrary.env.logs import Log
 from pyLibrary.parsers import URL
 from pyLibrary.queries.es_query import ESQuery
@@ -80,7 +81,7 @@ def get_all_uuid(settings):
 
 
 def etl(settings):
-    es = ElasticSearch.get_or_create_index(settings.elasticsearch)
+    es = Cluster(settings.elasticsearch).get_or_create_index(settings.elasticsearch)
     counter = Struct(num_requests=0)
 
     with Timer("get all uuid"):

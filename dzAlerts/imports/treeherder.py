@@ -13,7 +13,8 @@ import functools
 import hashlib
 import json
 import requests
-from dzAlerts.imports.mozilla_hg import MozillaGraph
+from dzAlerts.imports.mozilla_graph import MozillaGraph
+
 from pyLibrary.collections import MAX
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.files import File
@@ -55,7 +56,7 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
                 test_results.append({
                     "treeherder": {
                         "branch": branch,
-                        "job_id": job_id* settings.treeherder.step
+                        "job_id": job_id * settings.treeherder.step
                     }
                 })
             else:
@@ -137,7 +138,7 @@ def etl(es_sink, file_sink, settings, transformer, max_id, job_id, branch):
 
 uid_json_encoder = json.JSONEncoder(
     skipkeys=False,
-    ensure_ascii=False,  # DIFF FROM DEFAULTS
+    ensure_ascii=False, # DIFF FROM DEFAULTS
     check_circular=True,
     allow_nan=True,
     indent=None,
@@ -197,7 +198,7 @@ def get_existing_ids(es, settings, branch):
             })
 
             for t in existing_ids.facets.ids.terms:
-                int_ids.add(int(t.term/settings.treeherder.step))
+                int_ids.add(int(t.term / settings.treeherder.step))
 
         existing_ids = int_ids
         Log.println("Number of ids in ES: {{num}}", {"num": len(existing_ids)})
@@ -207,10 +208,14 @@ def get_existing_ids(es, settings, branch):
 def extract_from_datazilla_using_id(es, settings, transformer, branch):
     # WE ARE WOKRING WITH BLOCKS OF SIZE settings.treeherder.step
     existing_ids = get_existing_ids(es, settings, branch)
-    min_k = int(settings.treeherder.min/settings.treeherder.step)
+    min_k = int(settings.treeherder.min / settings.treeherder.step)
     max_existing_id = nvl(MAX(existing_ids), min_k)
     holes = set(range(min_k, max_existing_id)) - existing_ids
     missing_ids = set(range(min_k, max_existing_id + settings.treeherder.max_tries)) - existing_ids
+
+    # https://treeherder.mozilla.org/api/project/mozilla-inbound/project_info
+    # url = settings.treeherder.url+"/api/project/"+branch
+    # project = requests.get(url).content
 
     Log.note("Max Existing ID: {{max}}", {"max": max_existing_id})
     Log.note("Number missing: {{num}}", {"num": len(missing_ids)})
