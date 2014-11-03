@@ -64,7 +64,8 @@ class MozillaGraph(object):
                 ),
                 parents=r.parents,
                 children=r.children,
-                files=r.files
+                files=r.files,
+                graph=self
             )
             self.nodes[revision]=revision
             return output
@@ -86,7 +87,7 @@ class MozillaGraph(object):
                 push = Push(index, revision.branch, _push.date, _push.user)
                 for c in _push.changesets:
                     changeset = Changeset(id=c.node, **unwrap(c))
-                    rev = Revision(branch=revision.branch, changeset=changeset)
+                    rev = Revision(branch=revision.branch, changeset=changeset, graph=self)
                     self.pushes[rev] = push
                     push.changesets.append(changeset)
 
@@ -94,11 +95,6 @@ class MozillaGraph(object):
         revision.push = push
         return push
 
-    def get_children(self, revision):
-        return self._get_adjacent(revision, "children")
-
-    def get_parents(self, revision):
-        return self._get_adjacent(revision, "parents")
 
     def get_edges(self, revision):
         output = []
@@ -111,18 +107,25 @@ class MozillaGraph(object):
     def get_family(self, revision):
         return set(self.get_children(revision) + self.get_parents(revision))
 
+    def get_children(self, revision):
+        return self._get_adjacent(revision, "children")
+
+    def get_parents(self, revision):
+        return self._get_adjacent(revision, "parents")
+
+
     def _get_adjacent(self, revision, subset):
         revision = self.get_node(revision)
         if not revision[subset]:
             return []
         elif len(revision[subset]) == 1:
-            return [self.get_node(Revision(branch=revision.branch, changeset=c)) for c in revision[subset]]
+            return [self.get_node(Revision(branch=revision.branch, changeset=c, graph=self)) for c in revision[subset]]
         else:
             #MULTIPLE BRANCHES ARE A HINT OF A MERGE BETWEEN BRANCHES
             output = []
             for branch in self.settings.branches.values():
                 for c in revision[subset]:
-                    node = self.get_node(Revision(branch=branch, changeset=c))
+                    node = self.get_node(Revision(branch=branch, changeset=c, graph=self))
                     if node:
                         output.append(node)
             return output

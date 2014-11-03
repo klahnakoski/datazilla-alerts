@@ -13,17 +13,31 @@ from pyLibrary.structs.wraps import wrap
 
 
 class Revision(object):
-    def __init__(self, branch, changeset, index=None, push=None, parents=None, children=None, files=None):
+    def __init__(self, branch, changeset, index=None, push=None, parents=None, children=None, files=None, graph=None):
         self.branch = wrap(branch)
         self.changeset = wrap(changeset)
         self.index = index
         self.push = push
-        self.parents = parents
-        self.children = children
+        self._parents =parents if len(parents)==1 else None
+        self._children = children if len(children)==1 else None
         self.files = files
+        self.graph=graph
 
     def __hash__(self):
         return hash((self.branch.name.lower(), self.changeset.id[:12]))
 
     def __eq__(self, other):
         return (self.branch.name.lower(), self.changeset.id[:12]) == (other.branch.name.lower(), other.changeset.id[:12])
+
+    @property
+    def parents(self):
+        if not self._parents:
+            self._parents = self.graph.get_parents(self)
+        return self._parents
+
+    @property
+    def children(self):
+        if not self._children:
+            self._children = self.graph.get_children(self)
+        return self._children
+

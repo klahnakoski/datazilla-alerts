@@ -306,7 +306,7 @@ def load_from_file(settings, es, existing_ids, transformer):
 def get_branches(settings):
     response = requests.get(settings.branches.url)
     branches = CNV.JSON2object(CNV.utf82unicode(response.content))
-    return wrap({branch.name: unwrap(branch) for branch in branches if branch.name == "mozilla-inbound"})
+    return wrap({branch.name: unwrap(branch) for branch in branches if branch.name in ["mozilla-inbound", "fx-team"]})
 
 
 def main():

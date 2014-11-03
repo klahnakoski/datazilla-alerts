@@ -45,9 +45,7 @@ class Talos2ES():
             pass
 
 
-    # A SIMPLE TRANSFORM OF DATA:  I WOULD ALSO LIKE TO ADD DIMENSIONAL TYPE INFORMATION
-    # WHICH WOULD GIVE DEAR READER A BETTER FEEL FOR THE TOTALITY OF THIS DATA
-    # BUT THEN AGAIN, SIMPLE IS BETTER, YES?
+    # CONVERT THE TESTS (WHICH ARE IN A dict) TO
     def transform(self, uid, talos_test_result):
         try:
             r = talos_test_result
