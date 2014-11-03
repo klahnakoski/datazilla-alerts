@@ -10,31 +10,39 @@ At first glance, the python slice operator ```[:]``` is elegant and powerful.
 Unfortunately it is inconsistent and forces the programmer to write extra code
 to work around these inconsistencies.
 
+```python
     my_list = ['a', 'b', 'c', 'd', 'e']
+```
 
 Let us iterate through some slices:
 
+```python
     my_list[4:] == ['e']
     my_list[3:] == ['d', 'e']
     my_list[2:] == ['c', 'd', 'e']
     my_list[1:] == ['b', 'c', 'd', 'e']
     my_list[0:] == ['a', 'b', 'c', 'd', 'e']
+```
 
 Looks good, but this time let's use negative indices:
 
+```python
     my_list[-4:] == ['b', 'c', 'd', 'e']
     my_list[-3:] == ['c', 'd', 'e']
     my_list[-2:] == ['d', 'e']
     my_list[-1:] == ['e']
     my_list[-0:] == ['a', 'b', 'c', 'd', 'e']  # [] is expected
+```
 
 Using negative idiocies ```[-num:]``` allows the programmer to slice relative to
 the right rather than the left.  When ```num``` is a constant this problem is
 never revealed, but when ```num``` is a variable, then the inconsistency can
 reveal itself.
 
+```python
     def get_suffix(num):
         return my_list[-num:]   # wrong
+```
 
 So, clearly, ```[-num:]``` can not be understood as a suffix slice, rather
 something more complicated; especially considering that ```num``` could be
@@ -43,11 +51,12 @@ negative.
 I advocate never using negative indices in the slice operator.  Rather, use the
 ```right()``` method instead which is consistent for a range ```num```:
 
+```python
     def right(_list, num):
         if num <= 0:
             return []
         return _list[-num:]
-
+```
 
 ###Python 2.7 ```__getslice__``` is broken###
 
@@ -59,26 +68,31 @@ As an example, I would like to ensure my over-sliced-to-the-right and over-
 sliced-to-the-left  behave the same.  Let's look at over-slicing-to-the-right,
 which behaves as expected on a regular list:
 
-        assert 3 == len(my_list[1:4])
-        assert 4 == len(my_list[1:5])
-        assert 4 == len(my_list[1:6])
-        assert 4 == len(my_list[1:7])
-        assert 4 == len(my_list[1:8])
-        assert 4 == len(my_list[1:9])
+```python
+    assert 3 == len(my_list[1:4])
+    assert 4 == len(my_list[1:5])
+    assert 4 == len(my_list[1:6])
+    assert 4 == len(my_list[1:7])
+    assert 4 == len(my_list[1:8])
+    assert 4 == len(my_list[1:9])
+```
 
 Any slice that requests indices past the list's length is simply truncated.
 I would like to implement the same for over-slicing-to-the-left:
 
-        assert 2 == len(my_list[ 1:3])
-        assert 3 == len(my_list[ 0:3])
-        assert 3 == len(my_list[-1:3])
-        assert 3 == len(my_list[-2:3])
-        assert 3 == len(my_list[-3:3])
-        assert 3 == len(my_list[-4:3])
-        assert 3 == len(my_list[-5:3])
+```python
+    assert 2 == len(my_list[ 1:3])
+    assert 3 == len(my_list[ 0:3])
+    assert 3 == len(my_list[-1:3])
+    assert 3 == len(my_list[-2:3])
+    assert 3 == len(my_list[-3:3])
+    assert 3 == len(my_list[-4:3])
+    assert 3 == len(my_list[-5:3])
+```
 
 Here is an attempt:
 
+```python
     class MyList(list):
         def __init__(self, value):
             self.list = value
@@ -101,6 +115,7 @@ Here is an attempt:
 
         def __len__(self):
             return len(self.list)
+```
 
 Unfortunately this does not work.  When the ```__len__``` method is defined:
 ```__getslice__``` defines ```i = i % len(self)```: Which
