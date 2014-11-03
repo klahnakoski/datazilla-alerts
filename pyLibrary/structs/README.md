@@ -13,44 +13,29 @@ not have the features listed here.
 
  1. ```a.b == a["b"]```
  2. missing keys are handled gracefully, which is beneficial when being used in set operations (database operations) without raising exceptions
-
-        ```python
-        a = wrap({})
-        >>> a == {}
-        a.b == None
-        >>> True
-        a.b.c == None
-        >>> True
-        a[None] == None
-        >>> True
-        ```
-
-    missing keys are common when dealing with JSON, which is often almost anything.  Unfortunalty, you do loose the ability to perform <code>a is None</code> checks:  You must always use <code>a == None</code> instead.
-
- 3. remove an attribute by assigning ```None```:
-
-        ```python
-            a.b = None
-        ```
-
- 4. you can access paths as a variable:  ```a["b.c"] == a.b.c```
+    ```
+        a = wrap({})<br>
+        >>> a == {}<br>
+        a.b == None<br>
+        >>> True<br>
+        a.b.c == None<br>
+        >>> True<br>
+        a[None] == None<br>
+        >>> True<br>
+    ```
+<br>
+missing keys are common when dealing with JSON, which is often almost anything.  Unfortunalty, you do loose the ability to perform <code>a is None</code> checks:  You must always use <code>a == None</code> instead.
+ 3. remove an attribute by assigning ```None``` (eg ```a.b = None```)
+ 4. you can access paths as a variable:  ```a["b.c"] == a.b.c```.  Of course, this creates a need to refer to literal dot (.), which can be done by escaping with backslash: ```a["b\\.c"] == a["b\.c"]```
  5. you can set paths to values, missing dicts along the path are created:
-
-        ```python
-            a = wrap({})<br>
-            > a == {}<br>
-            a["b.c"] = 42<br>
-            > a == {"b": {"c": 42}}
-        ```
-
- 6. attribute names (keys) are corrected to unicode - it appears Python
-   object.getattribute() is called with str() even when using
-        ```python
-            from __future__ import unicode_literals
-        ```
-
-7. by allowing dot notation, the IDE does tab completion and my spelling
-   mistakes get found at "compile time"
+    ```
+        a = wrap({})<br>
+        >>> a == {}<br>
+        a["b.c"] = 42<br>
+        >>> a == {"b": {"c": 42}}
+    ```
+ 6. attribute names (keys) are corrected to unicode - it appears Python object.getattribute() is called with str() even when using ```from __future__ import unicode_literals```
+ 7. by allowing dot notation, the IDE does tab completion and my spelling mistakes get found at "compile time"
 
 ### Examples ###
 
@@ -75,13 +60,13 @@ different names, some examples are:
 Null instead of None
 --------------------
 
+To continue the
 
 
 
 
-
-Slicing is Broken in Python 2.7
--------------------------------
+Motivation for StructList
+-------------------------
 
 ###The slice operator in Python2.7 is inconsistent###
 
