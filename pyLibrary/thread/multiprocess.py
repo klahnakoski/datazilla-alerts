@@ -10,7 +10,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from .threads import Queue
-from ..env.logs import Log
+from pyLibrary.env.logs import Log
 
 
 class worker(object):

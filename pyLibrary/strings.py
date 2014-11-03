@@ -21,43 +21,43 @@ from .structs.wraps import wrap
 
 
 def datetime(value):
-    from .cnv import CNV
+    from . import convert
 
     if isinstance(value, (date, builtin_datetime)):
         pass
     elif value < 10000000000:
-        value = CNV.unix2datetime(value)
+        value = convert.unix2datetime(value)
     else:
-        value = CNV.milli2datetime(value)
+        value = convert.milli2datetime(value)
 
-    return CNV.datetime2string(value, "%Y-%m-%d %H:%M:%S")
+    return convert.datetime2string(value, "%Y-%m-%d %H:%M:%S")
 
 
 def unix(value):
-    from .cnv import CNV
+    from . import convert
 
     if isinstance(value, (date, builtin_datetime)):
         pass
     elif value < 10000000000:
-        value = CNV.unix2datetime(value)
+        value = convert.unix2datetime(value)
     else:
-        value = CNV.milli2datetime(value)
+        value = convert.milli2datetime(value)
 
-    return str(CNV.datetime2unix(value))
+    return str(convert.datetime2unix(value))
 
 def url(value):
     """
     CONVERT FROM dict OR string TO URL PARAMETERS
     """
-    from .cnv import CNV
-    return CNV.value2url(value)
+    from . import convert
+    return convert.value2url(value)
 
 def html(value):
     """
     CONVERT FROM unicode TO HTML OF THE SAME
     """
-    from .cnv import CNV
-    return CNV.unicode2HTML(value)
+    from . import convert
+    return convert.unicode2HTML(value)
 
 def upper(value):
     return value.upper()
@@ -76,9 +76,9 @@ def replace(value, find, replace):
     return value.replace(find, replace)
 
 def json(value):
-    from .cnv import CNV
+    from . import convert
 
-    return CNV.object2JSON(value)
+    return convert.object2JSON(value)
 
 
 def indent(value, prefix=u"\t", indent=None):

@@ -1,7 +1,7 @@
 import types
 import math
-from ..collections.multiset import Multiset
-from ..struct import Null
+from pyLibrary.collections.multiset import Multiset
+from pyLibrary.struct import Null
 
 __author__ = 'klahnakoski'
 
@@ -124,4 +124,16 @@ def UNION(*values):
             continue
         else:
             output.add(v)
+    return output
+
+
+def INTERSECT(*values):
+    if isinstance(values, tuple) and len(values) == 1 and isinstance(values[0], (list, set, tuple, Multiset, types.GeneratorType)):
+        values = values[0]
+
+    output = set(values[0])
+    for v in values[1:]:
+        output -= set(v)
+        if not output:
+            return output   # EXIT EARLY
     return output

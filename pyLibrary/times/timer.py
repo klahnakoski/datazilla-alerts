@@ -13,9 +13,9 @@ from __future__ import division
 from datetime import timedelta
 from time import clock
 
-from ..struct import nvl, Struct
-from ..structs.wraps import wrap
-from ..env.logs import Log
+from pyLibrary.struct import nvl, Struct
+from pyLibrary.structs.wraps import wrap
+from pyLibrary.env.logs import Log
 
 
 class Timer:

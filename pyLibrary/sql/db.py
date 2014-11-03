@@ -15,18 +15,18 @@ from datetime import datetime
 import json
 import subprocess
 from pymysql import connect, InterfaceError
-from .. import struct
-from ..jsons import json_scrub
-from ..maths import Math
-from ..strings import expand_template, utf82unicode
-from ..struct import nvl
-from ..structs.wraps import wrap, listwrap
-from ..cnv import CNV
-from ..env.logs import Log, Except
-from ..queries import Q
-from ..strings import indent
-from ..strings import outdent
-from ..env.files import File
+from pyLibrary import struct
+from pyLibrary.jsons import json_scrub
+from pyLibrary.maths import Math
+from pyLibrary.strings import expand_template, utf82unicode
+from pyLibrary.struct import nvl
+from pyLibrary.structs.wraps import wrap, listwrap
+from pyLibrary import convert
+from pyLibrary.env.logs import Log, Except
+from pyLibrary.queries import Q
+from pyLibrary.strings import indent
+from pyLibrary.strings import outdent
+from pyLibrary.env.files import File
 
 
 DEBUG = False
@@ -245,7 +245,7 @@ class DB(object):
             self.cursor.execute(sql)
             columns = [utf8_to_unicode(d[0]) for d in nvl(self.cursor.description, [])]
             fixed = [[utf8_to_unicode(c) for c in row] for row in self.cursor]
-            result = CNV.table2list(columns, fixed)
+            result = convert.table2list(columns, fixed)
 
             if not old_cursor:   # CLEANUP AFTER NON-TRANSACTIONAL READS
                 self.cursor.close()

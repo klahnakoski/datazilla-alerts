@@ -10,6 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 from collections import deque
+from pyLibrary.collections import INTERSECT
+from pyLibrary.env.logs import Log
 from pyLibrary.graphs.paths import Step, Path
 from pyLibrary.struct import Struct
 
@@ -88,6 +90,9 @@ def dominator(graph, head):
             dom.output = node
             return False
         if node in visited:
+            common = INTERSECT(p[1::] for p in todo)  # DO NOT INCLUDE head
+            if node in common:
+                dom.output = node  #ALL REMAINING PATHS HAVE node IN COMMON TOO
             return False
         return True
 
