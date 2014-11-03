@@ -224,7 +224,8 @@ def talos_alert_revision(settings):
                         suite=example.Talos.Test.suite + "." + example.Talos.Test.name,
                         branch=example.Talos.Branch,
                         os=example.Talos.OS.name + "." + example.Talos.OS.version,
-                        platform=example.Talos.Platform
+                        platform=example.Talos.Platform,
+                        revision=example.Talos.Revision
                     )
 
                     num_except = len(exceptions)
