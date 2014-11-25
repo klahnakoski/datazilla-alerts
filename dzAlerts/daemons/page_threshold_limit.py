@@ -14,8 +14,8 @@ from datetime import datetime
 
 from pyLibrary.queries import Q
 from pyLibrary.queries.db_query import esfilter2sqlwhere
-from pyLibrary.struct import nvl
-from pyLibrary.cnv import CNV
+from pyLibrary.structs import nvl
+from pyLibrary import convert
 from pyLibrary.sql.db import SQL
 from pyLibrary.env.logs import Log
 from pyLibrary.times.durations import Duration
@@ -77,7 +77,7 @@ def page_threshold_limit(db, debug):
                 "last_updated": datetime.utcnow(),
                 "tdad_id": page.tdad_id,
                 "reason": REASON,
-                "details": CNV.object2JSON({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
+                "details": convert.object2JSON({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
                 "severity": page.severity,
                 "confidence": 1.0    # USING NORMAL DIST ASSUMPTION WE CAN ADJUST
                 # CONFIDENCE EVEN BEFORE THRESHOLD IS HIT!

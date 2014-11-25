@@ -21,12 +21,12 @@ from pyLibrary.env import startup, elasticsearch
 from pyLibrary.queries.db_query import DBQuery
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
-from pyLibrary.cnv import CNV
+from pyLibrary import convert
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
-from pyLibrary.struct import nvl, StructList, literal_field, split_field, Null
+from pyLibrary.structs import nvl, StructList, literal_field, split_field, Null
 from pyLibrary.env.logs import Log
-from pyLibrary.struct import Struct, set_default
+from pyLibrary.structs.dicts import Struct, set_default
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import DB
 from pyLibrary.structs.wraps import wrap_dot, listwrap
@@ -71,7 +71,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     """
 
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
-    oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
+    oldest_ts = convert.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
     if settings.param.debug == None:
         debug = DEBUG or DEBUG_TOUCH_ALL_ALERTS
@@ -248,7 +248,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             Log.note("{{num}} unique test results found for {{group}} dating back no further than {{start_date}}", {
                 "num": len(test_results),
                 "group": g,
-                "start_date": CNV.milli2datetime(min_date)
+                "start_date": convert.milli2datetime(min_date)
             })
 
             if verbose:
@@ -357,10 +357,10 @@ def alert_sustained_median(settings, qb, alerts_db):
             }))
 
             if debug:
-                File("test_values.txt").write(CNV.list2tab(Q.run({
+                File("test_values.txt").write(convert.list2tab(Q.run({
                     "from": stats,
                     "select": [
-                        {"name": test_param.sort.name, "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
+                        {"name": test_param.sort.name, "value": lambda x: convert.datetime2string(convert.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
                         "value",
                         {"name": "revision", "value": settings.param.revision_dimension},
                         {"name": "mtest_score", "value": "result.score"},
@@ -378,7 +378,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     continue
                 alert = Struct(
                     status="NEW",
-                    push_date=CNV.milli2datetime(v[test_param.sort.name]),
+                    push_date=convert.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
                         s.name: v[s.name] for s in source_ref
                     }),
@@ -471,7 +471,7 @@ def main():
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
             with ESQuery(elasticsearch.Index(settings.query["from"])) as qb:
-                qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
+                qb.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
 
                 with DB(settings.alerts) as alerts_db:
                     alert_sustained_median(

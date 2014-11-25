@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import pytest
 from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
 from pyLibrary import struct
-from pyLibrary.cnv import CNV
+from pyLibrary import convert
 from pyLibrary.env import startup
 from pyLibrary.sql.db import SQL, DB
 from pyLibrary.env.logs import Log
@@ -187,13 +187,13 @@ class test_alert_threshold:
         self.db.execute("DELETE FROM alerts WHERE reason={{reason}}", {"reason": REASON})
 
         ## diff_time IS REQUIRED TO TRANSLATE THE TEST DATE DATES TO SOMETHING MORE CURRENT
-        now_time = CNV.datetime2unix(datetime.utcnow())
-        max_time = max([CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")) for t in CNV.table2list(self.test_data.header, self.test_data.rows)])
+        now_time = convert.datetime2unix(datetime.utcnow())
+        max_time = max([convert.datetime2unix(convert.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")) for t in convert.table2list(self.test_data.header, self.test_data.rows)])
         diff_time = now_time - max_time
 
         ## INSERT THE TEST RESULTS
-        for t in CNV.table2list(self.test_data.header, self.test_data.rows):
-            time = CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"))
+        for t in convert.table2list(self.test_data.header, self.test_data.rows):
+            time = convert.datetime2unix(convert.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"))
             time += diff_time
 
             self.db.insert("test_data_all_dimensions", {

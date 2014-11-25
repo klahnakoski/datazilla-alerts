@@ -31,8 +31,6 @@ from pyLibrary.structs.wraps import wrap, wrap_dot, unwrap
 """
 DUE TO MY POOR MEMORY, THIS IS A LIST OF ALL CONVERSION ROUTINES
 """
-
-
 def object2JSON(obj, pretty=False):
     try:
         json = json_encoder(obj, pretty=pretty)

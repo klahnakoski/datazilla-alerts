@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.struct import nvl
+from pyLibrary.structs import nvl
 from pyLibrary.structs.wraps import wrap
 
 

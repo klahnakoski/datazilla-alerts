@@ -17,7 +17,7 @@ import subprocess
 import urllib
 from pyLibrary import struct
 from pyLibrary.sql.sql import find_holes
-from pyLibrary.cnv import CNV
+from pyLibrary import convert
 from pyLibrary.env import startup, elasticsearch
 from pyLibrary.maths.randoms import Random
 from pyLibrary.sql.db import DB
@@ -25,7 +25,7 @@ from pyLibrary.env.files import File
 from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.strings import between
-from pyLibrary.struct import nvl
+from pyLibrary.structs import nvl
 from pyLibrary.thread.multithread import Multithread
 from pyLibrary.times.durations import Duration
 from pyLibrary.times.timer import Timer
@@ -101,13 +101,13 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
             if date_range.min == None:
                 drange = ">0 0"
             else:
-                drange = ">" + unicode(CNV.datetime2unix(date_range.min)) + " 0"
+                drange = ">" + unicode(convert.datetime2unix(date_range.min)) + " 0"
         else:
             if date_range.min == None:
-                drange = "<" + unicode(CNV.datetime2unix(date_range.max) - 1) + " 0"
+                drange = "<" + unicode(convert.datetime2unix(date_range.max) - 1) + " 0"
             else:
-                drange = unicode(CNV.datetime2unix(date_range.min)) + " 0 to " + unicode(
-                    CNV.datetime2unix(date_range.max) - 1) + " 0"
+                drange = unicode(convert.datetime2unix(date_range.min)) + " 0 to " + unicode(
+                    convert.datetime2unix(date_range.max) - 1) + " 0"
 
 
     # GET ALL CHANGESET INFO
@@ -182,7 +182,7 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
                 files = set(files.split("\n")) - set()
                 doc = {
                     "repos": repo.name,
-                    "date": CNV.unix2datetime(CNV.value2number(date.split(" ")[0])),
+                    "date": convert.unix2datetime(convert.value2number(date.split(" ")[0])),
                     "node": node,
                     "revision": rev,
                     "author": author,
@@ -228,7 +228,7 @@ def update_repo(repo, settings):
                     """, {"repos": repo.name})[0]
 
             ranges = struct.wrap([
-                {"min": nvl(existing_range.max, CNV.milli2datetime(0)) + timedelta(days=1)},
+                {"min": nvl(existing_range.max, convert.milli2datetime(0)) + timedelta(days=1)},
                 {"max": existing_range.min}
             ])
 

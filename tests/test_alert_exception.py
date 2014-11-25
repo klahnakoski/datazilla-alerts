@@ -17,7 +17,7 @@ import dzAlerts
 from dzAlerts.daemons.alert_exception import alert_exception, REASON
 from pyLibrary import struct
 
-from pyLibrary.cnv import CNV
+from pyLibrary import convert
 from pyLibrary.env import startup
 from pyLibrary.sql.db import SQL, DB
 from pyLibrary.env.logs import Log
@@ -126,7 +126,7 @@ class test_alert_exception():
 
     def insert_test_results(self, test_data):
         ## diff_time IS REQUIRED TO TRANSLATE THE TEST DATE DATES TO SOMETHING MORE CURRENT
-        now_time = CNV.datetime2unix(datetime.utcnow())
+        now_time = convert.datetime2unix(datetime.utcnow())
         max_time = max(Q.select(test_data, "timestamp"))
         diff_time = now_time - max_time
 
@@ -184,7 +184,7 @@ class test_alert_exception():
                 test_run_id
         """, {
             "id": SQL("util.newid()"),
-            "now": CNV.datetime2unix(datetime.utcnow())
+            "now": convert.datetime2unix(datetime.utcnow())
         })
 
 
@@ -229,14 +229,14 @@ def test_1(settings):
     })
     test_data1 = [
         struct.wrap({
-            "timestamp": CNV.datetime2unix(CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
-            "datetime": CNV.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
+            "timestamp": convert.datetime2unix(convert.string2datetime(t.date, "%Y-%b-%d %H:%M:%S")),
+            "datetime": convert.string2datetime(t.date, "%Y-%b-%d %H:%M:%S"),
             "count": int(t.count),
             "mean": float(t.mean),
             "variance": pow(float(t["mean+std"]) - float(t.mean), 2),
             "reject": t.reject
         })
-        for t in CNV.table2list(test_data1.header, test_data1.rows)
+        for t in convert.table2list(test_data1.header, test_data1.rows)
     ]
 
     with DB(settings.perftest) as db:
@@ -270,13 +270,13 @@ def not_test_2(settings):
     test_data2 = [
         struct.wrap({
             "timestamp": t.timestamp,
-            "datetime": CNV.unix2datetime(t.timestamp),
+            "datetime": convert.unix2datetime(t.timestamp),
             "count": t.count,
             "mean": t.mean,
             "variance": pow(t.std, 2),
             "reject": t.h0_rejected
         })
-        for t in CNV.table2list(test_data2.header, test_data2.rows)
+        for t in convert.table2list(test_data2.header, test_data2.rows)
     ]
 
     with DB(settings.perftest) as db:

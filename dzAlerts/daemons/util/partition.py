@@ -13,7 +13,7 @@ from __future__ import division
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.struct import Struct
+from pyLibrary.structs.dicts import Struct
 
 
 def partition(series, score_threshold):

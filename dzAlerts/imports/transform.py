@@ -14,12 +14,13 @@ import datetime
 from dzAlerts.imports.repos.revisions import Revision
 
 import pyLibrary
-from pyLibrary.cnv import CNV
+from pyLibrary import convert
 from pyLibrary.collections import MIN, MAX
 from pyLibrary.env.profiles import Profiler
 from pyLibrary.maths import Math
 from pyLibrary.maths.stats import Stats, ZeroMoment2Stats, ZeroMoment
-from pyLibrary.struct import Struct, literal_field, nvl, StructList
+from pyLibrary.structs import literal_field, Struct, nvl
+from pyLibrary.structs.lists import StructList
 from pyLibrary.thread.threads import Lock
 from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
@@ -106,7 +107,7 @@ class Talos2ES():
                         else:
                             if r.test_build.revision == 'NULL':
                                 r.test_build.no_pushlog = True  # OOPS! SOMETHING BROKE
-                            elif CNV.milli2datetime(Math.min(r.testrun.date, r.datazilla.date_loaded)) < PUSHLOG_TOO_OLD:
+                            elif convert.milli2datetime(r.testrun.date) < PUSHLOG_TOO_OLD:
                                 Log.note("{{branch}} @ {{revision}} has no pushlog, transforming anyway", r.test_build)
                                 r.test_build.no_pushlog = True
                             else:
@@ -117,7 +118,7 @@ class Talos2ES():
                             if branch not in self.unknown_branches:
                                 Log.note("Whole branch {{branch}} has no pushlog", {"branch":branch})
                                 self.unknown_branches.add(branch)
-                            if CNV.milli2datetime(Math.min(r.testrun.date, r.datazilla.date_loaded)) < PUSHLOG_TOO_OLD:
+                            if convert.milli2datetime(r.testrun.date) < PUSHLOG_TOO_OLD:
                                 r.test_build.no_pushlog = True
                             else:
                                 r.test_build.no_pushlog = True
@@ -131,7 +132,7 @@ class Talos2ES():
             # RECORD THE UNKNOWN PART OF THE TEST RESULTS
             remainder = r.copy()
             remainder.results = None
-            if len(remainder.keys()) > 4:
+            if len(remainder.keys()) > 3:
                 new_records.append(remainder)
 
             #RECORD TEST RESULTS
@@ -143,7 +144,6 @@ class Talos2ES():
                     for g, sub_results in Q.groupby(replicates, size=5):
                         new_record = Struct(
                             test_machine=r.test_machine,
-                            datazilla=r.datazilla,
                             treeherder=r.treeherder,
                             testrun=r.testrun,
                             test_build=r.test_build,
@@ -164,7 +164,6 @@ class Talos2ES():
                 for i, (test_name, replicates) in enumerate(r.results.items()):
                     new_record = Struct(
                         test_machine=r.test_machine,
-                        datazilla=r.datazilla,
                         treeherder=r.treeherder,
                         testrun=r.testrun,
                         test_build=r.test_build,
@@ -187,7 +186,6 @@ class Talos2ES():
 
                 new_record = Struct(
                     test_machine=r.test_machine,
-                    datazilla=r.datazilla,
                     treeherder=r.treeherder,
                     testrun=r.testrun,
                     test_build=r.test_build,
@@ -202,7 +200,6 @@ class Talos2ES():
                 # ADD RECORD FOR GRAPH SERVER SUMMARY
                 new_record = Struct(
                     test_machine=r.test_machine,
-                    datazilla=r.datazilla,
                     treeherder=r.treeherder,
                     testrun=r.testrun,
                     test_build=r.test_build,

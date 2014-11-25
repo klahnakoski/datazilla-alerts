@@ -16,7 +16,7 @@ from pyLibrary import maths
 from pyLibrary.collections import AND
 from pyLibrary.env.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.struct import Struct
+from pyLibrary.structs.dicts import Struct
 
 
 def median_test(samples1, samples2, resolution=None, interpolate=True):

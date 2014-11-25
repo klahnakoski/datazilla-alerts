@@ -20,7 +20,7 @@ from pyLibrary.env import startup
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.env.logs import Log
 from pyLibrary.sql.db import DB, SQL
-from pyLibrary.struct import nvl, Struct
+from pyLibrary.structs import nvl, Struct
 from pyLibrary.times.durations import Duration
 
 def main():

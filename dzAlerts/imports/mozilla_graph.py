@@ -14,9 +14,9 @@ import requests
 from dzAlerts.imports.repos.changesets import Changeset
 from dzAlerts.imports.repos.pushs import Push
 from dzAlerts.imports.repos.revisions import Revision
-from pyLibrary.cnv import CNV
+from pyLibrary import convert
 from pyLibrary.env.logs import Log
-from pyLibrary.struct import nvl
+from pyLibrary.structs import nvl
 from pyLibrary.structs.wraps import unwrap, wrap
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -47,7 +47,7 @@ class MozillaGraph(object):
             Log.note("Reading details for from {{url}}", {"url": url})
 
             response = requests.get(url, timeout=self.settings.timeout.seconds)
-            revs = CNV.JSON2object(response.content.decode("utf8"))
+            revs = convert.JSON2object(response.content.decode("utf8"))
 
             if len(revs.keys()) != 1:
                 Log.error("Do not know how to handle")
@@ -82,7 +82,7 @@ class MozillaGraph(object):
 
             url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
             response = requests.get(url, timeout=self.settings.timeout.seconds).content
-            data = CNV.JSON2object(response.decode("utf8"))
+            data = convert.JSON2object(response.decode("utf8"))
             for index, _push in data.items():
                 push = Push(index, revision.branch, _push.date, _push.user)
                 for c in _push.changesets:
