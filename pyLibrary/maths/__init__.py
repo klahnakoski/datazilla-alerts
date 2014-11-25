@@ -71,6 +71,8 @@ class Math(object):
         try:
             if v == None:
                 return Null
+            if v == 0.0:
+                return -float("inf")
             if base == None:
                 return math.log(v)
             return math.log(v, base)
