@@ -103,7 +103,7 @@ class NullType(object):
         return Null
 
     def right(self, num=None):
-        return EmptyList
+        return Null
 
     def __getattribute__(self, key):
         try:

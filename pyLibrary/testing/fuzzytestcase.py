@@ -10,7 +10,7 @@
 from math import log10
 
 import unittest
-from pyLibrary.struct import nvl
+from pyLibrary.structs import nvl
 from pyLibrary.maths import Math
 from pyLibrary.structs.wraps import wrap
 from pyLibrary.strings import expand_template

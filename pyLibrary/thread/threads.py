@@ -16,7 +16,7 @@ import thread
 import threading
 import time
 import sys
-from pyLibrary.struct import nvl, Struct
+from pyLibrary.structs import nvl, Struct
 import gc
 
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.

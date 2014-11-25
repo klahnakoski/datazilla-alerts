@@ -17,7 +17,7 @@ import smtplib
 import sys
 from pyLibrary.env.logs import Log
 from pyLibrary.structs.wraps import listwrap
-from pyLibrary.struct import nvl
+from pyLibrary.structs import nvl
 
 
 class Emailer:

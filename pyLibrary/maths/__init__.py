@@ -11,9 +11,10 @@ from __future__ import unicode_literals
 from __future__ import division
 import math
 import __builtin__
-from pyLibrary.struct import Null, nvl
+
 from pyLibrary.env.logs import Log
 from pyLibrary.strings import find_first
+from pyLibrary.structs import Null, nvl
 
 
 class Math(object):

@@ -48,7 +48,7 @@ def literal_field(field):
     try:
         return field.replace(".", "\.")
     except Exception, e:
-        from ..env.logs import Log
+        from pyLibrary.env.logs import Log
 
         Log.error("bad literal", e)
 
@@ -152,6 +152,6 @@ def _getdefault(obj, key):
 
 
 
-from .dicts import Struct
-from .nones import Null, NullType
-from .wraps import wrap, unwrap
+from pyLibrary.structs.nones import Null, NullType
+from pyLibrary.structs.dicts import Struct
+from pyLibrary.structs.wraps import wrap, unwrap

@@ -19,7 +19,7 @@ from types import ModuleType
 
 from pyLibrary.jsons import json_encoder
 from pyLibrary.thread import threads
-from pyLibrary.struct import nvl, Struct, split_field, join_field
+from pyLibrary.structs import nvl, Struct, split_field, join_field
 from pyLibrary.structs.wraps import listwrap, wrap, wrap_dot
 from pyLibrary.strings import indent, expand_template
 from pyLibrary.thread.threads import Thread
@@ -50,12 +50,12 @@ class Log(object):
 
         if settings["class"]:
             if settings["class"].startswith("logging.handlers."):
-                from .log_usingLogger import Log_usingLogger
+                from pyLibrary.log_usingLogger import Log_usingLogger
 
                 return Log_usingLogger(settings)
             else:
                 try:
-                    from .log_usingLogger import make_log_from_settings
+                    from pyLibrary.log_usingLogger import make_log_from_settings
 
                     return make_log_from_settings(settings)
                 except Exception, e:
@@ -66,11 +66,11 @@ class Log(object):
         if settings.log_type == "file" or settings.filename:
             return Log_usingFile(settings.filename)
         if settings.log_type == "stream" or settings.stream:
-            from .log_usingStream import Log_usingStream
+            from pyLibrary.log_usingStream import Log_usingStream
 
             return Log_usingStream(settings.stream)
         if settings.log_type == "elasticsearch" or settings.stream:
-            from .log_usingElasticSearch import Log_usingElasticSearch
+            from pyLibrary.log_usingElasticSearch import Log_usingElasticSearch
 
             return Log_usingElasticSearch(settings)
 
@@ -600,7 +600,7 @@ class Log_usingMulti(BaseLog):
 
 def write_profile(profile_settings, cprofiler):
     from pyLibrary import convert
-    from .files import File
+    from pyLibrary.env.files import File
     import pstats
 
     p = pstats.Stats(cprofiler)

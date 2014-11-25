@@ -9,8 +9,8 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.structs import literal_field, split_field, Null, hash_value, nvl, _getdefault
-from pyLibrary.structs.nones import NullType
+from copy import deepcopy
+from pyLibrary.structs import split_field, _getdefault, hash_value, literal_field, nvl
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -137,7 +137,7 @@ class Struct(dict):
 
     def __setitem__(self, key, value):
         if key == "":
-            from ..env.logs import Log
+            from pyLibrary.env.logs import Log
 
             Log.error("key is empty string.  Probably a bad idea")
         if isinstance(key, str):
@@ -263,6 +263,14 @@ class Struct(dict):
         d = _get(self, "__dict__")
         return wrap(d.copy())
 
+    def __copy__(self):
+        d = _get(self, "__dict__")
+        return wrap(d.copy())
+
+    def __deepcopy__(self, memo):
+        d = _get(self, "__dict__")
+        return wrap(deepcopy(d, memo))
+
     def __delitem__(self, key):
         if isinstance(key, str):
             key = key.decode("utf8")
@@ -327,4 +335,5 @@ def _str(value, depth):
 
 
 
-from .wraps import unwrap, wrap
+from pyLibrary.structs.nones import Null, NullType
+from pyLibrary.structs.wraps import unwrap, wrap

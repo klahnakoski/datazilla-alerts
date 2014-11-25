@@ -12,10 +12,10 @@ from __future__ import division
 
 from datetime import timedelta, datetime
 from pyLibrary import convert
-from .elasticsearch import Cluster
+from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.structs.wraps import wrap
 from pyLibrary.thread.threads import Thread, Queue
-from .logs import BaseLog, Log
+from pyLibrary.env.logs import BaseLog, Log
 
 
 class Log_usingElasticSearch(BaseLog):

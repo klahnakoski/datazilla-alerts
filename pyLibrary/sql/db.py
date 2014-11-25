@@ -15,12 +15,11 @@ from datetime import datetime
 import json
 import subprocess
 from pymysql import connect, InterfaceError
-from pyLibrary import struct
 from pyLibrary.jsons import json_scrub
 from pyLibrary.maths import Math
 from pyLibrary.strings import expand_template, utf82unicode
-from pyLibrary.struct import nvl
-from pyLibrary.structs.wraps import wrap, listwrap
+from pyLibrary.structs import nvl
+from pyLibrary.structs.wraps import wrap, listwrap, unwrap
 from pyLibrary import convert
 from pyLibrary.env.logs import Log, Except
 from pyLibrary.queries import Q
@@ -214,7 +213,7 @@ class DB(object):
 
     def call(self, proc_name, params):
         self._execute_backlog()
-        params = [struct.unwrap(v) for v in params]
+        params = [unwrap(v) for v in params]
         try:
             self.cursor.callproc(proc_name, params)
             self.cursor.close()

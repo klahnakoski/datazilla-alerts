@@ -15,7 +15,7 @@ import os
 import shutil
 from pyLibrary.strings import utf82unicode
 from pyLibrary.maths import crypto
-from pyLibrary.struct import nvl
+from pyLibrary.structs import nvl
 from pyLibrary.structs.wraps import listwrap
 from pyLibrary import convert
 
@@ -162,7 +162,7 @@ class File(object):
                     for line in f:
                         yield utf82unicode(line)
             except Exception, e:
-                from .logs import Log
+                from pyLibrary.env.logs import Log
 
                 Log.error("Can not read line from {{filename}}", {"filename": self._filename}, e)
 
@@ -173,7 +173,7 @@ class File(object):
             self.parent.create()
         with open(self._filename, "ab") as output_file:
             if isinstance(content, str):
-                from .logs import Log
+                from pyLibrary.env.logs import Log
 
                 Log.error("expecting to write unicode only")
             output_file.write(content.encode("utf-8"))
@@ -189,13 +189,13 @@ class File(object):
             with open(self._filename, "ab") as output_file:
                 for c in content:
                     if isinstance(c, str):
-                        from .logs import Log
+                        from pyLibrary.env.logs import Log
                         Log.error("expecting to write unicode only")
 
                     output_file.write(c.encode("utf-8"))
                     output_file.write(b"\n")
         except Exception, e:
-            from ..env.logs import Log
+            from pyLibrary.env.logs import Log
 
             Log.error("Could not write to file", e)
 

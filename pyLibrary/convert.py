@@ -18,15 +18,14 @@ import json
 import re
 import time
 
-from . import struct
-from . import jsons
-from .times.dates import Date
-from .jsons import json_encoder
-from .collections.multiset import Multiset
-from .env.profiles import Profiler
-from .env.logs import Log
-from .strings import expand_template
-from .structs.wraps import wrap, wrap_dot
+from pyLibrary import jsons
+from pyLibrary.times.dates import Date
+from pyLibrary.jsons import json_encoder
+from pyLibrary.collections.multiset import Multiset
+from pyLibrary.env.profiles import Profiler
+from pyLibrary.env.logs import Log
+from pyLibrary.strings import expand_template
+from pyLibrary.structs.wraps import wrap, wrap_dot, unwrap
 
 
 """
@@ -136,7 +135,7 @@ def dict2Multiset(dic):
         return None
 
     output = Multiset()
-    output.dic = struct.unwrap(dic).copy()
+    output.dic = unwrap(dic).copy()
     return output
 
 

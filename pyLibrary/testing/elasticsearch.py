@@ -10,13 +10,12 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from pyLibrary import struct
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Index, Cluster
 from pyLibrary.env.logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.queries import Q
-from pyLibrary.struct import Struct
+from pyLibrary.structs.dicts import Struct
 from pyLibrary.structs.wraps import unwrap, wrap
 
 def make_test_instance(name, settings):
@@ -72,7 +71,7 @@ class Fake_ES():
         """
         records = {v["id"]: v["value"] for v in records}
 
-        struct.unwrap(self.data).update(records)
+        unwrap(self.data).update(records)
 
         data_as_json = convert.object2JSON(self.data, pretty=True)
 

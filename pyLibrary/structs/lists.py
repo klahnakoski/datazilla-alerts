@@ -9,7 +9,9 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.structs import Null, wrap, unwrap
+from copy import deepcopy
+from pyLibrary.structs.nones import Null
+from pyLibrary.structs.wraps import wrap, unwrap
 
 
 _get = object.__getattribute__
@@ -37,7 +39,7 @@ class StructList(list):
         if isinstance(index, slice):
             # IMPLEMENT FLAT SLICES (for i not in range(0, len(self)): assert self[i]==None)
             if index.step is not None:
-                from ..env.logs import Log
+                from pyLibrary.env.logs import Log
                 Log.error("slice step must be None, do not know how to deal with values")
             length = len(_get(self, "list"))
 
@@ -97,12 +99,19 @@ class StructList(list):
         return _get(self, "list").__len__()
 
     def __getslice__(self, i, j):
-        from ..env.logs import Log
+        from pyLibrary.env.logs import Log
 
         Log.error("slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes.  Use [start:stop:step] (see https://github.com/klahnakoski/pyLibrary/blob/master/pyLibrary/structs/README.md#slicing-is-broken-in-python-27)")
 
     def copy(self):
         return StructList(list(_get(self, "list")))
+
+    def __copy__(self):
+        return StructList(list(_get(self, "list")))
+
+    def __deepcopy__(self, memo):
+        d = _get(self, "list")
+        return wrap(deepcopy(d, memo))
 
     def remove(self, x):
         _get(self, "list").remove(x)

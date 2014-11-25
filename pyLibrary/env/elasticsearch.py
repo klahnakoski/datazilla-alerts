@@ -21,10 +21,11 @@ from pyLibrary import convert
 from pyLibrary.env.logs import Log
 from pyLibrary.maths.randoms import Random
 from pyLibrary.maths import Math
+from pyLibrary.queries import Q
 from pyLibrary.strings import utf82unicode
-from pyLibrary.struct import nvl, Null
+from pyLibrary.structs import nvl, Null, Struct
+from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap, unwrap
-from pyLibrary.struct import Struct, StructList
 from pyLibrary.thread.threads import ThreadedQueue
 
 
@@ -351,7 +352,7 @@ class Cluster(object):
             Log.error("Expecting index name to conform to pattern")
 
         if not schema and settings.schema_file:
-            from .files import File
+            from pyLibraryfiles import File
 
             schema = convert.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
         elif isinstance(schema, basestring):
