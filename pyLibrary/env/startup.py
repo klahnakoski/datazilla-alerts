@@ -14,7 +14,7 @@ import argparse
 import os
 import tempfile
 import sys
-from pyLibrary.structs import Struct
+from pyLibrary.structs.dicts import Struct
 from pyLibrary.structs.wraps import listwrap, wrap, unwrap
 from pyLibrary import convert
 from pyLibrary.env.logs import Log

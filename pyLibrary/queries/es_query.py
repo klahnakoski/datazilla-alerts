@@ -21,7 +21,8 @@ from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.query import Query, _normalize_where
 from pyLibrary.env.logs import Log
 from pyLibrary.queries.MVEL import _MVEL
-from pyLibrary.structs import Struct, nvl, split_field
+from pyLibrary.structs.dicts import Struct
+from pyLibrary.structs import nvl, split_field
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap, listwrap
 

@@ -24,6 +24,7 @@ from pyLibrary.structs.lists import StructList
 from pyLibrary.thread.threads import Lock
 from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
+from pyLibrary.times.timer import Timer
 
 
 DEBUG = False
@@ -96,8 +97,10 @@ class Talos2ES():
                     r.test_build.pgo = True
 
                 with Profiler("get from pushlog"):
+                    revision = Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}})
                     with self.locker:
-                        revision = self.repo.get_node(Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}}))
+                        revision = self.repo.get_node(revision)
+
                     if revision:
                         with self.locker:
                             push = self.repo.get_push(revision)
@@ -132,7 +135,7 @@ class Talos2ES():
             # RECORD THE UNKNOWN PART OF THE TEST RESULTS
             remainder = r.copy()
             remainder.results = None
-            if len(remainder.keys()) > 3:
+            if len(remainder.keys()) > 4:
                 new_records.append(remainder)
 
             #RECORD TEST RESULTS

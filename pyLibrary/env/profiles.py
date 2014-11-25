@@ -13,7 +13,7 @@ from __future__ import division
 from datetime import datetime
 from time import clock
 from pyLibrary.collections import MAX
-from pyLibrary.structs import Struct
+from pyLibrary.structs.dicts import Struct
 from pyLibrary.structs.wraps import wrap
 
 ON = False

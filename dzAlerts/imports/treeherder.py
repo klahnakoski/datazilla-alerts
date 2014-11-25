@@ -14,8 +14,8 @@ import hashlib
 import json
 import requests
 from dzAlerts.imports.mozilla_graph import MozillaGraph
-from pyLibrary import convert
 
+from pyLibrary import convert
 from pyLibrary.collections import MAX
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.files import File
@@ -27,7 +27,8 @@ from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
 from pyLibrary.env.logs import Log
 from pyLibrary.env import startup
-from pyLibrary.structs import Struct, nvl, set_default, literal_field
+from pyLibrary.structs.dicts import Struct
+from pyLibrary.structs import nvl, set_default, literal_field
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap, unwrap
 from pyLibrary.thread.threads import ThreadedQueue, Lock
@@ -60,55 +61,74 @@ uid_json_encoder = json.JSONEncoder(
 )
 
 
+
 class TreeHerderImport(object):
     def __init__(self, settings):
         self.settings = settings
         self.perf_signatures = {}
         self.current_branch = None
-        self.properties_lock = Lock()
+        # self.properties_lock = Lock()
 
-    def get_properties(self, signature):
-        output = self.perf_signatures.get(signature, None)
-        if output:
-            return output
 
-        with self.properties_lock:
-            output = self.perf_signatures.get(signature, None)
-            if not output:
-                url = expand_template(self.settings.treeherder.signature_url, {
-                    "branch": self.current_branch,
-                    "signature": signature
-                })
-                response = requests.get(url, timeout=self.settings.treeherder.timeout).content
-                output = convert.JSON2object(convert.utf82unicode(response))[0]
-                output = self.convert_properties(output)
-                self.perf_signatures[signature] = output
-            return output
+    def treeherder2talos(self, r, url):
 
-    def convert_properties(self, properties):
-        """
-        MAP PROPERTIES BACK TO ORIGINAL STRUCTURE
-        """
-        output = Struct()
+        # def get_properties(signature):
+        #     output = self.perf_signatures.get(signature, None)
+        #     if output:
+        #         return output
+        #
+        #     with self.properties_lock:
+        #         output = self.perf_signatures.get(signature, None)
+        #         if not output:
+        #             url = expand_template(self.settings.treeherder.signature_url, {
+        #                 "branch": self.current_branch,
+        #                 "signature": signature
+        #             })
+        #             response = requests.get(url, timeout=self.settings.treeherder.timeout).content
+        #             output = convert.JSON2object(convert.utf82unicode(response))[0]
+        #             output = convert_properties(output)
+        #             self.perf_signatures[signature] = output
+        #         return output
 
-        output.test_machine.os = properties.machine_os_name
-        output.test_machine.osversion = properties.machine_platform
-        output.test_machine.platform = properties.machine_architecture
-        output.test_machine.device_name = properties.device_name
+        def convert_properties(output, sig_properties):
+            """
+            MAP PROPERTIES BACK TO ORIGINAL STRUCTURE
+            """
+            output.test_machine.os = sig_properties.machine_os_name
+            output.test_machine.osversion = sig_properties.machine_platform
+            output.test_machine.platform = sig_properties.machine_architecture
+            output.test_machine.device_name = sig_properties.device_name
 
-        output.test_build.branch = properties.repository
-        output.test_build.os = properties.build_os_name
-        output.test_build.osversion = properties.build_platform
-        output.test_build.platform = properties.build_architecture
-        output.test_build.build_system = properties.build_system_type
+            output.test_build.branch = sig_properties.repository
+            output.test_build.os = sig_properties.build_os_name
+            output.test_build.osversion = sig_properties.build_platform
+            output.test_build.platform = sig_properties.build_architecture
+            output.test_build.build_system = sig_properties.build_system_type
 
-        output.testrun.suite = properties.suite
-        output.testrun.job_group = properties.job_group_name
-        output.testrun.job_type = properties.job_type_name
+            output.testrun.suite = sig_properties.suite
+            output.testrun.job_group = sig_properties.job_group_name
+            output.testrun.job_type = sig_properties.job_type_name
 
-        # output.result.test_name = properties.test
-        return output
+        th = convert.JSON2object(r.blob).blob
 
+        if not th.metadata.test_build.revision:
+            Log.error("missing revision")
+
+        talos = Struct()
+        talos.treeherder = {
+            "branch": self.current_branch,
+            "perf_id": r.id,
+            "url": url
+        }
+        talos.test_build = th.metadata.test_build
+        convert_properties(talos, th.signature_properties)
+
+        talos.testrun.options = th.metadata.options
+        talos.testrun.date = th.date
+        talos.results_aux = talos.metatdata.results_aux
+        talos.results_xperf = talos.metatdata.results_xperf
+        talos.results[literal_field(th.test)] = th.replicates
+        return talos
 
     def etl(self, es_sink, file_sink, transformer, min_job_id, max_job_id):
         """
@@ -134,13 +154,14 @@ class TreeHerderImport(object):
                     d = wrap([d for d in data if d.id == job_id])[0]
                     if not d:
                         #ADD PLACEHOLDERS FOR NO DATA
-                        perf_results.append({
+                        es_sink.add({"value":{
                             "treeherder": {
                                 "branch": self.current_branch,
                                 "perf_id": job_id,
-                                "url": url
+                                "url": url,
+                                "reason": "missing data"
                             }
-                        })
+                        }})
                     elif not d.id or d.id!=job_id or not d.blob:
                         #ADD PLACEHOLDERS FOR NO DATA
                         id = (self.current_branch, job_id)
@@ -151,7 +172,8 @@ class TreeHerderImport(object):
                                 "branch": self.current_branch,
                                 "perf_id": job_id,
                                 "corrupt_json": d,
-                                "url": url
+                                "url": url,
+                                "reason": "missing id or blob"
                             }
                         }})
                     else:
@@ -167,28 +189,16 @@ class TreeHerderImport(object):
         try:
             for r in perf_results:
                 try:
-                    talos = convert.JSON2object(r.blob).blob
-                    t = Struct()
-                    t.treeherder = {
-                        "branch": self.current_branch,
-                        "perf_id": r.id,
-                        "url": url
-                    }
-                    t.testrun.options = talos.metadata.options
-                    t.testrun.date = talos.date
-                    t.test_build = talos.metadata.test_build
-                    t.results_aux = t.metatdata.results_aux
-                    t.results_xperf = t.metatdata.results_xperf
-                    set_default(t, self.get_properties(talos.series_signature))
-                    t.results[literal_field(talos.test)] = talos.replicates
+                    t = self.treeherder2talos(r, url)
                 except Exception, e:
-                    Log.note("CORRUPTED: job_id {{job_id}}  reason={{reason}}", {"job_id": r.id, "reason": e.message})
+                    Log.note("CORRUPTED: perf_id {{perf_id}}  reason={{reason}}", {"perf_id": r.id, "reason": e.message})
                     es_sink.add({"value":{
                         "treeherder": {
                             "branch": self.current_branch,
                             "perf_id": r.id,
-                            "corrupt_json": r,
-                            "url": url
+                            "corrupt_json": convert.object2JSON(r),
+                            "url": url,
+                            "reason": e.message
                         }
                     }})
                     continue
@@ -196,7 +206,7 @@ class TreeHerderImport(object):
                 id = (t.treeherder.perf_id, t.treeherder.branch)
                 Log.println("Add {{id}} for revision {{revision}} ({{bytes}} bytes)", {
                     "id": id,
-                    "revision": talos.test_build.revision,
+                    "revision": t.test_build.revision,
                     "bytes": len(convert.object2JSON(r))
                 })
                 with Profiler("transform"):
@@ -288,14 +298,8 @@ class TreeHerderImport(object):
         Log.note("Number missing: {{num}}", {"num": len(missing_ids)})
         Log.note("Number in holes: {{num}}", {"num": len(holes)})
 
-
         #FASTER IF NO INDEXING IS ON
         es.set_refresh_interval(-1)
-
-        #FILE IS FASTER THAN NETWORK
-        if (len(holes) > 10000 or self.settings.args.scan_file or self.settings.args.restart) and File(self.settings.param.output_file).exists:
-            self.load_from_file(es, existing_ids, transformer)
-            missing_ids = missing_ids - existing_ids
 
         #COPY MISSING DATA TO ES
         try:
@@ -329,49 +333,6 @@ class TreeHerderImport(object):
         es.add_alias()
 
 
-    def load_from_file(self, es, existing_ids, transformer):
-        #ASYNCH PUSH TO ES IN BLOCKS OF 1000
-        with Timer("Scan file for missing ids"):
-            with ThreadedQueue(es, size=nvl(es.settings.batch_size, 100)) as json_for_es:
-                num = 0
-                for line in File(self.settings.param.output_file):
-                    try:
-                        if len(line.strip()) == 0:
-                            continue
-                        col = line.split("\t")
-                        id = convert.JSON2object(col[0])
-                        # if id==3003529:
-                        #     Log.debug()
-                        if id < self.settings.treeherder.min:
-                            continue
-                        if id in existing_ids:
-                            continue
-
-                        if num > self.settings.treeherder.step:
-                            return
-                        num += 1
-
-                        with Profiler("decode and transform"):
-                            data = convert.JSON2object(col[-1])
-                            if data.test_run_id:
-                                with Profiler("transform"):
-                                    data = transformer.transform(id, data)
-                                json_for_es.extend({"value": d} for d in data)
-                                Log.note("Added {{id}} from file", {"id": id})
-
-                                existing_ids.add(id)
-                            else:
-                                Log.note("Skipped {{id}} from file (no test_run_id)", {"id": id})
-                                num -= 1
-
-                    except Exception, e:
-                        Log.warning("Bad line id={{id}} ({{length}}bytes):\n\t{{prefix}}", {
-                            "id": id,
-                            "length": len(convert.object2JSON(line)),
-                            "prefix": convert.object2JSON(line)[0:130]
-                        }, e)
-
-
 def get_branches(settings):
     response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
     branches = convert.JSON2object(convert.utf82unicode(response.content))
@@ -403,7 +364,7 @@ def cluster(values, max_size):
         else:
             yield count, (mini, maxi)
             mini = v
-            maxi = v + 1,
+            maxi = v + 1
             count += 1
     yield count, (mini, maxi)
 

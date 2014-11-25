@@ -16,7 +16,8 @@ from pyLibrary.queries import MVEL, _normalize_select, INDEX_CACHE
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain
 from pyLibrary.queries.filters import TRUE_FILTER, simplify
-from pyLibrary.structs import Struct, nvl, split_field, join_field, Null
+from pyLibrary.structs.dicts import Struct
+from pyLibrary.structs import nvl, split_field, join_field, Null
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap, unwrap, listwrap
 

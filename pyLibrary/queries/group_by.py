@@ -14,7 +14,7 @@ import sys
 import math
 from pyLibrary.queries.cube import Cube
 from pyLibrary.queries.index import value2key
-from pyLibrary.structs import Struct
+from pyLibrary.structs.dicts import Struct
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import listwrap, wrap
 from pyLibrary.env.logs import Log

@@ -228,17 +228,21 @@
 				},
 				"treeherder" : {
 					"properties" : {
-						"uid" : {
-							"index" : "not_analyzed",
-							"type" : "string"
-						},
 						"branch" : {
 							"index" : "not_analyzed",
 							"type" : "string"
 						},
-						"job_id" : {
+						"perf_id" : {
 							"index" : "not_analyzed",
 							"type" : "long"
+						},
+						"url":{
+							"index" : "not_analyzed",
+							"type" : "string"
+						},
+						"corrupt_json":{
+							"index" : "not_analyzed",
+							"type" : "string"
 						}
 					}
 				},

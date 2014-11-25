@@ -211,7 +211,6 @@ class Index(object):
             try:
                 data_bytes = "\n".join(lines) + "\n"
                 data_bytes = data_bytes.encode("utf8")
-                del lines
             except Exception, e:
                 Log.error("can not make request body from\n{{lines|indent}}", {"lines": lines}, e)
 

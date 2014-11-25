@@ -20,7 +20,8 @@ from pyLibrary.env.elasticsearch import Index
 from pyLibrary.env.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries import domains, MVEL, filters
-from pyLibrary.structs import Struct, set_default, split_field, join_field, nvl
+from pyLibrary.structs.dicts import Struct
+from pyLibrary.structs import set_default, split_field, join_field, nvl
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap
 from pyLibrary.times import durations
