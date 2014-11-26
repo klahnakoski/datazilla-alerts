@@ -37,6 +37,7 @@ from pyLibrary.times.timer import Timer
 from pyLibrary.thread.multithread import Multithread
 
 
+DEBUG = False
 NUM_PER_BATCH = 1000
 JOB_ID_MODULO = 10000
 COUNTER = Struct(count=0)
@@ -204,22 +205,23 @@ class TreeHerderImport(object):
                     continue
 
                 id = (t.treeherder.perf_id, t.treeherder.branch)
-                Log.println("Add {{id}} for revision {{revision}} ({{bytes}} bytes)", {
-                    "id": id,
-                    "revision": t.test_build.revision,
-                    "bytes": len(convert.object2JSON(r))
-                })
+                if DEBUG:
+                    Log.println("Add {{id}} for revision {{revision}} ({{bytes}} bytes)", {
+                        "id": id,
+                        "revision": t.test_build.revision,
+                        "bytes": len(convert.object2JSON(r))
+                    })
                 with Profiler("transform"):
                     result = transformer.transform(id, t)
 
                 if result:
-                    Log.println("{{num}} records to add", {
-                        "num": len(result)
-                    })
                     es_sink.extend({"value": d} for d in result)
 
             if num_results == 0:
                 return False
+
+            Log.println("{{num}} records added", {"num": num_results})
+
             return True
         except Exception, e:
             Log.warning("Failure to etl (content length={{length}})", {"length": len(content)}, e)
@@ -254,7 +256,7 @@ class TreeHerderImport(object):
             max_id = MAX(max_id, self.settings.treeherder.min)
 
             es_interval_size = 200000
-            for mini, maxi in Q.intervals(self.settings.treeherder.min, max_id + es_interval_size, es_interval_size):
+            for mini, maxi in Q.intervals(self.settings.treeherder.min, max_id, es_interval_size):
                 existing_ids = es.search({
                     "query": {"match_all": {}},
                     "from": 0,
@@ -262,8 +264,11 @@ class TreeHerderImport(object):
                     "sort": [],
                     "facets": {
                         "ids": {
-                            "terms": {"field": "treeherder.perf_id", "size": es_interval_size},
-                            "filter": {"and": [
+                            "terms": {
+                                "field": "treeherder.perf_id",
+                                "size": es_interval_size
+                            },
+                            "facet_filter": {"and": [
                                 {"range": {"treeherder.perf_id": {"gte": mini, "lt": maxi}}},
                                 {"term": {"treeherder.branch": self.current_branch}}
                             ]}
@@ -271,7 +276,7 @@ class TreeHerderImport(object):
                     }
                 })
 
-                int_ids |= set(existing_ids.facets.ids.terms.select("term"))
+                int_ids.update(existing_ids.facets.ids.terms.select("term"))
 
             existing_ids = int_ids
             Log.println("Number of ids in ES: {{num}}", {"num": len(existing_ids)})

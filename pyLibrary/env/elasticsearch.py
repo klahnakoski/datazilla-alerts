@@ -351,7 +351,7 @@ class Cluster(object):
             Log.error("Expecting index name to conform to pattern")
 
         if not schema and settings.schema_file:
-            from pyLibraryfiles import File
+            from pyLibrary.env.files import File
 
             schema = convert.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
         elif isinstance(schema, basestring):
