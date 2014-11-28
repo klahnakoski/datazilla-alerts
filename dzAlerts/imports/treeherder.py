@@ -48,6 +48,72 @@ COUNTER = Struct(count=0)
 # output.test_build.revision =
 # result.ordering
 
+#
+# a11yr
+# cart
+# dromaeo_css
+# dromaeo_dom
+# glterrain
+# kraken
+# media_tests
+# sessionrestore
+# sessionrestore_no_auto_restore
+# tart
+# tcanvasmark
+# tcheck2
+# tp4m
+# tp5n
+# tp5o
+# tp5o_scroll
+# tpaint
+# tprovider
+# tresize
+# trobopan
+# ts_paint
+# ts_paint_cold
+# tscrollx
+# tsvgr_opacity
+# tsvgx
+# v8_7
+
+# Alder
+# Alder-Non-PGO
+# Ash
+# B2G-Inbound
+# B2G-Inbound-Non-PGO
+# Cedar
+# Cypress
+# Date
+# Elm
+# Fig
+# Firefox
+# Firefox-Non-PGO
+# Fx-Team
+# Fx-Team-Non-PGO
+# Gum
+# Gum-Non-PGO
+# Holly
+# Jamun
+# Larch
+# Maple
+# Mozilla-Aurora
+# Mozilla-B2g30-v1.4
+# Mozilla-B2g30-v1.4-Non-PGO
+# Mozilla-B2g32-v2.0
+# Mozilla-B2g32-v2.0-Non-PGO
+# Mozilla-B2g34-v2.1
+# Mozilla-B2g34-v2.1-Non-PGO
+# Mozilla-Beta
+# Mozilla-Beta-Release-Non-PGO
+# Mozilla-Esr24
+# Mozilla-Esr31
+# Mozilla-Inbound
+# Mozilla-Inbound-Non-PGO
+# Mozilla-Release
+# Mozilla-Release-Release-Non-PGO
+# Try
+# Try-Non-PGO
+# mobile
 
 uid_json_encoder = json.JSONEncoder(
     skipkeys=False,
