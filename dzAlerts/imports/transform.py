@@ -101,34 +101,14 @@ class Talos2ES():
                     with self.locker:
                         revision = self.repo.get_node(revision)
 
-                    if revision:
-                        with self.locker:
-                            push = self.repo.get_push(revision)
+                    with self.locker:
+                        push = self.repo.get_push(revision)
 
-                        if push:
-                            r.test_build.push_date = int(Math.round(push.date * 1000))
-                        else:
-                            if r.test_build.revision == 'NULL':
-                                r.test_build.no_pushlog = True  # OOPS! SOMETHING BROKE
-                            elif convert.milli2datetime(r.testrun.date) < PUSHLOG_TOO_OLD:
-                                Log.note("{{branch}} @ {{revision}} has no pushlog, transforming anyway", r.test_build)
-                                r.test_build.no_pushlog = True
-                            else:
-                                Log.note("{{branch}} @ {{revision}} has no pushlog, try again later", r.test_build)
-                                return []  # TRY AGAIN LATER
-                    else:
-                        with self.locker:
-                            if branch not in self.unknown_branches:
-                                Log.note("Whole branch {{branch}} has no pushlog", {"branch":branch})
-                                self.unknown_branches.add(branch)
-                            if convert.milli2datetime(r.testrun.date) < PUSHLOG_TOO_OLD:
-                                r.test_build.no_pushlog = True
-                            else:
-                                r.test_build.no_pushlog = True
-                                #return [r]  #TODO: DO THIS IF WE FIGURE OUT HOW TO HANDLE THE VERY LARGE NUMBER OF RESULTS WITH NO PUSHLOG
-
+                    r.test_build.push_date = int(Math.round(push.date * 1000))
             except Exception, e:
-                Log.warning("{{branch}} @ {{revision}} has no pushlog", r.test_build, e)
+                Log.warning("{{test_build.branch}} @ {{test_build.revision}} (perf_id=={{treeherder.perf_id}}) has no pushlog", r, e)
+                # TRY AGAIN LATER
+                return []
 
             new_records = []
 
