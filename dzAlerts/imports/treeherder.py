@@ -48,33 +48,39 @@ COUNTER = Struct(count=0)
 # output.test_build.revision =
 # result.ordering
 
+
+
+All
+a11yr
+media_tests
+tart
+tcanvasmark
+tcheck2
+tp4m
+tp5o
+tp5o_scroll
+tprovider
+trobopan
+ts_paint
+tsvgx
+v8_7
+
 #
-# a11yr
+
 # cart
 # dromaeo_css
 # dromaeo_dom
 # glterrain
 # kraken
-# media_tests
 # sessionrestore
 # sessionrestore_no_auto_restore
-# tart
-# tcanvasmark
-# tcheck2
-# tp4m
+
 # tp5n
-# tp5o
-# tp5o_scroll
 # tpaint
-# tprovider
 # tresize
-# trobopan
-# ts_paint
 # ts_paint_cold
 # tscrollx
 # tsvgr_opacity
-# tsvgx
-# v8_7
 
 # Alder
 # Alder-Non-PGO
