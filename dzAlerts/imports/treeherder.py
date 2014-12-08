@@ -495,6 +495,9 @@ def main():
                 es = Cluster(settings.elasticsearch).get_or_create_index(settings.elasticsearch)
 
             for b in branches.keys():
+                if branches[b].dvcs_type != "hg":
+                    continue
+
                 try:
                     worker.current_branch = b
                     worker.extract_from_treeherder(es, transformer)

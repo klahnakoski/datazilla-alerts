@@ -81,15 +81,18 @@ class MozillaGraph(object):
             })
 
             url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
-            response = requests.get(url, timeout=self.settings.timeout.seconds).content
-            data = convert.JSON2object(response.decode("utf8"))
-            for index, _push in data.items():
-                push = Push(index, revision.branch, _push.date, _push.user)
-                for c in _push.changesets:
-                    changeset = Changeset(id=c.node, **unwrap(c))
-                    rev = Revision(branch=revision.branch, changeset=changeset, graph=self)
-                    self.pushes[rev] = push
-                    push.changesets.append(changeset)
+            try:
+                response = requests.get(url, timeout=self.settings.timeout.seconds).content
+                data = convert.JSON2object(response.decode("utf8"))
+                for index, _push in data.items():
+                    push = Push(index, revision.branch, _push.date, _push.user)
+                    for c in _push.changesets:
+                        changeset = Changeset(id=c.node, **unwrap(c))
+                        rev = Revision(branch=revision.branch, changeset=changeset, graph=self)
+                        self.pushes[rev] = push
+                        push.changesets.append(changeset)
+            except Exception, e:
+                Log.error("Problem pulling pushlog from {{url}}", {"url": url}, e)
 
         push = self.pushes[revision]
         revision.push = push
