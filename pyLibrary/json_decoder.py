@@ -10,10 +10,10 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-import json
 from pyLibrary.jsons import json_encoder, use_pypy, UnicodeBuilder
-from pyLibrary.structs.dicts import StructList, Null, EmptyList
-from pyLibrary.structs.wraps import wrap, wrap_dot
+from pyLibrary.structs import Null
+from pyLibrary.structs.lists import StructList
+from pyLibrary.structs.wraps import wrap, unwrap
 
 DEBUG = False
 
@@ -393,7 +393,7 @@ class JSONList(object):
         if num == None:
             return StructList([self.list[-1]])
         if num <= 0:
-            return EmptyList
+            return Null
         return StructList(self.list[-num])
 
     def leftBut(self, num):
@@ -404,7 +404,7 @@ class JSONList(object):
         if num == None:
             return StructList([self.list[:-1:]])
         if num <= 0:
-            return EmptyList
+            return Null
         return StructList(self.list[:-num:])
 
     def last(self):

@@ -57,6 +57,10 @@ def JSON2object(json_string, params=None, flexible=False, paths=False):
             if isinstance(json_string, str):
                 Log.error("only unicode json accepted")
 
+            # LOOKUP REFERENCES
+
+
+
             value = wrap(json_decoder(json_string))
 
             if paths:

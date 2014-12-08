@@ -39,8 +39,7 @@ def open_test_instance(name, settings):
 
         Index(settings).delete()
 
-        schema = convert.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
-        es = Cluster(settings).create_index(settings, schema, limit_replicas=True)
+        es = Cluster(settings).create_index(settings, limit_replicas=True)
         return es
 
 

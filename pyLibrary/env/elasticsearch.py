@@ -112,11 +112,11 @@ class Index(object):
         self.cluster_metadata = None
         self.cluster._post(
             "/_aliases",
-            convert.object2JSON({
+            data=convert.unicode2utf8(convert.object2JSON({
                 "actions": [
                     {"add": {"index": self.settings.index, "alias": self.settings.alias}}
                 ]
-            }),
+            })),
             timeout=nvl(self.settings.timeout, 30)
         )
 
@@ -223,11 +223,20 @@ class Index(object):
             items = response["items"]
 
             for i, item in enumerate(items):
-                if not item.index.ok:
-                    Log.error("{{error}} while loading line:\n{{line}}", {
-                        "error": item.index.error,
-                        "line": lines[i * 2 + 1]
-                    })
+                if self.cluster.version.startswith("0.90."):
+                    if not item.index.ok:
+                        Log.error("{{error}} while loading line:\n{{line}}", {
+                            "error": item.index.error,
+                            "line": lines[i * 2 + 1]
+                        })
+                elif self.cluster.version.startswith("1.4."):
+                    if not item.index.status==201:
+                        Log.error("{{error}} while loading line:\n{{line}}", {
+                            "error": item.index.error,
+                            "line": lines[i * 2 + 1]
+                        })
+                else:
+                    Log.error("version not supported {{version}}", {"version":self.cluster.version})
 
             if self.debug:
                 Log.note("{{num}} items added", {"num": len(items)})
@@ -247,20 +256,25 @@ class Index(object):
     # -1 FOR NO REFRESH
     def set_refresh_interval(self, seconds):
         if seconds <= 0:
-            interval = "-1"
+            interval = -1
         else:
             interval = unicode(seconds) + "s"
 
         response = self.cluster.put(
             "/" + self.settings.index + "/_settings",
-            data="{\"index.refresh_interval\":\"" + interval + "\"}"
+            data='{"index":{"refresh_interval":' + convert.object2JSON(interval) + '}}'
         )
 
         result = convert.JSON2object(utf82unicode(response.content))
-        if not result.ok:
-            Log.error("Can not set refresh interval ({{error}})", {
-                "error": utf82unicode(response.content)
-            })
+        # if self.cluster.version.startswith("0.90."):
+        # if not result.ok:
+        #     Log.error("Can not set refresh interval ({{error}})", {
+        #         "error": utf82unicode(response.content)
+        #     })
+        # elif self.cluster.version.startswith("0.4."):
+        #     Log.error("")
+        # else:
+        #     Log.error("Do not know how to handle ES version {{version}}", {"version":self.cluster.version})
 
     def search(self, query, timeout=None):
         query = wrap(query)
@@ -305,6 +319,7 @@ class Cluster(object):
         settings.setdefault("port", 9200)
         self.debug = nvl(settings.debug, DEBUG)
         self.settings = settings
+        self.version = None
         self.path = settings.host + ":" + unicode(settings.port)
 
     def get_or_create_index(self, settings, schema=None, limit_replicas=None):
@@ -350,14 +365,16 @@ class Cluster(object):
         if settings.alias == settings.index:
             Log.error("Expecting index name to conform to pattern")
 
-        if not schema and settings.schema_file:
-            from pyLibrary.env.files import File
+        if settings.schema_file:
+            Log.error('schema_file attribute not suported.  Use {"$ref":<filename>} instead')
 
-            schema = convert.JSON2object(File(settings.schema_file).read(), flexible=True, paths=True)
-        elif isinstance(schema, basestring):
+        if isinstance(schema, basestring):
             schema = convert.JSON2object(schema, paths=True)
         else:
             schema = convert.JSON2object(convert.object2JSON(schema), paths=True)
+
+        if not schema:
+            schema = settings.schema
 
         limit_replicas = nvl(limit_replicas, settings.limit_replicas)
 
@@ -404,13 +421,12 @@ class Cluster(object):
                 response = self.get("/_cluster/state")
                 self.cluster_metadata = response.metadata
                 self.node_metatdata = self.get("/")
+                self.version = self.node_metatdata.version.number
         else:
             Log.error("Metadata exploration has been disabled")
         return self.cluster_metadata
 
-    def _post(self, path, *args, **kwargs):
-        if "data" in kwargs and not isinstance(kwargs["data"], str):
-            Log.error("data must be utf8 encoded string")
+    def _post(self, path, **kwargs):
 
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
@@ -419,7 +435,15 @@ class Cluster(object):
             kwargs.setdefault("timeout", 600)
             kwargs.headers["Accept-Encoding"] = "gzip,deflate"
             kwargs = unwrap(kwargs)
-            response = requests.post(url, *args, **kwargs)
+
+
+            if "data" in kwargs and not isinstance(kwargs["data"], str):
+                Log.error("data must be utf8 encoded string")
+
+            if DEBUG:
+                Log.note("{{url}}:\n{{data|left(300)|indent}}", {"url": url, "data": kwargs["data"]})
+
+            response = requests.post(url, **kwargs)
             if self.debug:
                 Log.note(utf82unicode(response.content)[:130])
             details = convert.JSON2object(utf82unicode(response.content))
@@ -454,12 +478,15 @@ class Cluster(object):
         except Exception, e:
             Log.error("Problem with call to {{url}}", {"url": url}, e)
 
-    def put(self, path, *args, **kwargs):
+    def put(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
+
+        if DEBUG:
+            Log.note("PUT {{url}}:\n{{data|indent}}", {"url": url, "data": kwargs["data"]})
         try:
             kwargs = wrap(kwargs)
             kwargs.setdefault("timeout", 60)
-            response = requests.put(url, *args, **kwargs)
+            response = requests.put(url, **kwargs)
             if self.debug:
                 Log.note(utf82unicode(response.content))
             return response

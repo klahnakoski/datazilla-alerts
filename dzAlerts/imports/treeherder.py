@@ -50,20 +50,20 @@ COUNTER = Struct(count=0)
 
 
 
-All
-a11yr
-media_tests
-tart
-tcanvasmark
-tcheck2
-tp4m
-tp5o
-tp5o_scroll
-tprovider
-trobopan
-ts_paint
-tsvgx
-v8_7
+# All
+# a11yr
+# media_tests
+# tart
+# tcanvasmark
+# tcheck2
+# tp4m
+# tp5o
+# tp5o_scroll
+# tprovider
+# trobopan
+# ts_paint
+# tsvgx
+# v8_7
 
 #
 
@@ -322,6 +322,8 @@ class TreeHerderImport(object):
                     max_id = self.settings.treeherder.min
                 elif e.contains("No mapping found for field [treeherder.perf_id]"):
                     max_id = self.settings.treeherder.min
+                elif e.contains("does not have type"):
+                    max_id = self.settings.treeherder.min
                 else:
                     raise e
 
@@ -413,7 +415,7 @@ class TreeHerderImport(object):
 def get_branches(settings):
     response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
     branches = convert.JSON2object(convert.utf82unicode(response.content))
-    return wrap({branch.name: unwrap(branch) for branch in branches if branch.name in ["mozilla-inbound", "fx-team"]})
+    return wrap({branch.name: unwrap(branch) for branch in branches})
 
 
 def cluster(values, max_size):
@@ -496,6 +498,8 @@ def main():
 
             for b in branches.keys():
                 try:
+                    if b in ["fx-team", "mozilla-inbound"]:
+                        continue
                     worker.current_branch = b
                     worker.extract_from_treeherder(es, transformer)
                 except Exception, e:
