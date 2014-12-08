@@ -266,15 +266,18 @@ class Index(object):
         )
 
         result = convert.JSON2object(utf82unicode(response.content))
-        # if self.cluster.version.startswith("0.90."):
-        # if not result.ok:
-        #     Log.error("Can not set refresh interval ({{error}})", {
-        #         "error": utf82unicode(response.content)
-        #     })
-        # elif self.cluster.version.startswith("0.4."):
-        #     Log.error("")
-        # else:
-        #     Log.error("Do not know how to handle ES version {{version}}", {"version":self.cluster.version})
+        if self.cluster.version.startswith("0.90."):
+            if not result.ok:
+                Log.error("Can not set refresh interval ({{error}})", {
+                    "error": utf82unicode(response.content)
+                })
+        elif self.cluster.version.startswith("1.4."):
+            if not result.acknowledged:
+                Log.error("Can not set refresh interval ({{error}})", {
+                    "error": utf82unicode(response.content)
+                })
+        else:
+            Log.error("Do not know how to handle ES version {{version}}", {"version":self.cluster.version})
 
     def search(self, query, timeout=None):
         query = wrap(query)
@@ -486,7 +489,7 @@ class Cluster(object):
         try:
             kwargs = wrap(kwargs)
             kwargs.setdefault("timeout", 60)
-            response = requests.put(url, **kwargs)
+            response = requests.put(url, data=kwargs.data, **kwargs)
             if self.debug:
                 Log.note(utf82unicode(response.content))
             return response

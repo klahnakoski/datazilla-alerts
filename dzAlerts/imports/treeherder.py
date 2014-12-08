@@ -498,8 +498,6 @@ def main():
 
             for b in branches.keys():
                 try:
-                    if b in ["fx-team", "mozilla-inbound"]:
-                        continue
                     worker.current_branch = b
                     worker.extract_from_treeherder(es, transformer)
                 except Exception, e:
