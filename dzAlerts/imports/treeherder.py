@@ -413,7 +413,7 @@ class TreeHerderImport(object):
 def get_branches(settings):
     response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
     branches = convert.JSON2object(convert.utf82unicode(response.content))
-    return wrap({branch.name: unwrap(branch) for branch in branches if branch.name in ["mozilla-inbound", "fx-team"]})
+    return wrap({branch.name: unwrap(branch) for branch in branches})
 
 
 def cluster(values, max_size):
