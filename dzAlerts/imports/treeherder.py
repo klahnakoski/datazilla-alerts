@@ -50,20 +50,20 @@ COUNTER = Struct(count=0)
 
 
 
-All
-a11yr
-media_tests
-tart
-tcanvasmark
-tcheck2
-tp4m
-tp5o
-tp5o_scroll
-tprovider
-trobopan
-ts_paint
-tsvgx
-v8_7
+# All
+# a11yr
+# media_tests
+# tart
+# tcanvasmark
+# tcheck2
+# tp4m
+# tp5o
+# tp5o_scroll
+# tprovider
+# trobopan
+# ts_paint
+# tsvgx
+# v8_7
 
 #
 
