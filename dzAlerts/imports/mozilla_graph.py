@@ -84,7 +84,7 @@ class MozillaGraph(object):
             url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
             try:
                 response = self._get_and_retry(url)
-                data = convert.JSON2object(response.decode("utf8"))
+                data = convert.JSON2object(response.content.decode("utf8"))
                 for index, _push in data.items():
                     push = Push(index, revision.branch, _push.date, _push.user)
                     for c in _push.changesets:
