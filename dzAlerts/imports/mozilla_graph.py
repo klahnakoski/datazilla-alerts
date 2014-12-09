@@ -18,6 +18,7 @@ from pyLibrary import convert
 from pyLibrary.env.logs import Log
 from pyLibrary.structs import nvl
 from pyLibrary.structs.wraps import unwrap, wrap
+from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -42,11 +43,11 @@ class MozillaGraph(object):
         if revision in self.nodes:
             return self.nodes[revision]
 
+        url = revision.branch.url + "/json-info?node=" + revision.changeset.id
         try:
-            url = revision.branch.url + "/json-info?node=" + revision.changeset.id
             Log.note("Reading details for from {{url}}", {"url": url})
 
-            response = requests.get(url, timeout=self.settings.timeout.seconds)
+            response = self._get_and_retry(url)
             revs = convert.JSON2object(response.content.decode("utf8"))
 
             if len(revs.keys()) != 1:
@@ -70,7 +71,7 @@ class MozillaGraph(object):
             self.nodes[revision]=revision
             return output
         except Exception, e:
-            Log.error("Can not get revision info", e)
+            Log.error("Can not get revision info from {{url}}", {"url": url}, e)
 
     def get_push(self, revision):
         # http://hg.mozilla.org/mozilla-central/json-pushes?full=1&changeset=57c461500a0c
@@ -81,15 +82,18 @@ class MozillaGraph(object):
             })
 
             url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
-            response = requests.get(url, timeout=self.settings.timeout.seconds).content
-            data = convert.JSON2object(response.decode("utf8"))
-            for index, _push in data.items():
-                push = Push(index, revision.branch, _push.date, _push.user)
-                for c in _push.changesets:
-                    changeset = Changeset(id=c.node, **unwrap(c))
-                    rev = Revision(branch=revision.branch, changeset=changeset, graph=self)
-                    self.pushes[rev] = push
-                    push.changesets.append(changeset)
+            try:
+                response = self._get_and_retry(url)
+                data = convert.JSON2object(response.content.decode("utf8"))
+                for index, _push in data.items():
+                    push = Push(index, revision.branch, _push.date, _push.user)
+                    for c in _push.changesets:
+                        changeset = Changeset(id=c.node, **unwrap(c))
+                        rev = Revision(branch=revision.branch, changeset=changeset, graph=self)
+                        self.pushes[rev] = push
+                        push.changesets.append(changeset)
+            except Exception, e:
+                Log.error("Problem pulling pushlog from {{url}}", {"url": url}, e)
 
         push = self.pushes[revision]
         revision.push = push
@@ -130,3 +134,14 @@ class MozillaGraph(object):
                         output.append(node)
             return output
 
+    def _get_and_retry(self, url, **kwargs):
+        kwargs = wrap(kwargs)
+        kwargs.setdefault("timeout", self.settings.timeout.seconds)
+        try:
+            return requests.get(url, **unwrap(kwargs))
+        except Exception, e:
+            try:
+                Thread.sleep(seconds=5)
+                return requests.get(url.replace("https://", "http://"), **unwrap(kwargs))
+            except Exception, f:
+                Log.error("Tried {{url}} twice.  Both failed.", {"url": url}, [e, f])

@@ -42,84 +42,6 @@ NUM_PER_BATCH = 1000
 JOB_ID_MODULO = 10000
 COUNTER = Struct(count=0)
 
-# output.test_machine.name =
-# output.test_build.name =
-# output.test_build.pgo =
-# output.test_build.revision =
-# result.ordering
-
-
-
-# All
-# a11yr
-# media_tests
-# tart
-# tcanvasmark
-# tcheck2
-# tp4m
-# tp5o
-# tp5o_scroll
-# tprovider
-# trobopan
-# ts_paint
-# tsvgx
-# v8_7
-
-#
-
-# cart
-# dromaeo_css
-# dromaeo_dom
-# glterrain
-# kraken
-# sessionrestore
-# sessionrestore_no_auto_restore
-
-# tp5n
-# tpaint
-# tresize
-# ts_paint_cold
-# tscrollx
-# tsvgr_opacity
-
-# Alder
-# Alder-Non-PGO
-# Ash
-# B2G-Inbound
-# B2G-Inbound-Non-PGO
-# Cedar
-# Cypress
-# Date
-# Elm
-# Fig
-# Firefox
-# Firefox-Non-PGO
-# Fx-Team
-# Fx-Team-Non-PGO
-# Gum
-# Gum-Non-PGO
-# Holly
-# Jamun
-# Larch
-# Maple
-# Mozilla-Aurora
-# Mozilla-B2g30-v1.4
-# Mozilla-B2g30-v1.4-Non-PGO
-# Mozilla-B2g32-v2.0
-# Mozilla-B2g32-v2.0-Non-PGO
-# Mozilla-B2g34-v2.1
-# Mozilla-B2g34-v2.1-Non-PGO
-# Mozilla-Beta
-# Mozilla-Beta-Release-Non-PGO
-# Mozilla-Esr24
-# Mozilla-Esr31
-# Mozilla-Inbound
-# Mozilla-Inbound-Non-PGO
-# Mozilla-Release
-# Mozilla-Release-Release-Non-PGO
-# Try
-# Try-Non-PGO
-# mobile
 
 uid_json_encoder = json.JSONEncoder(
     skipkeys=False,
@@ -144,24 +66,6 @@ class TreeHerderImport(object):
 
 
     def treeherder2talos(self, r, url):
-
-        # def get_properties(signature):
-        #     output = self.perf_signatures.get(signature, None)
-        #     if output:
-        #         return output
-        #
-        #     with self.properties_lock:
-        #         output = self.perf_signatures.get(signature, None)
-        #         if not output:
-        #             url = expand_template(self.settings.treeherder.signature_url, {
-        #                 "branch": self.current_branch,
-        #                 "signature": signature
-        #             })
-        #             response = requests.get(url, timeout=self.settings.treeherder.timeout).content
-        #             output = convert.JSON2object(convert.utf82unicode(response))[0]
-        #             output = convert_properties(output)
-        #             self.perf_signatures[signature] = output
-        #         return output
 
         def convert_properties(output, sig_properties):
             """
@@ -255,7 +159,7 @@ class TreeHerderImport(object):
                         num_results += 1
                         perf_results.append(d)
         except Exception, e:
-            Log.warning("Failure to read from {{url}}", {"url": url}, e)
+            Log.warning("Failure to GET from {{url}}", {"url": url}, e)
             return False
 
         # THIS STEP FORMATS DATA BACK TO TALOS ORIGINAL FORMAT
@@ -497,6 +401,9 @@ def main():
                 es = Cluster(settings.elasticsearch).get_or_create_index(settings.elasticsearch)
 
             for b in branches.keys():
+                if branches[b].dvcs_type != "hg":
+                    continue
+
                 try:
                     worker.current_branch = b
                     worker.extract_from_treeherder(es, transformer)
