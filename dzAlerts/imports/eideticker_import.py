@@ -18,7 +18,8 @@ from pyLibrary.env.logs import Log
 from pyLibrary.parsers import URL
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
-from pyLibrary.struct import wrap, StructList, nvl, Struct
+from pyLibrary.structs import nvl, Struct, wrap
+from pyLibrary.structs.lists import StructList
 from pyLibrary.thread.multithread import Multithread
 from pyLibrary.times.timer import Timer
 
