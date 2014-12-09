@@ -135,6 +135,9 @@ class MozillaGraph(object):
             return output
 
     def _get_and_retry(self, url, **kwargs):
+        """
+        requests 2.5.0 HTTPS IS A LITTLE UNSTABLE
+        """
         kwargs = wrap(kwargs)
         kwargs.setdefault("timeout", self.settings.timeout.seconds)
         try:
