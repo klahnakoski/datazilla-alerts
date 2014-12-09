@@ -18,10 +18,10 @@ class Revision(object):
         self.changeset = wrap(changeset)
         self.index = index
         self.push = push
-        self._parents =parents if parents and len(parents)==1 else None
-        self._children = children if children and len(children)==1 else None
+        self._parents = parents if parents and len(parents) == 1 else None
+        self._children = children if children and len(children) == 1 else None
         self.files = files
-        self.graph=graph
+        self.graph = graph
 
     def __hash__(self):
         return hash((self.branch.name.lower(), self.changeset.id[:12]))
