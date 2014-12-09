@@ -142,6 +142,6 @@ class MozillaGraph(object):
         except Exception, e:
             try:
                 Thread.sleep(seconds=5)
-                return requests.get(url, **unwrap(kwargs))
+                return requests.get(url.replace("https://", "http://"), **unwrap(kwargs))
             except Exception, f:
-                Log.error("Tried {{url}} twice.  Both failed.", {"url": url}, e)
+                Log.error("Tried {{url}} twice.  Both failed.", {"url": url}, [e, f])

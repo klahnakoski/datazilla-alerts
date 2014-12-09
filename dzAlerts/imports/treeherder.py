@@ -159,7 +159,7 @@ class TreeHerderImport(object):
                         num_results += 1
                         perf_results.append(d)
         except Exception, e:
-            Log.warning("Failure to read from {{url}}", {"url": url}, e)
+            Log.warning("Failure to GET from {{url}}", {"url": url}, e)
             return False
 
         # THIS STEP FORMATS DATA BACK TO TALOS ORIGINAL FORMAT
