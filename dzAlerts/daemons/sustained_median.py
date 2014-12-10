@@ -24,11 +24,12 @@ from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary import convert
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
-from pyLibrary.structs import nvl, StructList, literal_field, split_field, Null
 from pyLibrary.env.logs import Log
-from pyLibrary.structs.dicts import Struct, set_default
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import DB
+from pyLibrary.structs import Null, split_field, literal_field, set_default, Struct
+from pyLibrary.structs import nvl
+from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap_dot, listwrap
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import Duration

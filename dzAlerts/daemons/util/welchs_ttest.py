@@ -12,9 +12,8 @@ from __future__ import division
 
 from math import log
 from pyLibrary.env.logs import Log
-
+from pyLibrary.structs import unwrap
 from pyLibrary.vendor.strangman.stats import ttest_ind
-from pyLibrary.struct import unwrap
 
 
 def welchs_ttest(a, b):

@@ -315,7 +315,7 @@ class Cluster(object):
         """
 
         settings = wrap(settings)
-        assert settings.host
+        assert settings.host, "Expecting cluster host name"
         settings.setdefault("explore_metadata", True)
 
         self.cluster_metadata = None
