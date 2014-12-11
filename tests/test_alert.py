@@ -16,15 +16,15 @@ import pytest
 
 import dzAlerts
 from dzAlerts.daemons.alert import send_alerts
-from dzAlerts.util import struct
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import Q
-from dzAlerts.util.maths import Math
-from dzAlerts.util.strings import between, expand_template
-from dzAlerts.util.times.durations import Duration
+from pyLibrary import struct
+from pyLibrary import convert
+from pyLibrary.env import startup
+from pyLibrary.sql.db import DB
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.maths import Math
+from pyLibrary.strings import between, expand_template
+from pyLibrary.times.durations import Duration
 from util.testing import make_test_database
 
 
@@ -89,7 +89,7 @@ class test_alert:
                 (0, 117679, 65, 20, 64, 860, 1366261267, "d6b34be6fb4c", "Firefox", "Mozilla-Inbound", "23.0a1", "win", "6.2.9200", "x86_64", "opt", "t-w864-ix-022", "19801727", "1366245741", "tp5o",
                  "bbc.co.uk", 138.8, 40.5257120028, 0, 0.650194865224, 25, 0, 144.37333333365, 12.96130778322, 1, 1)
             ]})
-        self.db.insert_list("test_data_all_dimensions", CNV.table2list(all_dim.header, all_dim.data))
+        self.db.insert_list("test_data_all_dimensions", convert.table2list(all_dim.header, all_dim.data))
         self.series = self.db.query("SELECT min(id) id FROM test_data_all_dimensions")[0].id
 
 
@@ -100,24 +100,24 @@ class test_alert:
                 ("id", "status", "push_date", "last_updated", "last_sent", "tdad_id", "reason", "details", "severity", "confidence", "comment"),
             "data": [
                 # TEST last_sent IS NOT TOO YOUNG
-                (self.uid + 0, "NEW", self.far_past, self.far_past, self.recent_past, self.series, self.reason, CNV.object2JSON({"id": 0, "expect": "fail"}), self.high_severity, self.high_confidence,
+                (self.uid + 0, "NEW", self.far_past, self.far_past, self.recent_past, self.series, self.reason, convert.object2JSON({"id": 0, "expect": "fail"}), self.high_severity, self.high_confidence,
                  None),
                 # TEST last_sent IS TOO OLD, SHOULD BE (RE)SENT
-                (self.uid + 1, "NEW", self.far_past, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 1, "expect": "pass"}), self.high_severity, self.high_confidence, None),
-                (self.uid + 2, "NEW", self.far_past, self.now, self.far_past, self.series, self.reason, CNV.object2JSON({"id": 2, "expect": "pass"}), self.high_severity, self.high_confidence, None),
-                (self.uid + 3, "NEW", self.now, self.now, self.recent_past, self.series, self.reason, CNV.object2JSON({"id": 3, "expect": "pass"}), self.high_severity, self.high_confidence, None),
+                (self.uid + 1, "NEW", self.far_past, self.now, None, self.series, self.reason, convert.object2JSON({"id": 1, "expect": "pass"}), self.high_severity, self.high_confidence, None),
+                (self.uid + 2, "NEW", self.far_past, self.now, self.far_past, self.series, self.reason, convert.object2JSON({"id": 2, "expect": "pass"}), self.high_severity, self.high_confidence, None),
+                (self.uid + 3, "NEW", self.now, self.now, self.recent_past, self.series, self.reason, convert.object2JSON({"id": 3, "expect": "pass"}), self.high_severity, self.high_confidence, None),
                 # TEST obsolete ARE NOT SENT
-                (self.uid + 4, "obsolete", self.now, self.now, self.far_past, self.series, self.reason, CNV.object2JSON({"id": 4, "expect": "fail"}), self.high_severity, self.high_confidence, None),
+                (self.uid + 4, "obsolete", self.now, self.now, self.far_past, self.series, self.reason, convert.object2JSON({"id": 4, "expect": "fail"}), self.high_severity, self.high_confidence, None),
                 # TEST ONLY IMPORTANT ARE SENT
-                (self.uid + 5, "NEW", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 5, "expect": "pass"}), self.important, 0.5, None),
-                (self.uid + 6, "NEW", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 6, "expect": "fail"}), self.low_severity, self.high_confidence, None),
-                (self.uid + 7, "NEW", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 7, "expect": "fail"}), self.high_severity, self.low_confidence, None),
+                (self.uid + 5, "NEW", self.now, self.now, None, self.series, self.reason, convert.object2JSON({"id": 5, "expect": "pass"}), self.important, 0.5, None),
+                (self.uid + 6, "NEW", self.now, self.now, None, self.series, self.reason, convert.object2JSON({"id": 6, "expect": "fail"}), self.low_severity, self.high_confidence, None),
+                (self.uid + 7, "NEW", self.now, self.now, None, self.series, self.reason, convert.object2JSON({"id": 7, "expect": "fail"}), self.high_severity, self.low_confidence, None),
                 # TEST ONES WITH SOLUTION ARE NOT SENT
-                (self.uid + 8, "NEW", self.now, self.now, None, self.series, self.reason, CNV.object2JSON({"id": 8, "expect": "fail"}), self.high_severity, self.high_confidence, "a comment!")
+                (self.uid + 8, "NEW", self.now, self.now, None, self.series, self.reason, convert.object2JSON({"id": 8, "expect": "fail"}), self.high_severity, self.high_confidence, "a comment!")
             ]
         })
 
-        self.test_data = CNV.table2list(test_data.header, test_data.data)
+        self.test_data = convert.table2list(test_data.header, test_data.data)
         self.db.insert_list("alerts", self.test_data)
 
     def test_send_zero_alerts(self):
@@ -172,7 +172,7 @@ class test_alert:
                 "reason": self.reason,
                 "send_time": self.now
             })
-            expected_marked = set([d.id for d in self.test_data if CNV.JSON2object(d.details).expect == 'pass'])
+            expected_marked = set([d.id for d in self.test_data if convert.JSON2object(d.details).expect == 'pass'])
             actual_marked = set(Q.select(alert_state, "id"))
             assert expected_marked == actual_marked, expand_template(
                 "Expecting only id in {{expected}}, but instead got {{actual}}", {
@@ -181,11 +181,11 @@ class test_alert:
                 })
 
             # VERIFY BODY HAS THE CORRECT ALERTS
-            expecting_alerts = set([d.id for d in map(lambda d: CNV.JSON2object(d.details), self.test_data) if d.expect == 'pass'])
+            expecting_alerts = set([d.id for d in map(lambda d: convert.JSON2object(d.details), self.test_data) if d.expect == 'pass'])
             actual_alerts_sent = set([
-                CNV.value2int(between(b, ">>>>", "<<<<"))
+                convert.value2int(between(b, ">>>>", "<<<<"))
                 for b in emails[0].body.split(dzAlerts.daemons.alert.SEPARATOR)
-                if CNV.value2int(between(b, ">>>>", "<<<<")) != None
+                if convert.value2int(between(b, ">>>>", "<<<<")) != None
             ])
             assert expecting_alerts == actual_alerts_sent
         except Exception, e:

@@ -11,8 +11,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.env.logs import Log
+from pyLibrary.sql.db import DB
+from pyLibrary.env.logs import Log
 
 
 class Emailer:

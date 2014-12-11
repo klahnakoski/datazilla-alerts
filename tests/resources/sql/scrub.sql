@@ -21,7 +21,9 @@ DELETE FROM hierarchy WHERE child IN (
 DELETE FROM alerts WHERE create_time<date_add(now(), interval -30 day);
 COMMIT;
 
-DELETE FROM listeners;
+
+DELETE FROM listeners WHERE email <>'klahnakoski@mozilla.com';
+INSERT INTO listeners (email, reason) VALUES ('klahnakoski@mozilla.com', 'b2g_alert_revision');
 COMMIT;
 
 

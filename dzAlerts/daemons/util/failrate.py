@@ -12,8 +12,8 @@ from __future__ import division
 
 from scipy.stats import beta
 
-from dzAlerts.util.collections import MIN, MAX
-from dzAlerts.util.maths import Math
+from pyLibrary.collections import MIN, MAX
+from pyLibrary.maths import Math
 
 REAL_REGRESSION_RATE = 0.01    # CHOOSE SOMETHING SMALL TO REFLECT RARITY
 CONFIDENCE = 0.70

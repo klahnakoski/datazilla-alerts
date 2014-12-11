@@ -11,28 +11,30 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from datetime import datetime
-from dzAlerts.daemons.util import update_alert_status
 
-from dzAlerts.util.collections import MIN, MAX
-from dzAlerts.util.env.files import File
-from dzAlerts.util.maths import Math
-from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.env import startup, elasticsearch
-from dzAlerts.util.queries.db_query import DBQuery
+from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.queries import windows
-from dzAlerts.util.queries.query import Query
-from dzAlerts.util.struct import nvl, StructList, literal_field, split_field, Null
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.struct import Struct, set_default
-from dzAlerts.util.queries import Q
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.structs.wraps import wrap_dot, listwrap
-from dzAlerts.util.thread.threads import Thread
-from dzAlerts.util.times.durations import Duration
-from dzAlerts.util.times.timer import Timer
+from pyLibrary.collections import MIN, MAX
+from pyLibrary.env.files import File
+from pyLibrary.maths import Math
+from pyLibrary.queries.es_query import ESQuery
+from pyLibrary.env import startup, elasticsearch
+from pyLibrary.queries.db_query import DBQuery
+from pyLibrary import convert
+from pyLibrary.queries import windows
+from pyLibrary.queries.query import Query
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.sql.db import DB
+from pyLibrary.structs import Null, split_field, literal_field, set_default, Struct
+from pyLibrary.structs import nvl
+from pyLibrary.structs.lists import StructList
+from pyLibrary.structs.wraps import wrap_dot, listwrap
+from pyLibrary.thread.threads import Thread
+from pyLibrary.times.durations import Duration
+from pyLibrary.times.timer import Timer
+from pyLibrary.times.dates import Date
 
 
 NOW = datetime.utcnow()
@@ -71,7 +73,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     """
 
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
-    oldest_ts = CNV.datetime2milli(NOW - MAX_AGE)
+    oldest_ts = convert.datetime2milli(NOW - MAX_AGE)
     verbose = nvl(settings.param.verbose, VERBOSE)
     if settings.param.debug == None:
         debug = DEBUG or DEBUG_TOUCH_ALL_ALERTS
@@ -169,9 +171,12 @@ def alert_sustained_median(settings, qb, alerts_db):
         try:
             # FIND SPECIFIC PARAMETERS FOR THIS SLICE
             lookup = []
-            for f in listwrap(qb.edges[settings.param.test_dimension].fields):
+            for f in Q.reverse(listwrap(fields)):
                 if isinstance(f, basestring):
                     lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
+                elif f.name and f.value:
+                    k = split_field(f.name)[-1]
+                    lookup.append(settings.param['test' if k=='name' else k][literal_field(g[f.name])])
                 else:
                     for k, v in f.items():
                         lookup.append(settings.param['test' if k=='name' else k][literal_field(g[settings.param.test_dimension][k])])
@@ -215,7 +220,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         test_param.select.repo,
                         test_param.select.value,
                     ]+
-                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")] +  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
+                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")] +  # TODO: FIX BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
                         query.edges,
                     "where": {"and": [
                         {"term": g},
@@ -248,7 +253,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             Log.note("{{num}} unique test results found for {{group}} dating back no further than {{start_date}}", {
                 "num": len(test_results),
                 "group": g,
-                "start_date": CNV.milli2datetime(min_date)
+                "start_date": convert.milli2datetime(min_date)
             })
 
             if verbose:
@@ -357,10 +362,10 @@ def alert_sustained_median(settings, qb, alerts_db):
             }))
 
             if debug:
-                File("test_values.txt").write(CNV.list2tab(Q.run({
+                File("test_values.txt").write(convert.list2tab(Q.run({
                     "from": stats,
                     "select": [
-                        {"name": test_param.sort.name, "value": lambda x: CNV.datetime2string(CNV.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
+                        {"name": test_param.sort.name, "value": lambda x: convert.datetime2string(convert.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
                         "value",
                         {"name": "revision", "value": settings.param.revision_dimension},
                         {"name": "mtest_score", "value": "result.score"},
@@ -378,7 +383,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     continue
                 alert = Struct(
                     status="NEW",
-                    push_date=CNV.milli2datetime(v[test_param.sort.name]),
+                    push_date=convert.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({
                         s.name: v[s.name] for s in source_ref
                     }),
@@ -470,8 +475,9 @@ def main():
             # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-            with ESQuery(elasticsearch.Index(settings.query["from"])) as qb:
-                qb.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
+            es = elasticsearch.Index(settings.query["from"])
+            with ESQuery(es) as qb:
+                qb.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
 
                 with DB(settings.alerts) as alerts_db:
                     alert_sustained_median(

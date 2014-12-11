@@ -12,18 +12,19 @@ from __future__ import division
 
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.env import startup, elasticsearch
-from dzAlerts.util.env.files import File
-from dzAlerts.util.maths import Math
-from dzAlerts.util.queries.db_query import esfilter2sqlwhere, DBQuery
-from dzAlerts.util.queries.es_query import ESQuery
-from dzAlerts.util.sql.db import DB
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.queries import Q
-from dzAlerts.util.struct import nvl, StructList, Struct
-from dzAlerts.util.times.dates import Date
-from dzAlerts.util.times.durations import Duration
+from pyLibrary import convert
+from pyLibrary.env import startup, elasticsearch
+from pyLibrary.env.files import File
+from pyLibrary.maths import Math
+from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
+from pyLibrary.queries.es_query import ESQuery
+from pyLibrary.sql.db import DB
+from pyLibrary.env.logs import Log
+from pyLibrary.queries import Q
+from pyLibrary.structs import nvl, Struct
+from pyLibrary.structs.lists import StructList
+from pyLibrary.times.dates import Date
+from pyLibrary.times.durations import Duration
 
 
 DEBUG_TOUCH_ALL_ALERTS = False
@@ -94,13 +95,13 @@ def eideticker_alert_revision(settings):
         with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
             dbq = DBQuery(alerts_db)
 
-            esq.addDimension(CNV.JSON2object(File(settings.dimension.filename).read()))
+            esq.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
             if UPDATE_EMAIL_TEMPLATE:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
-                    "template": CNV.object2JSON(TEMPLATE),
-                    "subject": CNV.object2JSON(SUBJECT),
+                    "template": convert.object2JSON(TEMPLATE),
+                    "subject": convert.object2JSON(SUBJECT),
                     "style": File("resources/css/email_style.css").read(),
                     "reason": REASON
                 })
@@ -137,10 +138,10 @@ def eideticker_alert_revision(settings):
                 "min_time": Date.MIN if DEBUG_TOUCH_ALL_ALERTS else NOW - LOOK_BACK
             })
             for a in existing_sustained_alerts:
-                a.details = CNV.JSON2object(a.details)
+                a.details = convert.JSON2object(a.details)
                 try:
                     if a.revision.rtrim()[0] in ["{", "["]:
-                        a.revision = CNV.JSON2object(a.revision)
+                        a.revision = convert.JSON2object(a.revision)
                 except Exception, e:
                     pass
 
@@ -206,7 +207,7 @@ def eideticker_alert_revision(settings):
 
                 alerts.append(Struct(
                     status= "NEW",
-                    push_date= CNV.milli2datetime(worst_in_revision.push_date),
+                    push_date= convert.milli2datetime(worst_in_revision.push_date),
                     reason= REASON,
                     revision= revision,
                     tdad_id= revision,

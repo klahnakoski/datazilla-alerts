@@ -12,13 +12,13 @@ from __future__ import division
 
 from datetime import datetime
 
-from dzAlerts.util.queries import Q
-from dzAlerts.util.queries.db_query import esfilter2sqlwhere
-from dzAlerts.util.struct import nvl
-from dzAlerts.util.cnv import CNV
-from dzAlerts.util.sql.db import SQL
-from dzAlerts.util.env.logs import Log
-from dzAlerts.util.times.durations import Duration
+from pyLibrary.queries import Q
+from pyLibrary.queries.db_query import esfilter2sqlwhere
+from pyLibrary.structs import nvl
+from pyLibrary import convert
+from pyLibrary.sql.db import SQL
+from pyLibrary.env.logs import Log
+from pyLibrary.times.durations import Duration
 
 
 REASON = "page_threshold_limit"     # name of the reason in alert_reason
@@ -77,7 +77,7 @@ def page_threshold_limit(db, debug):
                 "last_updated": datetime.utcnow(),
                 "tdad_id": page.tdad_id,
                 "reason": REASON,
-                "details": CNV.object2JSON({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
+                "details": convert.object2JSON({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
                 "severity": page.severity,
                 "confidence": 1.0    # USING NORMAL DIST ASSUMPTION WE CAN ADJUST
                 # CONFIDENCE EVEN BEFORE THRESHOLD IS HIT!

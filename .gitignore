@@ -11,3 +11,4 @@ resources/schema/util/.svn
 .idea
 *.iml
 *.txt
+/pyLibrary/.svn

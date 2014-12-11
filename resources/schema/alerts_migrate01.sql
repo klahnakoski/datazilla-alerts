@@ -1,6 +1,6 @@
-use alerts;
+USE alerts;
 
-ALTER TABLE alerts 
+ALTER TABLE alerts
 	ADD COLUMN branch VARCHAR(128) NOT NULL DEFAULT ' ',
 	ADD COLUMN test VARCHAR(128) NOT NULL DEFAULT ' ',
 	ADD COLUMN platform	varchar(64) NOT NULL DEFAULT ' ',
@@ -29,13 +29,13 @@ commit;
 
 UPDATE alerts SET branch=json.string(details, 'Branch') WHERE details IS NOT NULL;
 UPDATE alerts SET test=coalesce(
-	json.string(json.json(details, 'Test'), 'name'), 
+	json.string(json.json(details, 'Test'), 'name'),
 	json.string(details, 'Test'),
 	json.string(details, 'page_url')
 ) WHERE details IS NOT NULL;
 commit;
 UPDATE alerts SET platform=coalesce(
-	json.string(json.json(details,'OS'), 'version'), 
+	json.string(json.json(details,'OS'), 'version'),
 	json.string(details, 'Device'),
 	json.string(details, "operating_system_version")
 ) WHERE details IS NOT NULL;
@@ -49,7 +49,7 @@ COMMIT;
 UPDATE alerts SET mergedfrom='' WHERE mergedfrom IS NULL;
 
 ALTER TABLE stati MODIFY code VARCHAR(60) NOT NULL;
-INSERT INTO stati (code) VALUES 
+INSERT INTO stati (code) VALUES
 ('False Alarm'),
 ('Investigating'),
 ('Resolved'),

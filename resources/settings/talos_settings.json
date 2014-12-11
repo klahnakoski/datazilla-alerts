@@ -81,6 +81,20 @@
 			}
 		},
 		"test": {
+			"_dromaeo_css_summary": {
+				"window_size": 30,
+				"min_regression": "3%",
+				"better": "higher"
+			},
+			"_dromaeo_dom_summary": {
+				"window_size": 30,
+				"min_regression": "3%",
+				"better": "higher"
+			},
+			"_tp5o_summary": {
+				"better": "lower",
+				"min_regression": "3%"
+			},
 			"1-customize-enter.error.TART": {
 				"units": "unknown units",
 				"better": "lower",
@@ -106,14 +120,14 @@
 				"min_regression": "3%"
 			}
 		},
-		"reason": "talos_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
+		"reason": "talos_alert_sustained_median", //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
 		"severity": 0.8,
 		"test_dimension": "Talos.Test",
 		"revision_dimension": "Talos.Revision",
 		"branch_dimension": "Talos.Branch",
 		"source_ref": [
 			"Talos.Test",
-			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
+			{"name": "test_run_id", "value": "datazilla.test_run_id"}
 		],
 		"verbose": true,
 		"mark_complete": "talos_sustained_median",
