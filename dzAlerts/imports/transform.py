@@ -86,16 +86,22 @@ class Talos2ES():
             mainthread_transform(r.results_aux)
             mainthread_transform(r.results_xperf)
 
+
+            branch = r.test_build.branch
+            if branch.lower().endswith("-non-pgo"):
+                branch = branch[0:-8]
+                r.test_build.branch = branch
+                r.test_build.pgo = False
+            else:
+                r.test_build.pgo = True
+
+            if r.test_machine.osversion.endswith(".e"):
+                r.test_machine.osversion = r.test_machine.osversion[:-2]
+                r.test_machine.e10s = True
+
+
             #ADD PUSH LOG INFO
             try:
-                branch = r.test_build.branch
-                if branch.endswith("-Non-PGO"):
-                    r.test_build.branch = branch
-                    r.test_build.pgo = False
-                    branch = branch[0:-8]
-                else:
-                    r.test_build.pgo = True
-
                 with Profiler("get from pushlog"):
                     revision = Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}})
                     with self.locker:
@@ -115,7 +121,7 @@ class Talos2ES():
             # RECORD THE UNKNOWN PART OF THE TEST RESULTS
             remainder = r.copy()
             remainder.results = None
-            if len(remainder.keys()) > 4:
+            if not r.results or len(remainder.keys()) > 4:
                 new_records.append(remainder)
 
             #RECORD TEST RESULTS
