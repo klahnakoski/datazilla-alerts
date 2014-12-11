@@ -16,7 +16,6 @@
 				"value": "test_build.push_date"
 			},
 			"units": "unknown",
-			"better": "lower",
 			"min_regression": "5%",
 			"min_mscore": 2.5,
 			"min_tscore": 4.0,
@@ -44,7 +43,7 @@
 		},
 		"suite": {
 			"dromaeo_css": {
-				"window_size": 30,
+				"window_size": 50,
 				"min_regression": "15%",
 				"better": "higher"
 			},
@@ -53,7 +52,14 @@
 				"min_regression": "15%",
 				"better": "higher"
 			},
+			"tp5o_scroll": {
+				"window_size": 30,
+				"min_regression": "15%"
+			},
 			"v8_7": {
+				"better": "higher"
+			},
+			"kraken": {
 				"better": "higher"
 			},
 			"canvasmark": {
@@ -94,6 +100,10 @@
 						"value": "result.stats.min"
 					}
 				}
+			},
+			"SUMMARY":{
+				"units": "geometric mean",
+				"min_regression": "3%"
 			}
 		},
 		"reason": "talos_alert_sustained_median",  //ADDED TO ALERT FOR MARKUP OF ALERT TYPE
