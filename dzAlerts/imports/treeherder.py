@@ -319,14 +319,7 @@ class TreeHerderImport(object):
 def get_branches(settings):
     response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
     branches = convert.JSON2object(convert.utf82unicode(response.content))
-
-    def talos2treeherder(name):
-        if name == "mozilla-central":
-            return "firefox"
-        else:
-            return name
-
-    return wrap({talos2treeherder(branch.name): unwrap(branch) for branch in branches})
+    return wrap({branch.name: unwrap(branch) for branch in branches})
 
 
 def cluster(values, max_size):
@@ -411,11 +404,8 @@ def main():
                 if branches[b].dvcs_type != "hg":
                     continue
 
-                if b!="firefox":
-                    continue
-
                 try:
-                    worker.current_branch = branches[b].name
+                    worker.current_branch = b
                     worker.extract_from_treeherder(es, transformer)
                 except Exception, e:
                     Log.warning("Problem with import of {{branch}}", {"branch": b}, e)
