@@ -321,8 +321,8 @@ def get_branches(settings):
     branches = convert.JSON2object(convert.utf82unicode(response.content))
 
     def talos2treeherder(name):
-        if name == "Mozilla-Central":
-            return "Firefox"
+        if name == "mozilla-central":
+            return "firefox"
         else:
             return name
 
@@ -411,8 +411,11 @@ def main():
                 if branches[b].dvcs_type != "hg":
                     continue
 
+                if b!="firefox":
+                    continue
+
                 try:
-                    worker.current_branch = b
+                    worker.current_branch = branches[b].name
                     worker.extract_from_treeherder(es, transformer)
                 except Exception, e:
                     Log.warning("Problem with import of {{branch}}", {"branch": b}, e)
