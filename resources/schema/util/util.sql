@@ -1,9 +1,11 @@
-drop database if exists util;
-create database util;
-use util;
 SET SESSION binlog_format = 'ROW';
-
 DELIMITER ;;
+
+
+DROP DATABASE IF EXISTS util;;
+CREATE DATABASE util;;
+USE util;;
+
 
 ###############################################################################
 ## PREPARED STATEMENTS AND PROCEDURES HAVE LIMITS STARTING IN 5.1

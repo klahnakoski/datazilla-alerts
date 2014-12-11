@@ -469,11 +469,11 @@ class Except(Exception):
             cause_strings = []
             for c in listwrap(self.cause):
                 try:
-                    cause_strings.append(indent(unicode(c)))
+                    cause_strings.append(unicode(c))
                 except Exception, e:
                     pass
 
-            output += "caused by\n" + "\nand caused by\n".join(cause_strings)
+            output += "caused by\n\t" + "\nand caused by\n\t".join(cause_strings)
 
         return output
 

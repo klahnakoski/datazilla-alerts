@@ -158,10 +158,11 @@ class File(object):
                 return convert.JSON2object(requests.get(ref), flexible=True, paths=True)
             elif ref.startswith("file://"):
                 ref = ref[7::]
-                if ref.startswith("/"):
-                    return File(ref).read_json(ref)
-                else:
-                    return File.new_instance(self.parent, ref).read_json()
+
+            if ref.startswith("/"):
+                return File(ref).read_json(ref)
+            else:
+                return File.new_instance(self.parent, ref).read_json()
         elif isinstance(node, list):
             candidate = [self._replace_ref(n) for n in node]
             if all(p[0] is p[1] for p in zip(candidate, node)):
