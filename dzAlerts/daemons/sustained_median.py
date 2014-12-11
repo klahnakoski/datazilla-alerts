@@ -11,16 +11,16 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from datetime import datetime
-from dzAlerts.daemons.util import update_alert_status
 
+from dzAlerts.daemons.util import update_alert_status
+from dzAlerts.daemons.util.median_test import median_test
+from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary.collections import MIN, MAX
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.env import startup, elasticsearch
 from pyLibrary.queries.db_query import DBQuery
-from dzAlerts.daemons.util.median_test import median_test
-from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary import convert
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
@@ -34,6 +34,7 @@ from pyLibrary.structs.wraps import wrap_dot, listwrap
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import Duration
 from pyLibrary.times.timer import Timer
+from pyLibrary.times.dates import Date
 
 
 NOW = datetime.utcnow()
@@ -170,9 +171,12 @@ def alert_sustained_median(settings, qb, alerts_db):
         try:
             # FIND SPECIFIC PARAMETERS FOR THIS SLICE
             lookup = []
-            for f in listwrap(Q.reverse(qb.edges[settings.param.test_dimension].fields)):
+            for f in Q.reverse(listwrap(fields)):
                 if isinstance(f, basestring):
                     lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
+                elif f.name and f.value:
+                    k = split_field(f.name)[-1]
+                    lookup.append(settings.param['test' if k=='name' else k][literal_field(g[f.name])])
                 else:
                     for k, v in f.items():
                         lookup.append(settings.param['test' if k=='name' else k][literal_field(g[settings.param.test_dimension][k])])
@@ -216,7 +220,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                         test_param.select.repo,
                         test_param.select.value,
                     ]+
-                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")] +  # BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
+                        [s for s in source_ref if not s.name.startswith("Talos.Test") and not s.name.startswith("B2G.Test")] +  # TODO: FIX BIG HACK!  WE SHOULD HAVE A WAY TO UNION() THE SELECT CLAUSE
                         query.edges,
                     "where": {"and": [
                         {"term": g},
@@ -471,7 +475,8 @@ def main():
             # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-            with ESQuery(elasticsearch.Index(settings.query["from"])) as qb:
+            es = elasticsearch.Index(settings.query["from"])
+            with ESQuery(es) as qb:
                 qb.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
 
                 with DB(settings.alerts) as alerts_db:

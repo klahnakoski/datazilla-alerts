@@ -10,8 +10,8 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from math import log, exp
-import dzAlerts
+from math import log
+
 from pyLibrary import maths
 from pyLibrary.collections import AND
 from pyLibrary.env.logs import Log
@@ -26,7 +26,7 @@ def median_test(samples1, samples2, resolution=None, interpolate=True):
     """
     if len(samples1) < 3 or len(samples2) < 3:
         return {"diff": 0, "score": 0}
-    median = pyLibrary.maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
+    median = maths.stats.median(samples1 + samples2, simple=not interpolate, mean_weight=0.5)
 
     if resolution == None:
         if AND([Math.is_integer(v) for v in samples1 + samples2]):

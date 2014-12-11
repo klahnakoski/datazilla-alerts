@@ -64,11 +64,11 @@ def run(query):
     if query.where is not TRUE_FILTER:
         frum = filter(frum, query.where)
 
-    if query.select:
-        frum = select(frum, query.select)
-
     if query.sort:
         frum = sort(frum, query.sort)
+
+    if query.select:
+        frum = select(frum, query.select)
 
     return frum
 
@@ -859,7 +859,12 @@ def intervals(_min, _max=None, size=1):
 
 
 def reverse(vals):
-    """
-    ONLY BECAUSE I AM A NUMBSKULL: I CAN NEVER REMEMBER THIS FUNCTION
-    """
-    return reversed(vals)
+    # TODO: Test how to do this fastest
+    l = len(vals)
+    output = [None] * l
+
+    for v in unwrap(vals):
+        l -= 1
+        output[l] = v
+
+    return wrap(output)

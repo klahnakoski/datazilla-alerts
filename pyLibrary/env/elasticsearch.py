@@ -163,21 +163,33 @@ class Index(object):
 
     def delete_record(self, filter):
         self.cluster.get_metadata()
+
         if self.cluster.node_metatdata.version.number.startswith("0.90"):
-            query = filter
+            query = {"filtered": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}
         elif self.cluster.node_metatdata.version.number.startswith("1.0"):
-            query = {"query": filter}
+            query = {"query": {"filtered": {
+                "query": {"match_all": {}},
+                "filter": filter
+            }}}
         else:
             raise NotImplementedError
 
         if self.debug:
             Log.note("Delete bugs:\n{{query}}", {"query": query})
 
-        self.cluster.delete(
+        result = self.cluster.delete(
             self.path + "/_query",
             data=convert.object2JSON(query),
             timeout=60
         )
+
+        for name, status in result._indices.items():
+            if status._shards.failed > 0:
+                Log.error("Failure to delete from {{index}}", {"index": name})
+
 
     def extend(self, records):
         """
@@ -496,13 +508,13 @@ class Cluster(object):
         except Exception, e:
             Log.error("Problem with call to {{url}}", {"url": url}, e)
 
-    def delete(self, path, *args, **kwargs):
+    def delete(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
         try:
             kwargs.setdefault("timeout", 60)
-            response = requests.delete(url, **kwargs)
+            response = convert.JSON2object(utf82unicode(requests.delete(url, **kwargs).content))
             if self.debug:
-                Log.note(utf82unicode(response.content))
+                Log.note("delete response {{response}}", {"response": response})
             return response
         except Exception, e:
             Log.error("Problem with call to {{url}}", {"url": url}, e)
