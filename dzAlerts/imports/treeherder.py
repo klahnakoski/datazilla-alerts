@@ -319,7 +319,14 @@ class TreeHerderImport(object):
 def get_branches(settings):
     response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
     branches = convert.JSON2object(convert.utf82unicode(response.content))
-    return wrap({branch.name: unwrap(branch) for branch in branches})
+
+    def talos2treeherder(name):
+        if name == "Mozilla-Central":
+            return "Firefox"
+        else:
+            return name
+
+    return wrap({talos2treeherder(branch.name): unwrap(branch) for branch in branches})
 
 
 def cluster(values, max_size):
