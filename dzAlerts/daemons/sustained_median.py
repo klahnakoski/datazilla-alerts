@@ -411,31 +411,33 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     # CHECK THE CURRENT ALERTS
     if not evaled_tests:
-        old_alerts = StructList.EMPTY
+        old_alerts = Null
     else:
-        old_alerts = DBQuery(alerts_db).query({
-            "from": "alerts",
-            "select": [
-                "id",
-                "tdad_id",
-                "status",
-                "last_updated",
-                "severity",
-                "confidence",
-                "details",
-                "comment",
-                "branch",
-                "test",
-                "platform",
-                "percent",
-                "keyrevision",
-                "mergedfrom"
-            ],
-            "where": {"and": [
-                {"terms": {"tdad_id": evaled_tests}},
-                {"term": {"reason": settings.param.reason}}
-            ]}
-        })
+        old_alerts = []
+        for et in Q.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
+            old_alerts.extend(DBQuery(alerts_db).query({
+                "from": "alerts",
+                "select": [
+                    "id",
+                    "tdad_id",
+                    "status",
+                    "last_updated",
+                    "severity",
+                    "confidence",
+                    "details",
+                    "comment",
+                    "branch",
+                    "test",
+                    "platform",
+                    "percent",
+                    "keyrevision",
+                    "mergedfrom"
+                ],
+                "where": {"and": [
+                    {"terms": {"tdad_id": et}},
+                    {"term": {"reason": settings.param.reason}}
+                ]}
+            }))
 
     update_alert_status(settings, alerts_db, alerts, old_alerts)
 
