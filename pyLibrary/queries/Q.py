@@ -12,7 +12,6 @@ from __future__ import unicode_literals
 from __future__ import division
 import __builtin__
 
-from pyLibrary import structs
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.filters import TRUE_FILTER, FALSE_FILTER

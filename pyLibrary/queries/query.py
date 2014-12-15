@@ -9,7 +9,6 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary import structs
 from pyLibrary.collections import AND, reverse
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import MVEL, _normalize_select, INDEX_CACHE
