@@ -14,7 +14,7 @@ from __future__ import division
 
 from datetime import datetime, timedelta
 import sys
-from pyLibrary.env.logs import BaseLog, DEBUG_LOGGING, Log
+from .logs import BaseLog, DEBUG_LOGGING, Log
 from pyLibrary.strings import expand_template
 from pyLibrary.thread.threads import Thread
 

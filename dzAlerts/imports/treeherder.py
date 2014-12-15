@@ -19,14 +19,14 @@ from pyLibrary import convert
 from pyLibrary.collections import MAX
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.files import File
-from pyLibrary.env.profiles import Profiler
+from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.jsons import json_scrub
 from pyLibrary.maths import Math
 from pyLibrary.queries import Q
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
-from pyLibrary.env.logs import Log
-from pyLibrary.env import startup
+from pyLibrary.debugs.logs import Log
+from pyLibrary.debugs import startup
 from pyLibrary.structs.dicts import Struct
 from pyLibrary.structs import nvl, set_default, literal_field
 from pyLibrary.structs.lists import StructList

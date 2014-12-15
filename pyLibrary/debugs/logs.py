@@ -50,12 +50,12 @@ class Log(object):
 
         if settings["class"]:
             if settings["class"].startswith("logging.handlers."):
-                from pyLibrary.env.log_usingLogger import Log_usingLogger
+                from .log_usingLogger import Log_usingLogger
 
                 return Log_usingLogger(settings)
             else:
                 try:
-                    from pyLibrary.env.log_usingLogger import make_log_from_settings
+                    from .log_usingLogger import make_log_from_settings
 
                     return make_log_from_settings(settings)
                 except Exception, e:
@@ -66,11 +66,11 @@ class Log(object):
         if settings.log_type == "file" or settings.filename:
             return Log_usingFile(settings.filename)
         if settings.log_type == "stream" or settings.stream:
-            from pyLibrary.env.log_usingStream import Log_usingStream
+            from .log_usingStream import Log_usingStream
 
             return Log_usingStream(settings.stream)
         if settings.log_type == "elasticsearch" or settings.stream:
-            from pyLibrary.env.log_usingElasticSearch import Log_usingElasticSearch
+            from .log_usingElasticSearch import Log_usingElasticSearch
 
             return Log_usingElasticSearch(settings)
 
@@ -275,7 +275,7 @@ class Log(object):
             cls.cprofiler.enable()
 
         if settings.profile:
-            from pyLibrary.env import profiles
+            from pyLibrary.debugs import profiles
 
             if isinstance(settings.profile, bool):
                 settings.profile = {"enabled": True, "filename": "profile.tab"}
@@ -329,7 +329,7 @@ class Log(object):
 
     @classmethod
     def stop(cls):
-        from pyLibrary.env import profiles
+        from pyLibrary.debugs import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
             write_profile(cls.settings.cprofile, cls.cprofiler)
@@ -473,7 +473,7 @@ class Except(Exception):
                 except Exception, e:
                     pass
 
-            output += "caused by\n\t" + "\nand caused by\n\t".join(cause_strings)
+            output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 
         return output
 
@@ -600,7 +600,7 @@ class Log_usingMulti(BaseLog):
 
 def write_profile(profile_settings, cprofiler):
     from pyLibrary import convert
-    from pyLibrary.env.files import File
+    from .files import File
     import pstats
 
     p = pstats.Stats(cprofiler)

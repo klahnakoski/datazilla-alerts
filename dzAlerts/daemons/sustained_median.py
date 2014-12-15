@@ -19,12 +19,13 @@ from pyLibrary.collections import MIN, MAX
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.es_query import ESQuery
-from pyLibrary.env import startup, elasticsearch
+from pyLibrary.debugs import startup
+from pyLibrary.env import elasticsearch
 from pyLibrary.queries.db_query import DBQuery
 from pyLibrary import convert
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import DB
 from pyLibrary.structs import Null, split_field, literal_field, set_default, Struct

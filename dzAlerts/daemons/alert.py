@@ -17,12 +17,12 @@ from pynliner import Pynliner
 
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from pyLibrary import convert
-from pyLibrary.env import startup
+from pyLibrary.debugs import startup
 from pyLibrary.queries import Q
 from pyLibrary.queries.db_query import esfilter2sqlwhere
 from pyLibrary.strings import expand_template
 from pyLibrary.maths import Math
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.sql.db import DB, SQL
 from pyLibrary.structs import nvl
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue

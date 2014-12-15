@@ -14,7 +14,7 @@ from math import log
 
 from pyLibrary import maths
 from pyLibrary.collections import AND
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.structs.dicts import Struct
 

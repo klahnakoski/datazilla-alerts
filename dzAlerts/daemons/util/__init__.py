@@ -12,7 +12,7 @@ from __future__ import division
 
 from datetime import datetime
 from pyLibrary.collections import OR
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 
 

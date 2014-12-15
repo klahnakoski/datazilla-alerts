@@ -17,7 +17,7 @@ from pyLibrary.queries.db_query import esfilter2sqlwhere
 from pyLibrary.structs import nvl
 from pyLibrary import convert
 from pyLibrary.sql.db import SQL
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.times.durations import Duration
 
 

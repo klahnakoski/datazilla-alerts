@@ -15,9 +15,9 @@ import dzAlerts
 from dzAlerts.daemons.alert import send_alerts
 from dzAlerts.daemons.eideticker_alert_revision import eideticker_alert_revision
 from dzAlerts.daemons.email_send import email_send
-from pyLibrary.env import startup
+from pyLibrary.debugs import startup
 from pyLibrary.env.emailer import Emailer
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.sql.db import DB, SQL
 from pyLibrary.structs import nvl, Struct
 from pyLibrary.times.durations import Duration

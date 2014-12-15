@@ -12,8 +12,8 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from dzAlerts.daemons.util.failrate import failure_rate, confident_fail_rate
-from pyLibrary.env import startup
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs import startup
+from pyLibrary.debugs.logs import Log
 
 EPSILON = 0.000001
 

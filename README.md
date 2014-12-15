@@ -1,7 +1,7 @@
 
 dzAlerts
 ========
-Detect regressions and improvments in peformance data ([more](https://wiki.mozilla.org/Auto-tools/Projects/Alerts))
+Detect regressions and improvements in performance data ([more](https://wiki.mozilla.org/Auto-tools/Projects/Alerts))
 
 Requirements
 ------------
@@ -27,15 +27,16 @@ Choose a Branch
 To balance stability with features, each deployment has its own branch, with
 occasional cross-pollination so they do not diverge.
 
-  * **dev** - current development
+  * **dev** - current development (**submit pull requests here!**)
   * **b2g** - b2g staging server
-  * **eideticker** - eideticker staging server
+  * **eideticker** - Eideticker staging server
   * **talos** - talos staging server
-  * **master** - eventual production deployment
+  * **treeherder** - import talos from Treeherder
+  * **master** - eventual production deployment (far behind the other branches)
 
 Setup Alert Database
 --------------------
-You can use [setup.py](tests/resources/python/setup.py) to setup the alerts database,
+USing the **dev** branch You can use [setup.py](tests/resources/python/setup.py) to setup the alerts database,
 
     python tests/resources/python/setup.py --settings=tests/resources/settings/setup_settings.json
 
@@ -46,5 +47,3 @@ Running Alerts
 --------------
 
     https://github.com/klahnakoski/datazilla-alerts/blob/master/resources/scripts/<type>-alerts.bat
-
-
