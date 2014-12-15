@@ -6,6 +6,7 @@
 talos_summary*
 all.bat
 out
+pyLibrary/.svn
 dzAlerts/util/.svn
 resources/schema/util/.svn
 .idea
