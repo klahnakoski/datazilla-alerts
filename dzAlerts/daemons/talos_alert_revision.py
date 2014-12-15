@@ -13,13 +13,13 @@ from __future__ import division
 from datetime import datetime
 from dzAlerts.daemons.util import update_alert_status
 from pyLibrary import convert
-from pyLibrary.env import startup, elasticsearch
+from pyLibrary.debugs import startup, elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.sql.db import DB
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.structs import nvl, Struct
 from pyLibrary.structs.lists import StructList

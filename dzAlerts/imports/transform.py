@@ -16,13 +16,13 @@ from dzAlerts.imports.repos.revisions import Revision
 import pyLibrary
 from pyLibrary import convert
 from pyLibrary.collections import MIN, MAX
-from pyLibrary.env.profiles import Profiler
+from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.maths import Math
 from pyLibrary.maths.stats import Stats, ZeroMoment2Stats, ZeroMoment
 from pyLibrary.structs import literal_field, Struct, nvl
 from pyLibrary.structs.lists import StructList
 from pyLibrary.thread.threads import Lock
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.times.timer import Timer
 

@@ -16,7 +16,7 @@ from pyLibrary.queries.query import _normalize_edge
 from pyLibrary.structs import Null
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap, wrap_dot, listwrap
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 
 
 class Cube(object):

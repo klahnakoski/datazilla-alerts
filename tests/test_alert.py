@@ -18,9 +18,9 @@ import dzAlerts
 from dzAlerts.daemons.alert import send_alerts
 from pyLibrary import struct
 from pyLibrary import convert
-from pyLibrary.env import startup
+from pyLibrary.debugs import startup
 from pyLibrary.sql.db import DB
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.maths import Math
 from pyLibrary.strings import between, expand_template

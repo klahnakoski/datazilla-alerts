@@ -18,11 +18,11 @@ import urllib
 from pyLibrary import struct
 from pyLibrary.sql.sql import find_holes
 from pyLibrary import convert
-from pyLibrary.env import startup, elasticsearch
+from pyLibrary.debugs import startup, elasticsearch
 from pyLibrary.maths.randoms import Random
 from pyLibrary.sql.db import DB
 from pyLibrary.env.files import File
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.strings import between
 from pyLibrary.structs import nvl

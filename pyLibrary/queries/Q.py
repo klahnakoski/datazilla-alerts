@@ -21,7 +21,7 @@ from pyLibrary.queries.index import Index
 from pyLibrary.queries.query import Query, _normalize_selects, sort_direction
 from pyLibrary.queries.cube import Cube
 from pyLibrary.maths import Math
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.structs import set_default, Null, Struct, split_field, nvl, join_field
 from pyLibrary.structs.lists import StructList
