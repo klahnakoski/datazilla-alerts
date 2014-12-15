@@ -12,7 +12,9 @@ from __future__ import division
 
 from datetime import datetime
 from math import log10
+
 from pynliner import Pynliner
+
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from pyLibrary import convert
 from pyLibrary.env import startup
@@ -26,6 +28,7 @@ from pyLibrary.structs import nvl
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import Duration
+
 
 ALERT_LIMIT = Math.bayesian_add(0.90, 0.70)  # SIMPLE severity*confidence LIMIT (FOR NOW)
 HEADER = "<h3>Performance Regression Alert</h3>"

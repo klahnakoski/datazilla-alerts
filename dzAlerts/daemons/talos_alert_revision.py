@@ -21,7 +21,8 @@ from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.sql.db import DB
 from pyLibrary.env.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.structs import nvl, StructList, Struct
+from pyLibrary.structs import nvl, Struct
+from pyLibrary.structs.lists import StructList
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
