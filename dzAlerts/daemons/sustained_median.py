@@ -42,7 +42,7 @@ MAX_AGE = Duration(days=90)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
 On page {{page_url}}<br>
-<a href=\"https://tbpl.mozilla.org/?tree={{branch}}&rev={{revision}}\">TBPL</a><br>
+<a href=\"https://treeherder.mozilla.org/#/jobs?repo={{repo}}&revision={{revision}}\">Treeherder</a><br>
 <a href=\"https://hg.mozilla.org/rev/{{revision}}\">Mercurial</a><br>
 <a href=\"https://bugzilla.mozilla.org/show_bug.cgi?id={{bug_id}}\">Bugzilla - {{bug_description}}</a><br>
 <a href=\"https://datazilla.mozilla.org/?start={{push_date_min}}&stop={{push_date_max}}&product={{product}}&repository={{branch}}&os={{operating_system_name}}&os_version={{operating_system_version}}&test={{test_name}}&graph_search={{revision}}&error_bars=false&project=talos\">Datazilla</a><br>
