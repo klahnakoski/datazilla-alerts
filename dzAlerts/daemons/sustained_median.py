@@ -414,6 +414,10 @@ def alert_sustained_median(settings, qb, alerts_db):
         old_alerts = Null
     else:
         old_alerts = []
+        # TODO: SOLVE THIS PROBLEM:  THE WIDE DATA REQUIREMENTS ARE MAKING LARGE SQL STATEMENTS
+        # REALLY, THEY ARE LONG LISTS OF DATA, SO THER IS OPPORTUNITY FOR COMPRESSION;
+        # WE COULD CREATE TABLE, LOAD TABLE, THEN EXECUTE QUERY USING A JOIN
+        # WE COULD SEND A STORED PROCEDURE, AND THEN CALL IT WITH THE DATA (BUT IS THAT SMALLER?)
         for et in Q.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
             old_alerts.extend(DBQuery(alerts_db).query({
                 "from": "alerts",
