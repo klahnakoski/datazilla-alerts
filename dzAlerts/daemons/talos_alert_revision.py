@@ -69,12 +69,7 @@ MECURIAL_PATH = {
     "Mozilla-Inbound": "integration/mozilla-inbound",
 }
 
-TBPL_PATH = {
-    "B2G-Inbound": "B2g-Inbound"
-}
-
-
-SUBJECT = "[ALERT][{{details.example.tbpl.url.branch}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Talos.Test.suite}}"
+SUBJECT = "[ALERT][{{details.example.treeherder.url.repo}}] {{details.example.Talos.Test.name}} regressed by {{details.example.diff_percent|percent(digits=2)}} in {{details.example.Talos.Test.suite}}"
 
 TEMPLATE = [
     """
@@ -84,7 +79,7 @@ TEMPLATE = [
         [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch}}/rev/{{revision}}">{{revision}}</a>]
         </span>
         [<a href="https://hg.mozilla.org/{{details.example.mercurial.url.branch|lower}}/rev/{{details.example.past_revision}}">Previous</a>]
-        [<a href="https://tbpl.mozilla.org/?tree={{details.example.tbpl.url.branch}}&rev={{revision}}">TBPL</a>]
+        [<a href="https://treeherder.mozilla.org/#/jobs?repo={{details.example.treeherder.url.repo}}&rev={{revision}}">Treeherder</a>]
     <br>
     <br>
     {{details.total_exceptions}} exceptional events:<br>
@@ -202,8 +197,8 @@ def talos_alert_revision(settings):
                     stop = Math.max(example.push_date_max, (2*example.push_date) - example.push_date_min) + Duration.DAY.milli
                     start = Math.min(example.push_date_min, stop-Duration.WEEK.milli)
 
-                    example.tbpl.url.branch = TBPL_PATH.get(branch, branch)
                     example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
+                    example.treeherder.url.repo = example.mercurial.url.branch.split('/')[-1]
                     example.datazilla.url = Struct(
                         project="talos",
                         product=example.Talos.Product,
