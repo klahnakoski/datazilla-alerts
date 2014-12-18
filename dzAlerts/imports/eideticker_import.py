@@ -11,10 +11,10 @@ from __future__ import unicode_literals
 from __future__ import division
 import requests
 
-from pyLibrary.env import startup
+from pyLibrary.debugs import startup
 from pyLibrary.env.elasticsearch import Cluster
 
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.parsers import URL
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template

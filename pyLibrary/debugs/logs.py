@@ -19,7 +19,7 @@ from types import ModuleType
 
 from pyLibrary.jsons import json_encoder
 from pyLibrary.thread import threads
-from pyLibrary.structs import nvl, Struct, split_field, join_field
+from pyLibrary.structs import nvl, Struct, split_field, join_field, Null
 from pyLibrary.structs.wraps import listwrap, wrap, wrap_dot
 from pyLibrary.strings import indent, expand_template
 from pyLibrary.thread.threads import Thread
@@ -50,12 +50,12 @@ class Log(object):
 
         if settings["class"]:
             if settings["class"].startswith("logging.handlers."):
-                from pyLibrary.env.log_usingLogger import Log_usingLogger
+                from .log_usingLogger import Log_usingLogger
 
                 return Log_usingLogger(settings)
             else:
                 try:
-                    from pyLibrary.env.log_usingLogger import make_log_from_settings
+                    from .log_usingLogger import make_log_from_settings
 
                     return make_log_from_settings(settings)
                 except Exception, e:
@@ -66,11 +66,11 @@ class Log(object):
         if settings.log_type == "file" or settings.filename:
             return Log_usingFile(settings.filename)
         if settings.log_type == "stream" or settings.stream:
-            from pyLibrary.env.log_usingStream import Log_usingStream
+            from .log_usingStream import Log_usingStream
 
             return Log_usingStream(settings.stream)
         if settings.log_type == "elasticsearch" or settings.stream:
-            from pyLibrary.env.log_usingElasticSearch import Log_usingElasticSearch
+            from .log_usingElasticSearch import Log_usingElasticSearch
 
             return Log_usingElasticSearch(settings)
 
@@ -114,7 +114,7 @@ class Log(object):
         cls.main_log.write(log_template, log_params)
 
     @classmethod
-    def unexpected(cls, template, params=None, cause=None):
+    def unexpected(cls, template, params=None, cause=Null):
         if isinstance(params, BaseException):
             cause = params
             params = None
@@ -139,7 +139,7 @@ class Log(object):
         cls,
         template,
         params=None,
-        cause=None,
+        cause=Null,
         stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         if isinstance(params, BaseException):
@@ -166,7 +166,7 @@ class Log(object):
         cls,
         template, # human readable template
         params=None, # parameters for template
-        cause=None, # pausible cause
+        cause=Null, # pausible cause
         stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         """
@@ -178,7 +178,7 @@ class Log(object):
 
         add_to_trace = False
         if cause == None:
-            cause = []
+            cause = Null
         elif isinstance(cause, list):
             pass
         elif isinstance(cause, Except):
@@ -202,7 +202,7 @@ class Log(object):
         cls,
         template, # human readable template
         params=None, # parameters for template
-        cause=None, # pausible cause
+        cause=Null, # pausible cause
         stack_depth=0    # stack trace offset (==1 if you do not want to report self)
     ):
         """
@@ -275,7 +275,7 @@ class Log(object):
             cls.cprofiler.enable()
 
         if settings.profile:
-            from pyLibrary.env import profiles
+            from pyLibrary.debugs import profiles
 
             if isinstance(settings.profile, bool):
                 settings.profile = {"enabled": True, "filename": "profile.tab"}
@@ -329,7 +329,7 @@ class Log(object):
 
     @classmethod
     def stop(cls):
-        from pyLibrary.env import profiles
+        from pyLibrary.debugs import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
             write_profile(cls.settings.cprofile, cls.cprofiler)
@@ -417,7 +417,7 @@ def format_trace(tbs, start=0):
 
 
 class Except(Exception):
-    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
+    def __init__(self, type=ERROR, template=None, params=None, cause=Null, trace=None):
         Exception.__init__(self)
         self.type = type
         self.template = template
@@ -473,7 +473,7 @@ class Except(Exception):
                 except Exception, e:
                     pass
 
-            output += "caused by\n\t" + "\nand caused by\n\t".join(cause_strings)
+            output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 
         return output
 

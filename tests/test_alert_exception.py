@@ -18,9 +18,9 @@ from dzAlerts.daemons.alert_exception import alert_exception, REASON
 from pyLibrary import struct
 
 from pyLibrary import convert
-from pyLibrary.env import startup
+from pyLibrary.debugs import startup
 from pyLibrary.sql.db import SQL, DB
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.maths.stats import closeEnough
 from util.testing import make_test_database

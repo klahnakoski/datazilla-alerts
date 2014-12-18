@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.structs.dicts import Struct
 

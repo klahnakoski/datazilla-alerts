@@ -13,8 +13,8 @@ from __future__ import division
 from datetime import datetime
 from time import clock
 from pyLibrary.collections import MAX
-from pyLibrary.structs.dicts import Struct
 from pyLibrary.structs.wraps import wrap
+from pyLibrary.structs import Struct
 
 ON = False
 profiles = {}
@@ -63,7 +63,7 @@ class Profiler(object):
 
 def write(profile_settings):
     from pyLibrary import convert
-    from pyLibrary.files import File
+    from .files import File
 
     profs = list(profiles.values())
     for p in profs:

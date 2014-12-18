@@ -15,7 +15,7 @@ from dzAlerts.imports.repos.changesets import Changeset
 from dzAlerts.imports.repos.pushs import Push
 from dzAlerts.imports.repos.revisions import Revision
 from pyLibrary import convert
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.structs import nvl
 from pyLibrary.structs.wraps import unwrap, wrap
 from pyLibrary.thread.threads import Thread

@@ -21,7 +21,7 @@ from pyLibrary.strings import expand_template, utf82unicode
 from pyLibrary.structs import nvl
 from pyLibrary.structs.wraps import wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary.env.logs import Log, Except
+from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.queries import Q
 from pyLibrary.strings import indent
 from pyLibrary.strings import outdent

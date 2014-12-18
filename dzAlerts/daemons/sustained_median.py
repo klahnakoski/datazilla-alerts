@@ -19,12 +19,13 @@ from pyLibrary.collections import MIN, MAX
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.es_query import ESQuery
-from pyLibrary.env import startup, elasticsearch
+from pyLibrary.debugs import startup
+from pyLibrary.env import elasticsearch
 from pyLibrary.queries.db_query import DBQuery
 from pyLibrary import convert
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import DB
 from pyLibrary.structs import Null, split_field, literal_field, set_default, Struct
@@ -64,6 +65,51 @@ def diff_percent(r):
             return (r.future_stats.mean - r.past_stats.mean) / r.past_stats.mean
     except Exception, e:
         Log.error("" + str(Null / Null), e)
+
+
+
+def get_settings_pre(settings, qb):
+    # THIS COMPLICATED CODE IS SIMPLY USING THE
+    # SETTINGS TO MAP branch, suite, test OVERRIDES
+    # TO THE default SETTINGS
+    fields = qb.normalize_edges(settings.param.test_dimension)
+    disabled = []
+    exists = []
+    for f in fields:
+        k = nvl(f.name, "test")
+        k = split_field(k)[-1]
+        k = "test" if k == "name" else k
+
+        disabled.append(
+            {"not": {"terms": {f.value: [s for s, p in settings.param[k].items() if p.disable]}}}
+        )
+        exists.append(
+            {"exists": {"field": f.value}}
+        )
+    disabled.append({"not": {"terms": {qb.normalize_edges(settings.param.branch_dimension)[0].value: [t for t, p in settings.param.branch.items() if p.disable]}}})
+    return disabled, exists, fields
+
+
+def get_parameters_specific(settings, fields, g):
+    """
+    ANOTHER COMPLICATED PARAMETER EXTRACTION ROUTINE
+    TODO: MAKE A GENERALIZED PARAMETER STANDARD TO SIMPLIFY THIS LOGIC
+    EG: LIST OF {"where":<condition>, "values":<overrides>} TO CONSTRUCT A SOPHISTICATED PARAMETER OBJECT
+    """
+    lookup = []
+    for f in Q.reverse(listwrap(fields)):
+        if isinstance(f, basestring):
+            lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
+        elif f.name and f.value:
+            k = split_field(f.name)[-1]
+            lookup.append(settings.param['test' if k == 'name' else k][literal_field(g[f.name])])
+        else:
+            for k, v in f.items():
+                lookup.append(settings.param['test' if k == 'name' else k][literal_field(g[settings.param.test_dimension][k])])
+    lookup.append(settings.param.branch[literal_field(g[settings.param.branch_dimension])])
+    lookup.append(settings.param.default)
+    test_param = set_default(*lookup)
+    return test_param
 
 
 def alert_sustained_median(settings, qb, alerts_db):
@@ -109,28 +155,8 @@ def alert_sustained_median(settings, qb, alerts_db):
         return False
 
     with Timer("pull combinations"):
-        # THIS COMPLICATED CODE IS SIMPLY USING THE
-        # SETTINGS TO MAP branch, suite, test OVERRIDES
-        # TO THE default SETTINGS
-        fields = qb.normalize_edges(settings.param.test_dimension)
-
-        disabled = []
-        exists = []
-        for f in fields:
-            k = nvl(f.name, "test")
-            k = split_field(k)[-1]
-            k = "test" if k=="name" else k
-
-            disabled.append(
-                {"not": {"terms": {f.value: [s for s, p in settings.param[k].items() if p.disable]}}}
-            )
-            exists.append(
-                {"exists": {"field": f.value}}
-            )
-        disabled.append({"not": {"terms": {qb.normalize_edges(settings.param.branch_dimension)[0].value: [t for t, p in settings.param.branch.items() if p.disable]}}})
-
+        disabled, exists, fields = get_settings_pre(settings, qb)
         source_ref = qb.normalize_edges(settings.param.source_ref)
-
 
         temp = Query({
             "from": settings.query["from"],
@@ -169,19 +195,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             continue
         try:
             # FIND SPECIFIC PARAMETERS FOR THIS SLICE
-            lookup = []
-            for f in Q.reverse(listwrap(fields)):
-                if isinstance(f, basestring):
-                    lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
-                elif f.name and f.value:
-                    k = split_field(f.name)[-1]
-                    lookup.append(settings.param['test' if k=='name' else k][literal_field(g[f.name])])
-                else:
-                    for k, v in f.items():
-                        lookup.append(settings.param['test' if k=='name' else k][literal_field(g[settings.param.test_dimension][k])])
-            lookup.append(settings.param.branch[literal_field(g[settings.param.branch_dimension])])
-            lookup.append(settings.param.default)
-            test_param = set_default(*lookup)
+            test_param = get_parameters_specific(settings, fields, g)
 
             if settings.args.restart:
                 first_sample = oldest_ts
@@ -415,7 +429,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     else:
         old_alerts = []
         # TODO: SOLVE THIS PROBLEM:  THE WIDE DATA REQUIREMENTS ARE MAKING LARGE SQL STATEMENTS
-        # REALLY, THEY ARE LONG LISTS OF DATA, SO THER IS OPPORTUNITY FOR COMPRESSION;
+        # REALLY, THEY ARE LONG LISTS OF DATA, SO THERE IS OPPORTUNITY FOR COMPRESSION;
         # WE COULD CREATE TABLE, LOAD TABLE, THEN EXECUTE QUERY USING A JOIN
         # WE COULD SEND A STORED PROCEDURE, AND THEN CALL IT WITH THE DATA (BUT IS THAT SMALLER?)
         for et in Q.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS

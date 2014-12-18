@@ -9,15 +9,14 @@
 #
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary import structs
 from pyLibrary.collections import AND, reverse
-from pyLibrary.env.logs import Log
+from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import MVEL, _normalize_select, INDEX_CACHE
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain
 from pyLibrary.queries.filters import TRUE_FILTER, simplify
 from pyLibrary.structs.dicts import Struct
-from pyLibrary.structs import nvl, split_field, join_field, Null
+from pyLibrary.structs import nvl, split_field, join_field, Null, set_default
 from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap, unwrap, listwrap
 
@@ -76,7 +75,7 @@ class Query(object):
         output = object.__new__(Query)
         source = object.__getattribute__(self, "__dict__")
         dest = object.__getattribute__(output, "__dict__")
-        structs.set_default(dest, source)
+        set_default(dest, source)
         return output
 
 
