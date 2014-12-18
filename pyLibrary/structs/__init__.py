@@ -34,6 +34,9 @@ def nvl(*args):
 
 
 def zip(keys, values):
+    """
+    CONVERT LIST OF KEY/VALUE PAIRS TO A DICT
+    """
     output = Struct()
     for i, k in enumerate(keys):
         output[k] = values[i]

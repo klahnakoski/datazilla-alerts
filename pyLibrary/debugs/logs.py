@@ -19,7 +19,7 @@ from types import ModuleType
 
 from pyLibrary.jsons import json_encoder
 from pyLibrary.thread import threads
-from pyLibrary.structs import nvl, Struct, split_field, join_field
+from pyLibrary.structs import nvl, Struct, split_field, join_field, Null
 from pyLibrary.structs.wraps import listwrap, wrap, wrap_dot
 from pyLibrary.strings import indent, expand_template
 from pyLibrary.thread.threads import Thread
@@ -114,7 +114,7 @@ class Log(object):
         cls.main_log.write(log_template, log_params)
 
     @classmethod
-    def unexpected(cls, template, params=None, cause=None):
+    def unexpected(cls, template, params=None, cause=Null):
         if isinstance(params, BaseException):
             cause = params
             params = None
@@ -139,7 +139,7 @@ class Log(object):
         cls,
         template,
         params=None,
-        cause=None,
+        cause=Null,
         stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         if isinstance(params, BaseException):
@@ -166,7 +166,7 @@ class Log(object):
         cls,
         template, # human readable template
         params=None, # parameters for template
-        cause=None, # pausible cause
+        cause=Null, # pausible cause
         stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         """
@@ -178,7 +178,7 @@ class Log(object):
 
         add_to_trace = False
         if cause == None:
-            cause = []
+            cause = Null
         elif isinstance(cause, list):
             pass
         elif isinstance(cause, Except):
@@ -202,7 +202,7 @@ class Log(object):
         cls,
         template, # human readable template
         params=None, # parameters for template
-        cause=None, # pausible cause
+        cause=Null, # pausible cause
         stack_depth=0    # stack trace offset (==1 if you do not want to report self)
     ):
         """
@@ -417,7 +417,7 @@ def format_trace(tbs, start=0):
 
 
 class Except(Exception):
-    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
+    def __init__(self, type=ERROR, template=None, params=None, cause=Null, trace=None):
         Exception.__init__(self)
         self.type = type
         self.template = template
@@ -600,7 +600,7 @@ class Log_usingMulti(BaseLog):
 
 def write_profile(profile_settings, cprofiler):
     from pyLibrary import convert
-    from .files import File
+    from pyLibrary.env.files import File
     import pstats
 
     p = pstats.Stats(cprofiler)
