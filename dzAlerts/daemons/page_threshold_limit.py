@@ -77,7 +77,7 @@ def page_threshold_limit(db, debug):
                 "last_updated": datetime.utcnow(),
                 "tdad_id": page.tdad_id,
                 "reason": REASON,
-                "details": convert.object2JSON({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
+                "details": convert.value2json({"expected": float(page.threshold), "actual": float(page.mean), "reason": page.reason}),
                 "severity": page.severity,
                 "confidence": 1.0    # USING NORMAL DIST ASSUMPTION WE CAN ADJUST
                 # CONFIDENCE EVEN BEFORE THRESHOLD IS HIT!

@@ -496,7 +496,7 @@ def main():
 
             es = elasticsearch.Index(settings.query["from"])
             with ESQuery(es) as qb:
-                qb.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
+                qb.addDimension(convert.json2value(File(settings.dimension.filename).read()))
 
                 with DB(settings.alerts) as alerts_db:
                     alert_sustained_median(

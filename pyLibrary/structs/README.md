@@ -111,13 +111,71 @@ incomplete tree.
 
 ### Null Arithmetic ###
 
-When `Null` is part of arithmetic operation (boolean or otherwise) it results in ```Null```:
+When `Null` is part of arithmetic operation (boolean or otherwise) it results
+in ```Null```:
 
  * ```a ∘ Null == Null```
  * ```Null ∘ a == Null```
 
 where `∘` is any binary operator.
 
+
+StructList is "Flat"
+----------------------------------------
+
+`StructList` uses a *flat-list* assumption to interpret slicing and indexing
+operations.  This assumes lists are defined over all integer (**ℤ**)
+indices; defaulting to `Null` for indices not explicitly defined otherwise.
+This is distinctly different from Python's usual *loop-around*  assumption,
+where negative indices are interpreted modulo-the-list-length.
+
+    python_list = ['A', 'B', 'C']
+    struct_list = wrap(python_list)
+
+Here is table comparing behaviours
+
+| <br>`index`|*loop-around*<br>`python_list[index]`|*flat-list*<br>`struct_list[index]`|
+| ------:|:------------------:|:------------------:|
+|   -5   |     `<error>`      |       `Null`       |
+|   -4   |     `<error>`      |       `Null`       |
+|   -3   |        `A`         |       `Null`       |
+|   -2   |        `B`         |       `Null`       |
+|   -1   |        `C`         |       `Null`       |
+|    0   |        `A`         |        `A`         |
+|    1   |        `B`         |        `B`         |
+|    2   |        `C`         |        `C`         |
+|    3   |     `<error>`      |       `Null`       |
+|    4   |     `<error>`      |       `Null`       |
+|    5   |     `<error>`      |       `Null`       |
+
+The *flat list* assumption reduces exception handling and simplifies code for
+window functions.  For example, `Math.min(struct_list[a:b:])` is valid for
+all `a<=b`
+
+  * Python 2.x binary slicing `[:]` is disabled (see implementation issues below)
+  * Trinary slicing `[::]` uses the flat list definition
+
+When assuming a *flat-list*, we loose the *take-from-the-right* tricks gained
+from modulo arithmetic on the indicies. Therefore, we require extra methods
+to perform right-based slicing:
+
+  * **right()** - `struct_list.right(b)` same as `python_list[-b:]` except when `b<=0`
+  * **leftBut()** - `struct_list.leftBut(b)` same as `python_list[:-b]` except
+  when `b<=0` (read as "left, but for ...")
+
+For the sake of completness, we have two more convenience methods:
+
+  * `struct_list.left(b)` same as `struct_list[:b:]`
+  * `struct_list.rightBut(b)` same as `struct_list[b::]`
+
+StructList Dot (.) Operator
+----------------------------
+
+The dot operator on a `StructList` will return a list of property values
+
+    ```python
+    myList.name == [x["name"] for x in myList]
+    ```
 
 
 Motivation for StructList
@@ -179,6 +237,8 @@ I advocate never using negative indices in the slice operator.  Rather, use the
     def right(_list, num):
         if num <= 0:
             return []
+        if num >= len(_list):
+            return _list
         return _list[-num:]
 ```
 

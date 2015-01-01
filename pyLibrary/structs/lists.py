@@ -70,9 +70,7 @@ class StructList(list):
         return StructList.select(self, key)
 
     def select(self, key):
-        output = []
-        for v in _get(self, "list"):
-            output.append(unwrap(wrap(v)[key]))
+        return StructList(vals=[unwrap(wrap(v)[key]) for v in _get(self, "list")])
 
             # try:
             #     output.append(v.__getattribute__(key))
@@ -81,8 +79,6 @@ class StructList(list):
             #         output.append(v.__getitem__(key))
             #     except Exception, f:
             #         output.append(None)
-
-        return StructList(output)
 
     def __iter__(self):
         return (wrap(v) for v in _get(self, "list"))
@@ -153,6 +149,17 @@ class StructList(list):
 
         return StructList(_get(self, "list")[-num:])
 
+    def left(self, num=None):
+        """
+        NOT REQUIRED, BUT EXISTS AS OPPOSITE OF right()
+        """
+        if num == None:
+            return StructList([_get(self, "list")[0]])
+        if num <= 0:
+            return Null
+
+        return StructList(_get(self, "list")[:num])
+
     def leftBut(self, num):
         """
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE LEFT [:-num:]
@@ -163,6 +170,17 @@ class StructList(list):
             return StructList.EMPTY
 
         return StructList(_get(self, "list")[:-num:])
+
+    def rightBut(self, num):
+        """
+        NOT REQUIRED, EXISTS AS OPPOSITE OF leftBut()
+        """
+        if num == None:
+            return StructList([_get(self, "list")[-1]])
+        if num <= 0:
+            return self
+
+        return StructList(_get(self, "list")[num::])
 
     def last(self):
         """
