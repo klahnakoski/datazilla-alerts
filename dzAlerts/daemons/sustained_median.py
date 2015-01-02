@@ -10,8 +10,6 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-from datetime import datetime
-
 from dzAlerts.daemons.util import update_alert_status
 from dzAlerts.daemons.util.median_test import median_test
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
@@ -30,14 +28,14 @@ from pyLibrary.queries import Q
 from pyLibrary.sql.db import DB
 from pyLibrary.structs import Null, split_field, literal_field, set_default, Struct
 from pyLibrary.structs import nvl
-from pyLibrary.structs.lists import StructList
 from pyLibrary.structs.wraps import wrap_dot, listwrap
 from pyLibrary.thread.threads import Thread
+from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 from pyLibrary.times.timer import Timer
 
 
-NOW = datetime.utcnow()
+NOW = Date.today()
 MAX_AGE = Duration(days=90)
 
 TEMPLATE = """<div><h3>{{score}} - {{reason}}</h3><br>
@@ -118,7 +116,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     """
 
     # OBJECTSTORE = settings.objectstore.schema + ".objectstore"
-    oldest_ts = convert.datetime2milli(NOW - MAX_AGE)
+    oldest_ts = (NOW - MAX_AGE).milli
     verbose = nvl(settings.param.verbose, VERBOSE)
     if settings.param.debug == None:
         debug = DEBUG or DEBUG_TOUCH_ALL_ALERTS
@@ -432,7 +430,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         # REALLY, THEY ARE LONG LISTS OF DATA, SO THERE IS OPPORTUNITY FOR COMPRESSION;
         # WE COULD CREATE TABLE, LOAD TABLE, THEN EXECUTE QUERY USING A JOIN
         # WE COULD SEND A STORED PROCEDURE, AND THEN CALL IT WITH THE DATA (BUT IS THAT SMALLER?)
-        for et in Q.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
+        for i, et in Q.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
             old_alerts.extend(DBQuery(alerts_db).query({
                 "from": "alerts",
                 "select": [

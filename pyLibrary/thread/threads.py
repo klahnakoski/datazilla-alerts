@@ -21,6 +21,7 @@ import gc
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
 # FOR FAST AND PREDICTABLE SHUTDOWN AND CLEANUP OF THREADS
+from pyLibrary.collections import OR
 from pyLibrary.structs import nvl, Struct
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -140,6 +141,10 @@ class Queue(object):
     def __len__(self):
         with self.lock:
             return len(self.queue)
+
+    def __nonzero__(self):
+        with self.lock:
+            return any(r != Thread.STOP for r in self.queue)
 
     def pop(self):
         with self.lock:

@@ -14,7 +14,8 @@ from datetime import datetime
 
 from dzAlerts.daemons.util import update_alert_status
 from pyLibrary import convert
-from pyLibrary.debugs import startup, elasticsearch
+from pyLibrary.debugs import startup
+from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
@@ -28,7 +29,6 @@ from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
 
-DEBUG_TOUCH_ALL_ALERTS = False
 UPDATE_EMAIL_TEMPLATE = True
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason

@@ -18,11 +18,9 @@ import sys
 from types import ModuleType
 
 from pyLibrary.jsons import json_encoder
-from pyLibrary.thread import threads
 from pyLibrary.structs import nvl, Struct, split_field, join_field, set_default
 from pyLibrary.structs.wraps import listwrap, wrap, wrap_dot
 from pyLibrary.strings import indent, expand_template
-from pyLibrary.thread.threads import Thread
 
 
 DEBUG_LOGGING = False
@@ -517,6 +515,7 @@ class Log_usingFile(BaseLog):
         assert file
 
         from pyLibrary.env.files import File
+        from pyLibrary.thread import threads
 
         self.file = File(file)
         if self.file.exists:
@@ -531,6 +530,7 @@ class Log_usingFile(BaseLog):
 
 
 class Log_usingThread(BaseLog):
+
     def __init__(self, logger):
         # DELAYED LOAD FOR THREADS MODULE
         from pyLibrary.thread.threads import Queue
@@ -640,5 +640,4 @@ if not Log.main_log:
     Log.main_log = Log_usingStream("sys.stdout")
 
 
-
-
+from pyLibrary.thread.threads import Thread
