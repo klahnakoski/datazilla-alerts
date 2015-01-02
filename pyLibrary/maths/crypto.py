@@ -81,7 +81,7 @@ def decrypt(data, _key):
 
     raw = convert.base642bytearray(_input.data)
     out_data = bytearray()
-    for i, e in Q.groupby(raw, size=16):
+    for _, e in Q.groupby(raw, size=16):
         out_data.extend(aes_cbc_256.decrypt_block(e))
 
     return str(out_data[:_input.length:]).decode("utf8")

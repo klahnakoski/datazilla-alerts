@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.structs.wraps import wrap, unwrap, tuplewrap
 
@@ -54,7 +55,7 @@ class UniqueIndex(object):
             self._data[key] = unwrap(val)
             self.count += 1
         elif d is not val:
-            Log.error("key already filled")
+            Log.error("key {{key|json}} already filled", {"key":key})
 
 
     def __contains__(self, key):
