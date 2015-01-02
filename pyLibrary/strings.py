@@ -78,7 +78,7 @@ def replace(value, find, replace):
 def json(value):
     from pyLibrary import convert
 
-    return convert.object2JSON(value)
+    return convert.value2json(value)
 
 
 def indent(value, prefix=u"\t", indent=None):
@@ -141,14 +141,16 @@ def right(value, len):
     return value[-len:]
 
 
-def right_align(value, len):
-    if len <= 0:
+def right_align(value, length):
+    if length <= 0:
         return u""
 
-    if len(value) < len:
-        return " " * (len - len(value)) + value
+    value = unicode(value)
+
+    if len(value) < length:
+        return (" " * (length - len(value))) + value
     else:
-        return value[-len:]
+        return value[-length:]
 
 
 def left(value, len):

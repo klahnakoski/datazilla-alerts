@@ -14,7 +14,8 @@ from datetime import datetime
 
 from dzAlerts.daemons.util import update_alert_status
 from pyLibrary import convert
-from pyLibrary.debugs import startup, elasticsearch
+from pyLibrary.debugs import startup
+from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
@@ -28,7 +29,6 @@ from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
 
-DEBUG_TOUCH_ALL_ALERTS = False
 UPDATE_EMAIL_TEMPLATE = True
 SUSTAINED_REASON = "eideticker_alert_sustained_median"
 REASON = "eideticker_alert_revision"   # name of the reason in alert_reason
@@ -96,13 +96,13 @@ def eideticker_alert_revision(settings):
         with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
             dbq = DBQuery(alerts_db)
 
-            esq.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
+            esq.addDimension(convert.json2value(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
             if UPDATE_EMAIL_TEMPLATE:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
-                    "template": convert.object2JSON(TEMPLATE),
-                    "subject": convert.object2JSON(SUBJECT),
+                    "template": convert.value2json(TEMPLATE),
+                    "subject": convert.value2json(SUBJECT),
                     "style": File("resources/css/email_style.css").read(),
                     "reason": REASON
                 })
@@ -139,10 +139,10 @@ def eideticker_alert_revision(settings):
                 "min_time": Date.MIN if DEBUG_TOUCH_ALL_ALERTS else NOW - LOOK_BACK
             })
             for a in existing_sustained_alerts:
-                a.details = convert.JSON2object(a.details)
+                a.details = convert.json2value(a.details)
                 try:
                     if a.revision.rtrim()[0] in ["{", "["]:
-                        a.revision = convert.JSON2object(a.revision)
+                        a.revision = convert.json2value(a.revision)
                 except Exception, e:
                     pass
 

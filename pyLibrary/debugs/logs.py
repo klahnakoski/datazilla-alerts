@@ -18,11 +18,9 @@ import sys
 from types import ModuleType
 
 from pyLibrary.jsons import json_encoder
-from pyLibrary.thread import threads
-from pyLibrary.structs import nvl, Struct, split_field, join_field, Null
+from pyLibrary.structs import nvl, Struct, split_field, join_field, set_default
 from pyLibrary.structs.wraps import listwrap, wrap, wrap_dot
 from pyLibrary.strings import indent, expand_template
-from pyLibrary.thread.threads import Thread
 
 
 DEBUG_LOGGING = False
@@ -62,17 +60,22 @@ class Log(object):
                     pass  # OH WELL :(
 
         if settings.log_type == "file" or settings.file:
-            return Log_usingFile(file)
+            return Log_usingFile(settings.file)
         if settings.log_type == "file" or settings.filename:
             return Log_usingFile(settings.filename)
+        if settings.log_type == "console":
+            from .log_usingStream import Log_usingStream
+            return Log_usingStream(sys.stdout)
         if settings.log_type == "stream" or settings.stream:
             from .log_usingStream import Log_usingStream
-
             return Log_usingStream(settings.stream)
         if settings.log_type == "elasticsearch" or settings.stream:
             from .log_usingElasticSearch import Log_usingElasticSearch
-
             return Log_usingElasticSearch(settings)
+        if settings.log_type == "email":
+            from .log_usingEmail import Log_usingEmail
+            return Log_usingEmail(settings)
+
 
     @classmethod
     def add_log(cls, log):
@@ -95,7 +98,7 @@ class Log(object):
 
         log_params = Struct(
             template=template,
-            params=nvl(params, {}).copy(),
+            params=set_default({}, params),
             timestamp=datetime.utcnow(),
         )
         if cls.trace:
@@ -114,7 +117,7 @@ class Log(object):
         cls.main_log.write(log_template, log_params)
 
     @classmethod
-    def unexpected(cls, template, params=None, cause=Null):
+    def unexpected(cls, template, params=None, cause=None):
         if isinstance(params, BaseException):
             cause = params
             params = None
@@ -139,7 +142,7 @@ class Log(object):
         cls,
         template,
         params=None,
-        cause=Null,
+        cause=None,
         stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         if isinstance(params, BaseException):
@@ -166,7 +169,7 @@ class Log(object):
         cls,
         template, # human readable template
         params=None, # parameters for template
-        cause=Null, # pausible cause
+        cause=None, # pausible cause
         stack_depth=0        # stack trace offset (==1 if you do not want to report self)
     ):
         """
@@ -178,7 +181,7 @@ class Log(object):
 
         add_to_trace = False
         if cause == None:
-            cause = Null
+            cause = []
         elif isinstance(cause, list):
             pass
         elif isinstance(cause, Except):
@@ -202,7 +205,7 @@ class Log(object):
         cls,
         template, # human readable template
         params=None, # parameters for template
-        cause=Null, # pausible cause
+        cause=None, # pausible cause
         stack_depth=0    # stack trace offset (==1 if you do not want to report self)
     ):
         """
@@ -244,10 +247,18 @@ class Log(object):
         sys.stderr.write(str_e)
 
 
-    # RUN ME FIRST TO SETUP THE THREADED LOGGING
     @classmethod
     def start(cls, settings=None):
-        ## http://victorlin.me/2012/08/good-logging-practice-in-python/
+        """
+        RUN ME FIRST TO SETUP THE THREADED LOGGING
+        http://victorlin.me/2012/08/good-logging-practice-in-python/
+
+        log - LIST OF PARAMETERS FOR LOGGER(S)
+        trace - SHOW MORE DETAILS IN EVERY LOG LINE (default False)
+        cprofile - True==ENABLE THE C-PROFILER THAT COMES WITH PYTHON (default False)
+        profile - True==ENABLE pyLibrary SIMPLE PROFILING (default False) (eg with Profiler("some description"):)
+        constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
+        """
         if not settings:
             return
 
@@ -285,6 +296,7 @@ class Log(object):
 
         if settings.constants:
             cls.please_setup_constants = True
+
         if cls.please_setup_constants:
             sys_modules = sys.modules
             # ONE MODULE IS MISSING, THE CALLING MODULE
@@ -417,7 +429,7 @@ def format_trace(tbs, start=0):
 
 
 class Except(Exception):
-    def __init__(self, type=ERROR, template=None, params=None, cause=Null, trace=None):
+    def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
         Exception.__init__(self)
         self.type = type
         self.template = template
@@ -503,6 +515,7 @@ class Log_usingFile(BaseLog):
         assert file
 
         from pyLibrary.env.files import File
+        from pyLibrary.thread import threads
 
         self.file = File(file)
         if self.file.exists:
@@ -517,6 +530,7 @@ class Log_usingFile(BaseLog):
 
 
 class Log_usingThread(BaseLog):
+
     def __init__(self, logger):
         # DELAYED LOAD FOR THREADS MODULE
         from pyLibrary.thread.threads import Queue
@@ -626,5 +640,4 @@ if not Log.main_log:
     Log.main_log = Log_usingStream("sys.stdout")
 
 
-
-
+from pyLibrary.thread.threads import Thread

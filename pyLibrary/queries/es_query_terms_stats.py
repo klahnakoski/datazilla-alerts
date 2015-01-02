@@ -118,7 +118,7 @@ def es_terms_stats(esq, mvel, query):
     term2parts = calcTerm.term2parts
 
     if len(esFacets) * len(select) > 1000:
-        # WE HAVE SOME SERIOUS PERMUTATIONS, WE MUST ISSUE MULTIPLE QUERIES
+        Log.error("not implemented yet")  # WE HAVE SOME SERIOUS PERMUTATIONS, WE MUST ISSUE MULTIPLE QUERIES
         pass
 
     esQuery = buildESQuery(query)

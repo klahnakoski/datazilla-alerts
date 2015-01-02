@@ -133,7 +133,7 @@ def ZeroMoment2Stats(z_moment):
         try:
             v = Stats2ZeroMoment(stats)
             for i in range(5):
-                assertAlmostEqualValue(v.S[i], Z[i], digits=6)
+                assertAlmostEqualValue(v.S[i], Z[i], places=7)
         except Exception, e:
             Log.error("Convertion failed.  Programmer error:\nfrom={{from|indent}},\nresult stats={{stats|indent}},\nexpected param={{expected|indent}}", {
                 "from": Z,

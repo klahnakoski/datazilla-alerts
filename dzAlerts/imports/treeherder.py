@@ -86,7 +86,7 @@ class TreeHerderImport(object):
             output.testrun.job_group = sig_properties.job_group_name
             output.testrun.job_type = sig_properties.job_type_name
 
-        th = convert.JSON2object(r.blob).blob
+        th = convert.json2value(r.blob).blob
 
         if not th.metadata.test_build.revision:
             Log.error("missing revision")
@@ -126,7 +126,7 @@ class TreeHerderImport(object):
                     "count": self.settings.treeherder.step
                 })
                 content = requests.get(url, timeout=self.settings.treeherder.timeout).content
-                data = convert.JSON2object(content.decode('utf8'))
+                data = convert.json2value(content.decode('utf8'))
                 for job_id in range(min_job_id, max_job_id):
                     d = wrap([d for d in data if d.id == job_id])[0]
                     if not d:
@@ -142,7 +142,7 @@ class TreeHerderImport(object):
                     elif not d.id or d.id!=job_id or not d.blob:
                         #ADD PLACEHOLDERS FOR NO DATA
                         id = (self.current_branch, job_id)
-                        file_sink.add(convert.object2JSON(id) + "\t" + content + "\n")
+                        file_sink.add(convert.value2json(id) + "\t" + content + "\n")
                         num_results += 1  #WE WANT TO COUNT THIS
                         es_sink.add({"value": {
                             "treeherder": {
@@ -155,7 +155,7 @@ class TreeHerderImport(object):
                         }})
                     else:
                         id = (d.id, self.current_branch)
-                        file_sink.add(convert.object2JSON(id) + "\t" + convert.object2JSON(d) + "\n")
+                        file_sink.add(convert.value2json(id) + "\t" + convert.value2json(d) + "\n")
                         num_results += 1
                         perf_results.append(d)
         except Exception, e:
@@ -173,7 +173,7 @@ class TreeHerderImport(object):
                         "treeherder": {
                             "branch": self.current_branch,
                             "perf_id": r.id,
-                            "corrupt_json": convert.object2JSON(r),
+                            "corrupt_json": convert.value2json(r),
                             "url": url,
                             "reason": e.message
                         }
@@ -185,7 +185,7 @@ class TreeHerderImport(object):
                     Log.println("Add {{id}} for revision {{revision}} ({{bytes}} bytes)", {
                         "id": id,
                         "revision": t.test_build.revision,
-                        "bytes": len(convert.object2JSON(r))
+                        "bytes": len(convert.value2json(r))
                     })
                 with Profiler("transform"):
                     result = transformer.transform(id, t)
@@ -267,7 +267,7 @@ class TreeHerderImport(object):
         #GET RANGE IN TREEHERDER
         url = expand_template(self.settings.treeherder.max_id_url, {"branch": self.current_branch})
         response = requests.get(url, timeout=self.settings.treeherder.timeout).content
-        treeherder_max = convert.JSON2object(convert.utf82unicode(response)).max_performance_artifact_id
+        treeherder_max = convert.json2value(convert.utf82unicode(response)).max_performance_artifact_id
         treeherder_max = Math.min(treeherder_max, self.settings.treeherder.max)
         treeherder_min = Math.max(self.settings.treeherder.min, 0)
         holes = set(range(treeherder_min, nvl(Math.max(*existing_ids), treeherder_min))) - existing_ids
@@ -318,7 +318,7 @@ class TreeHerderImport(object):
 
 def get_branches(settings):
     response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
-    branches = convert.JSON2object(convert.utf82unicode(response.content))
+    branches = convert.json2value(convert.utf82unicode(response.content))
     return wrap({branch.name: unwrap(branch) for branch in branches})
 
 
