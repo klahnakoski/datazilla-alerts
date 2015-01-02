@@ -67,7 +67,9 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
             a.id = SQL("util.newid()")
             a.last_updated = NOW
         try:
-            alerts_db.insert_list("alerts", new_alerts)
+            #TODO: MySQL APPEARS TO HAVE A SIZE LIMIT
+            for _, na in Q.groupby(new_alerts, size=100):
+                alerts_db.insert_list("alerts", na)
         except Exception, e:
             Log.error("problem with insert", e)
 
