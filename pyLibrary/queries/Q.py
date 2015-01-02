@@ -94,12 +94,12 @@ def index(data, keys=None):
     return o
 
 
-def unique_index(data, keys=None):
+def unique_index(data, keys=None, fail_on_dup=True):
     """
     RETURN dict THAT USES KEYS TO INDEX DATA
     ONLY ONE VALUE ALLOWED PER UNIQUE KEY
     """
-    o = UniqueIndex(listwrap(keys))
+    o = UniqueIndex(listwrap(keys), fail_on_dup=fail_on_dup)
 
     for d in data:
         try:
