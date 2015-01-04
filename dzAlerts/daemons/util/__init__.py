@@ -20,7 +20,7 @@ from pyLibrary.maths import Math
 # UPDATE?
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import SQL
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 
 SIGNIFICANT = 0.2
 DEBUG_TOUCH_ALL_ALERTS = False

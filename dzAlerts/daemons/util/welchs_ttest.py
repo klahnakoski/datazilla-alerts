@@ -12,7 +12,7 @@ from __future__ import division
 
 from math import log
 from pyLibrary.debugs.logs import Log
-from pyLibrary.structs.wraps import unwrap
+from pyLibrary.dot import unwrap
 from pyLibrary.vendor.strangman.stats import ttest_ind
 
 

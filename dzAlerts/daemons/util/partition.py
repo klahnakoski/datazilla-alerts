@@ -13,7 +13,7 @@ from __future__ import division
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.structs.dicts import Struct
+from pyLibrary.dot.dicts import Dict
 
 
 def partition(series, score_threshold):
@@ -32,9 +32,9 @@ def partition(series, score_threshold):
 
 
 def _partition(series, score_threshold, output):
-    best = Struct(index=-1, score=0)
+    best = Dict(index=-1, score=0)
     for i, s in enumerate(series):
-        candidate = Struct(index=i, score=welchs_ttest(series[:i], series[1:]).score)
+        candidate = Dict(index=i, score=welchs_ttest(series[:i], series[1:]).score)
         if candidate.score > score_threshold and candidate.score > best.score:
             best = candidate
     if best.index == -1:

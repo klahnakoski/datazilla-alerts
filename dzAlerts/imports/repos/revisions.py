@@ -9,7 +9,7 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.structs.wraps import wrap
+from pyLibrary.dot import wrap
 
 
 class Revision(object):

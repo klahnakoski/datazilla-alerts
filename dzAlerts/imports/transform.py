@@ -18,8 +18,8 @@ from pyLibrary.collections import MIN, MAX
 from pyLibrary.debugs.profiles import Profiler
 from pyLibrary.maths import Math
 from pyLibrary.maths.stats import Stats, ZeroMoment2Stats, ZeroMoment
-from pyLibrary.structs import literal_field, Struct, nvl
-from pyLibrary.structs.lists import StructList
+from pyLibrary.dot import literal_field, Dict, nvl
+from pyLibrary.dot.lists import DictList
 from pyLibrary.thread.threads import Lock
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
@@ -57,7 +57,7 @@ class Talos2ES():
                 if r == None:
                     return None
 
-                output = Struct()
+                output = Dict()
 
                 for i in r.mainthread_readbytes:
                     output[literal_field(i[1])].name = i[1]
@@ -123,13 +123,13 @@ class Talos2ES():
                 new_records.append(remainder)
 
             #RECORD TEST RESULTS
-            total = StructList()
+            total = DictList()
             if r.testrun.suite in ["dromaeo_css", "dromaeo_dom"]:
                 #dromaeo IS SPECIAL, REPLICATES ARE IN SETS OF FIVE
                 #RECORD ALL RESULTS
                 for i, (test_name, replicates) in enumerate(r.results.items()):
                     for g, sub_results in Q.groupby(replicates, size=5):
-                        new_record = Struct(
+                        new_record = Dict(
                             test_machine=r.test_machine,
                             treeherder=r.treeherder,
                             testrun=r.testrun,
@@ -149,7 +149,7 @@ class Talos2ES():
                         new_records.append(new_record)
             else:
                 for i, (test_name, replicates) in enumerate(r.results.items()):
-                    new_record = Struct(
+                    new_record = Dict(
                         test_machine=r.test_machine,
                         treeherder=r.treeherder,
                         testrun=r.testrun,
@@ -171,7 +171,7 @@ class Talos2ES():
             if len(total) > 1:
                 # ADD RECORD FOR GEOMETRIC MEAN SUMMARY
 
-                new_record = Struct(
+                new_record = Dict(
                     test_machine=r.test_machine,
                     treeherder=r.treeherder,
                     testrun=r.testrun,
@@ -185,7 +185,7 @@ class Talos2ES():
                 new_records.append(new_record)
 
                 # ADD RECORD FOR GRAPH SERVER SUMMARY
-                new_record = Struct(
+                new_record = Dict(
                     test_machine=r.test_machine,
                     treeherder=r.treeherder,
                     testrun=r.testrun,
@@ -213,7 +213,7 @@ def stats(values):
     values = values.map(float, includeNone=False)
 
     z = ZeroMoment.new_instance(values)
-    s = Struct()
+    s = Dict()
     for k, v in z.dict.items():
         s[k] = v
     for k, v in ZeroMoment2Stats(z).items():
@@ -233,7 +233,7 @@ def geo_mean(values):
     """
     GIVEN AN ARRAY OF dicts, CALC THE GEO-MEAN ON EACH ATTRIBUTE
     """
-    agg = Struct()
+    agg = Dict()
     for d in values:
         for k, v in d.items():
             if v != 0:

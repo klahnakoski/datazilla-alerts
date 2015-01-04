@@ -27,10 +27,10 @@ from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs import startup
-from pyLibrary.structs.dicts import Struct
-from pyLibrary.structs import nvl, set_default, literal_field
-from pyLibrary.structs.lists import StructList
-from pyLibrary.structs.wraps import wrap, unwrap
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.dot import nvl, set_default, literal_field
+from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import wrap, unwrap
 from pyLibrary.thread.threads import ThreadedQueue, Lock
 from transform import Talos2ES
 from pyLibrary.times.timer import Timer
@@ -40,7 +40,7 @@ from pyLibrary.thread.multithread import Multithread
 DEBUG = False
 NUM_PER_BATCH = 1000
 JOB_ID_MODULO = 10000
-COUNTER = Struct(count=0)
+COUNTER = Dict(count=0)
 
 
 uid_json_encoder = json.JSONEncoder(
@@ -91,7 +91,7 @@ class TreeHerderImport(object):
         if not th.metadata.test_build.revision:
             Log.error("missing revision")
 
-        talos = Struct()
+        talos = Dict()
         talos.treeherder = {
             "branch": self.current_branch,
             "perf_id": r.id,
@@ -113,7 +113,7 @@ class TreeHerderImport(object):
 
         job_id IS FIRST ID IN BLOCK OF job_ids OF SIZE settings.treeherder.step
         """
-        perf_results = StructList()
+        perf_results = DictList()
         num_results = 0
 
         # FIRST, DEAL WITH MISSING AND CORRUPT JSON

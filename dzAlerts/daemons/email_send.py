@@ -16,7 +16,7 @@ from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
 from pyLibrary.sql.db import DB
 from pyLibrary.env.emailer import Emailer
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 
 
 def email_send(db, emailer, debug):

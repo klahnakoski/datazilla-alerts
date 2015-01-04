@@ -15,9 +15,9 @@ from datetime import datetime as builtin_datetime
 import re
 import math
 import __builtin__
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 
-from pyLibrary.structs.wraps import wrap
+from pyLibrary.dot import wrap
 
 
 def datetime(value):

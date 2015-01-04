@@ -23,8 +23,7 @@ from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.sql.db import DB
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.structs import nvl, Struct
-from pyLibrary.structs.lists import StructList
+from pyLibrary.dot import nvl, Dict, DictList
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -151,7 +150,7 @@ def b2g_alert_revision(settings):
             tests = Q.index(existing_sustained_alerts, ["revision", "details.B2G.Test"])
 
             # SUMMARIZE
-            alerts = StructList()
+            alerts = DictList()
 
             total_tests = esq.query({
                 "from": "b2g_alerts",
@@ -171,7 +170,7 @@ def b2g_alert_revision(settings):
                 revision = revision["details.B2G.Revision"]
                 total_test_count = total_tests[{"B2G.Revision": revision}]
 
-                parts = StructList()
+                parts = DictList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
                     worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
                     example = worst_in_test.details
@@ -192,7 +191,7 @@ def b2g_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                alerts.append(Struct(
+                alerts.append(Dict(
                     status= "NEW",
                     push_date= convert.milli2datetime(worst_in_revision.push_date),
                     reason= REASON,

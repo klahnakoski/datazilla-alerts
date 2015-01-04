@@ -24,7 +24,7 @@ from pyLibrary.strings import expand_template
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.sql.db import DB, SQL
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import Duration

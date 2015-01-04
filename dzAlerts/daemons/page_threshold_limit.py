@@ -14,7 +14,7 @@ from datetime import datetime
 
 from pyLibrary.queries import Q
 from pyLibrary.queries.db_query import esfilter2sqlwhere
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 from pyLibrary import convert
 from pyLibrary.sql.db import SQL
 from pyLibrary.debugs.logs import Log

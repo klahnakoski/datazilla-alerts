@@ -6,10 +6,10 @@ This library is solving the problem of consistency (closure) under the dot(.)
 and slice [::] operators.  The most significant difference is in the dealing
 with None, missing keys, and missing items in lists.
 
-Struct replaces dict
+Dict replaces dict
 --------------------
 
-```Struct``` is used to declare an instance of an anonymous type, and has good
+```Dict``` is used to declare an instance of an anonymous type, and has good
 features for manipulating JSON.  Anonymous types are necessary when
 writing sophisticated list comprehensions, or queries, and to keep them
 readable.  In many ways, dict() can act as an anonymous type, but it does
@@ -54,7 +54,7 @@ a.b.c += 42
 
 ### Examples in the wild###
 
-```Struct``` is a common pattern in many frameworks even though it goes by
+```Dict``` is a common pattern in many frameworks even though it goes by
 different names, some examples are:
 
  * ```jinja2.environment.Environment.getattr()```  to allow convenient dot notation
@@ -63,6 +63,7 @@ different names, some examples are:
  * ```collections.namedtuple()``` - gives attribute names to tuple indicies
   effectively providing <code>a.b</code> rather than <code>a["b"]</code>
      offered by dicts
+ * DotDict allows dot notation, and path setting: https://github.com/mozilla/configman/blob/master/configman/dotdict.py
  * C# Linq requires anonymous types to avoid large amounts of boilerplate code.
  * D3 has many of these conventions ["The function's return value is
   then used to set each element's attribute. A null value will remove the
@@ -120,10 +121,9 @@ in ```Null```:
 where `∘` is any binary operator.
 
 
-StructList is "Flat"
+DictList is "Flat"
 ----------------------------------------
-
-`StructList` uses a *flat-list* assumption to interpret slicing and indexing
+`DictList` uses a *flat-list* assumption to interpret slicing and indexing
 operations.  This assumes lists are defined over all integer (**ℤ**)
 indices; defaulting to `Null` for indices not explicitly defined otherwise.
 This is distinctly different from Python's usual *loop-around*  assumption,
@@ -168,21 +168,21 @@ For the sake of completness, we have two more convenience methods:
   * `struct_list.left(b)` same as `struct_list[:b:]`
   * `struct_list.rightBut(b)` same as `struct_list[b::]`
 
-StructList Dot (.) Operator
+DictList Dot (.) Operator
 ----------------------------
 
-The dot operator on a `StructList` will return a list of property values
+The dot operator on a `DictList` will return a list of property values
 
     ```python
     myList.name == [x["name"] for x in myList]
     ```
 
 
-Motivation for StructList
+Motivation for DictList
 -------------------------
 
-```StructList``` is the final type required to to provide closure under the
-dot(.) and slice [::] operators.  Not only must ```StructList``` deal with
+```DictList``` is the final type required to to provide closure under the
+dot(.) and slice [::] operators.  Not only must ```DictList``` deal with
 ```Nulls``` (and ```Nones```) but also provide fixes to Python's inconsistent
 slice operator.
 

@@ -16,8 +16,8 @@ from dzAlerts.imports.repos.pushs import Push
 from dzAlerts.imports.repos.revisions import Revision
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
-from pyLibrary.structs import nvl
-from pyLibrary.structs.wraps import unwrap, wrap
+from pyLibrary.dot import nvl
+from pyLibrary.dot import unwrap, wrap
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration

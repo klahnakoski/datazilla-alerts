@@ -26,9 +26,7 @@ from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import DB
-from pyLibrary.structs import Null, split_field, literal_field, set_default, Struct
-from pyLibrary.structs import nvl
-from pyLibrary.structs.wraps import wrap_dot, listwrap
+from pyLibrary.dot import Null, split_field, literal_field, set_default, Dict, nvl, wrap_dot, listwrap
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -392,7 +390,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             for v in new_exceptions:
                 if v.ignored:
                     continue
-                alert = Struct(
+                alert = Dict(
                     status="NEW",
                     push_date=convert.milli2datetime(v[test_param.sort.name]),
                     tdad_id=wrap_dot({

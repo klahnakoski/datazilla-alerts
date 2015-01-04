@@ -16,7 +16,7 @@ from pyLibrary import maths
 from pyLibrary.collections import AND
 from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
-from pyLibrary.structs.dicts import Struct
+from pyLibrary.dot.dicts import Dict
 
 
 def median_test(samples1, samples2, resolution=None, interpolate=True):
@@ -44,9 +44,9 @@ def median_test(samples1, samples2, resolution=None, interpolate=True):
     mstat, prob = result
     try:
         if prob == 0.0:
-            return Struct(mstat=mstat, score=8)
+            return Dict(mstat=mstat, score=8)
         else:
-            return Struct(mstat=mstat, score=-log(prob, 10))
+            return Dict(mstat=mstat, score=-log(prob, 10))
     except Exception, e:
         Log.error("problem with math", e)
 

@@ -20,7 +20,7 @@ from pyLibrary.debugs import startup
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.debugs.logs import Log
 from pyLibrary.sql.db import DB, SQL
-from pyLibrary.structs import nvl, Struct
+from pyLibrary.dot import nvl, Dict
 from pyLibrary.times.durations import Duration
 
 def main():
@@ -39,7 +39,7 @@ def main():
             db.execute("DELETE FROM hierarchy WHERE parent IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
             db.execute("DELETE FROM hierarchy WHERE child IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
             db.execute("DELETE FROM alerts WHERE revision={{rev}}", {"rev": REVISION})
-            db.insert("alerts", Struct(
+            db.insert("alerts", Dict(
                 id=SQL("util.newid()"),
                 status="NEW",
                 push_date=datetime(2014, 8, 25, 12, 11),
