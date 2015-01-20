@@ -21,7 +21,7 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.maths import Math
 from pyLibrary.queries import domains, MVEL, filters
 from pyLibrary.dot.dicts import Dict
-from pyLibrary.dot import set_default, split_field, join_field, nvl
+from pyLibrary.dot import set_default, split_field, join_field, nvl, Null
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap
 from pyLibrary.times import durations
@@ -91,11 +91,11 @@ def post(es, esQuery, limit):
     try:
         postResult = es.search(esQuery)
 
-        for facetName, f in postResult.facets:
+        for facetName, f in postResult.facets.items():
             if f._type == "statistical":
-                return None
+                return Null
             if not f.terms:
-                return None
+                return Null
 
             if not DEBUG and not limit and len(f.terms) == limit:
                 Log.error("Not all data delivered (" + str(len(f.terms)) + "/" + str(f.total) + ") try smaller range")

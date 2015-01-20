@@ -59,7 +59,7 @@ def es_aggop(es, mvel, query):
 
     data = es_query_util.post(es, esQuery, query.limit)
 
-    matricies = {s.name: Matrix(value=fix_es_stats(unwrap(data.facets)[s.name])[aggregates[s.aggregate]]) for s in select}
+    matricies = {s.name: Matrix(value=fix_es_stats(data.facets[s.name])[aggregates[s.aggregate]]) for s in select}
     cube = Cube(query.select, [], matricies)
     cube.frum = query
     return cube

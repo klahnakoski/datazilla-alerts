@@ -9,11 +9,10 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-import requests
 
 from pyLibrary.debugs import startup
+from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster
-
 from pyLibrary.debugs.logs import Log
 from pyLibrary.parsers import URL
 from pyLibrary.queries.es_query import ESQuery
@@ -33,12 +32,12 @@ def get_all_uuid(settings):
     baseurl = settings.url
 
     output = DictList()
-    devices = requests.get(baseurl + '/devices.json').json()['devices']
+    devices = http.get(baseurl + '/devices.json').json()['devices']
     num_requests+=1
     for device_name, device_info in devices.items():
         for branch in device_info["branches"]:
             url = "/".join((baseurl, device_name, branch, "tests.json"))
-            tests = requests.get(url)
+            tests = http.get(url)
             num_requests+=1
             if tests.status_code != 200:
                 Log.warning("Can not find test for {{device}} because of {{response.status_code}} {{response.reason}} (url={{url}})", {
@@ -48,7 +47,7 @@ def get_all_uuid(settings):
                 })
                 continue
             for testname, test_info in tests.json()['tests'].items():
-                testdata = requests.get(baseurl + '/%s/%s/%s.json' % (device_name, branch, testname))
+                testdata = http.get(baseurl + '/%s/%s/%s.json' % (device_name, branch, testname))
                 num_requests+=1
                 try:
                     apps = testdata.json()['testdata']
@@ -111,7 +110,7 @@ def etl(settings):
             response = None
             url = expand_template(settings.uuid_url, {"uuid": metadata.uuid})
             try:
-                response = requests.get(url)
+                response = http.get(url)
                 counter.num_requests += 1
                 try:
                     data = wrap(response.json())

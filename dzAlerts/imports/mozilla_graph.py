@@ -10,7 +10,7 @@
 from __future__ import unicode_literals
 from __future__ import division
 
-import requests
+
 from dzAlerts.imports.repos.changesets import Changeset
 from dzAlerts.imports.repos.pushs import Push
 from dzAlerts.imports.repos.revisions import Revision
@@ -18,6 +18,7 @@ from pyLibrary import convert
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot import nvl
 from pyLibrary.dot import unwrap, wrap
+from pyLibrary.env import http
 from pyLibrary.maths import Math
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
@@ -154,10 +155,10 @@ class MozillaGraph(object):
         kwargs = wrap(kwargs)
         kwargs.setdefault("timeout", self.settings.timeout.seconds)
         try:
-            return requests.get(url, **unwrap(kwargs))
+            return http.get(url, **unwrap(kwargs))
         except Exception, e:
             try:
                 Thread.sleep(seconds=5)
-                return requests.get(url.replace("https://", "http://"), **unwrap(kwargs))
+                return http.get(url.replace("https://", "http://"), **unwrap(kwargs))
             except Exception, f:
                 Log.error("Tried {{url}} twice.  Both failed.", {"url": url}, [e, f])

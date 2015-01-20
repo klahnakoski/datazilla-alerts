@@ -157,9 +157,9 @@ class File(object):
                 return return_value
 
             if ref.startswith("http://"):
-                import requests
+                from pyLibrary.env import http
 
-                return convert.json2value(requests.get(ref), flexible=True, paths=True)
+                return convert.json2value(http.get(ref), flexible=True, paths=True)
             elif ref.startswith("file://"):
                 ref = ref[7::]
 

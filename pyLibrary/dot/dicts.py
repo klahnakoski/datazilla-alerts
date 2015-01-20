@@ -117,6 +117,9 @@ class Dict(dict):
             return True
         return False
 
+    def __iter__(self):
+        return _get(self, "__dict__").__iter__()
+
     def __getitem__(self, key):
         if key == None:
             return Null
@@ -293,10 +296,6 @@ class Dict(dict):
 
         d = _get(self, "__dict__")
         d.pop(key, None)
-
-    def keys(self):
-        d = _get(self, "__dict__")
-        return d.keys()
 
     def setdefault(self, k, d=None):
         if self[k] == None:

@@ -8,15 +8,17 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
+from copy import copy
 
 import functools
 import hashlib
 import json
-import requests
-from dzAlerts.imports.mozilla_graph import MozillaGraph
+from scipy.weave.converters import default
 
+from dzAlerts.imports.mozilla_graph import MozillaGraph
 from pyLibrary import convert
 from pyLibrary.collections import MAX
+from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.files import File
 from pyLibrary.debugs.profiles import Profiler
@@ -26,12 +28,12 @@ from pyLibrary.queries import Q
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
 from pyLibrary.debugs.logs import Log
-from pyLibrary.debugs import startup
+from pyLibrary.debugs import startup, constants
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, set_default, literal_field
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
-from pyLibrary.thread.threads import ThreadedQueue, Lock
+from pyLibrary.thread.threads import ThreadedQueue
 from transform import Talos2ES
 from pyLibrary.times.timer import Timer
 from pyLibrary.thread.multithread import Multithread
@@ -62,7 +64,16 @@ class TreeHerderImport(object):
         self.settings = settings
         self.perf_signatures = {}
         self.current_branch = None
-        # self.properties_lock = Lock()
+        self.options = Dict()
+
+        # GRAB THE OPTIONS
+        # https://bugzilla.mozilla.org/show_bug.cgi?id=1116601
+        result = http.get("https://treeherder.mozilla.org/api/optioncollection/")
+        options = convert.json2value(convert.utf82unicode(result.content))
+        for v in options:
+            result = http.get("https://treeherder.mozilla.org/api/option/"+str(v.id)+"/")
+            option = convert.json2value(convert.utf82unicode(result.content))
+            self.options[v.option_collection_hash]=option.name
 
 
     def treeherder2talos(self, r, url):
@@ -79,10 +90,16 @@ class TreeHerderImport(object):
             output.test_build.branch = sig_properties.repository
             output.test_build.os = sig_properties.build_os_name
             output.test_build.osversion = sig_properties.build_platform
+            output.test_build.option = self.options[sig_properties.option_collection_hash]
             output.test_build.platform = sig_properties.build_architecture
             output.test_build.build_system = sig_properties.build_system_type
 
             output.testrun.suite = sig_properties.suite
+
+            output.testrun.options.e10s = th.signature_properties.job_group_symbol.endswith("e10s")
+            if sig_properties.job_group_symbol not in ["T", "T-e10s"]:
+                Log.error("do not know how to deal with {{symbol}}", {"symbol":sig_properties.job_group_symbol})
+
             output.testrun.job_group = sig_properties.job_group_name
             output.testrun.job_type = sig_properties.job_type_name
 
@@ -100,7 +117,7 @@ class TreeHerderImport(object):
         talos.test_build = th.metadata.test_build
         convert_properties(talos, th.signature_properties)
 
-        talos.testrun.options = th.metadata.options
+        set_default(talos.testrun.options, th.metadata.options)
         talos.testrun.date = th.date
         talos.results_aux = talos.metatdata.results_aux
         talos.results_xperf = talos.metatdata.results_xperf
@@ -125,7 +142,7 @@ class TreeHerderImport(object):
                     "branch": self.current_branch,
                     "count": self.settings.treeherder.step
                 })
-                content = requests.get(url, timeout=self.settings.treeherder.timeout).content
+                content = http.get(url, timeout=self.settings.treeherder.timeout).content
                 data = convert.json2value(content.decode('utf8'))
                 for job_id in range(min_job_id, max_job_id):
                     d = wrap([d for d in data if d.id == job_id])[0]
@@ -266,7 +283,7 @@ class TreeHerderImport(object):
 
         #GET RANGE IN TREEHERDER
         url = expand_template(self.settings.treeherder.max_id_url, {"branch": self.current_branch})
-        response = requests.get(url, timeout=self.settings.treeherder.timeout).content
+        response = http.get(url, timeout=self.settings.treeherder.timeout).content
         treeherder_max = convert.json2value(convert.utf82unicode(response)).max_performance_artifact_id
         treeherder_max = Math.min(treeherder_max, self.settings.treeherder.max)
         treeherder_min = Math.max(self.settings.treeherder.min, 0)
@@ -275,7 +292,7 @@ class TreeHerderImport(object):
 
         # https://treeherder.mozilla.org/api/project/mozilla-inbound/project_info
         # url = settings.treeherder.url+"/api/project/"+branch
-        # project = requests.get(url).content
+        # project = http.get(url).content
 
         Log.note("Max TreeHerder ID: {{max}}", {"max": treeherder_max})
         Log.note("Number missing: {{num}}", {"num": len(missing_ids)})
@@ -317,7 +334,7 @@ class TreeHerderImport(object):
 
 
 def get_branches(settings):
-    response = requests.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
+    response = http.get(settings.branches.url, timeout=nvl(settings.treeherder.timeout, 30))
     branches = convert.json2value(convert.utf82unicode(response.content))
     return wrap({branch.name: unwrap(branch) for branch in branches})
 
@@ -376,6 +393,7 @@ def main():
             "action": "store_false",
             "dest": "scan_file"
         }])
+        constants.set(settings.constants)
         Log.start(settings.debug)
 
         with startup.SingleInstance(flavor_id=settings.args.filename):
