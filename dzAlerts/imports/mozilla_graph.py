@@ -41,7 +41,7 @@ class MozillaGraph(object):
         RETURNS revision
         """
         if len(revision.changeset.id) < 12 and Math.is_integer(revision.changeset.id):
-            revision = "0" * (12 - len(revision.changeset.id))
+            revision.changeset.id = ("0" * (12 - len(revision.changeset.id))) + revision.changeset.id
 
         revision.branch = self.settings.branches[revision.branch.name.lower()]
         if revision in self.nodes:
