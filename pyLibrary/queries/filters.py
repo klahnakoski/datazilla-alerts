@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from pyLibrary.collections import OR
-from pyLibrary.structs.wraps import wrap
+from pyLibrary.dot import wrap
 
 TRUE_FILTER = True
 FALSE_FILTER = False
@@ -59,7 +59,7 @@ def _normalize(esfilter):
     if esfilter is TRUE_FILTER or esfilter is FALSE_FILTER or esfilter.isNormal:
         return esfilter
 
-    # Log.note("from: " + convert.object2JSON(esfilter))
+    # Log.note("from: " + convert.value2json(esfilter))
     isDiff = True
 
     while isDiff:

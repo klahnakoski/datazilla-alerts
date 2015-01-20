@@ -15,8 +15,8 @@ from pyLibrary.env.elasticsearch import Index, Cluster
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
 from pyLibrary.queries import Q
-from pyLibrary.structs.dicts import Struct
-from pyLibrary.structs.wraps import unwrap, wrap
+from pyLibrary.dot.dicts import Dict
+from pyLibrary.dot import unwrap, wrap
 
 def make_test_instance(name, settings):
     if settings.filename:
@@ -50,9 +50,9 @@ class Fake_ES():
         self.settings = wrap({"host":"fake", "index":"fake"})
         self.filename = settings.filename
         try:
-            self.data = convert.JSON2object(File(self.filename).read())
+            self.data = convert.json2value(File(self.filename).read())
         except IOError:
-            self.data = Struct()
+            self.data = Dict()
 
 
     def search(self, query):
@@ -72,7 +72,7 @@ class Fake_ES():
 
         unwrap(self.data).update(records)
 
-        data_as_json = convert.object2JSON(self.data, pretty=True)
+        data_as_json = convert.value2json(self.data, pretty=True)
 
         File(self.filename).write(data_as_json)
         Log.note("{{num}} documents added", {"num": len(records)})

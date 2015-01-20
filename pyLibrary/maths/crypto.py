@@ -14,7 +14,7 @@ from __future__ import division
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.structs.dicts import Struct
+from pyLibrary.dot.dicts import Dict
 from pyLibrary.maths.randoms import Random
 from pyLibrary.vendor.aespython import key_expander, aes_cipher, cbc_mode
 
@@ -43,7 +43,7 @@ def encrypt(text, _key, salt=None):
     aes_cbc_256 = cbc_mode.CBCMode(aes_cipher_256, 16)
     aes_cbc_256.set_iv(salt)
 
-    output = Struct()
+    output = Dict()
     output.type = "AES256"
     output.salt = convert.bytearray2base64(salt)
     output.length = len(data)
@@ -52,7 +52,7 @@ def encrypt(text, _key, salt=None):
     for _, d in Q.groupby(data, size=16):
         encrypted.extend(aes_cbc_256.encrypt_block(d))
     output.data = convert.bytearray2base64(encrypted)
-    json = convert.object2JSON(output)
+    json = convert.value2json(output)
 
     if DEBUG:
         test = decrypt(json, _key)
@@ -70,7 +70,7 @@ def decrypt(data, _key):
     if _key is None:
         Log.error("Expecting a key")
 
-    _input = convert.JSON2object(data)
+    _input = convert.json2value(data)
 
     # Initialize encryption using key and iv
     key_expander_256 = key_expander.KeyExpander(256)
@@ -81,7 +81,7 @@ def decrypt(data, _key):
 
     raw = convert.base642bytearray(_input.data)
     out_data = bytearray()
-    for i, e in Q.groupby(raw, size=16):
+    for _, e in Q.groupby(raw, size=16):
         out_data.extend(aes_cbc_256.decrypt_block(e))
 
     return str(out_data[:_input.length:]).decode("utf8")

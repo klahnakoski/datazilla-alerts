@@ -13,7 +13,7 @@ from __future__ import division
 import __builtin__
 
 from pyLibrary.collections import UNION, MIN
-from pyLibrary.queries import flat_list, query, group_by
+from pyLibrary.queries import flat_list, query, group_by, _normalize_select
 from pyLibrary.queries.filters import TRUE_FILTER, FALSE_FILTER
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
@@ -22,9 +22,9 @@ from pyLibrary.queries.cube import Cube
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.structs import set_default, Null, Struct, split_field, nvl, join_field
-from pyLibrary.structs.lists import StructList
-from pyLibrary.structs.wraps import listwrap, wrap, unwrap
+from pyLibrary.dot import set_default, Null, Dict, split_field, nvl, join_field
+from pyLibrary.dot.lists import DictList
+from pyLibrary.dot import listwrap, wrap, unwrap
 
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -55,7 +55,7 @@ def run(query):
 
     if query.window:
         if isinstance(frum, Cube):
-            frum = StructList(list(frum))  # TRY TO CAST TO LIST OF RECORDS
+            frum = DictList(list(frum))  # TRY TO CAST TO LIST OF RECORDS
 
         for param in query.window:
             window(frum, param)
@@ -94,12 +94,12 @@ def index(data, keys=None):
     return o
 
 
-def unique_index(data, keys=None):
+def unique_index(data, keys=None, fail_on_dup=True):
     """
     RETURN dict THAT USES KEYS TO INDEX DATA
     ONLY ONE VALUE ALLOWED PER UNIQUE KEY
     """
-    o = UniqueIndex(listwrap(keys))
+    o = UniqueIndex(listwrap(keys), fail_on_dup=fail_on_dup)
 
     for d in data:
         try:
@@ -123,8 +123,8 @@ def map2set(data, relation):
     """
     if data == None:
         return Null
-    if isinstance(relation, Struct):
-        Log.error("Does not accept a Struct")
+    if isinstance(relation, Dict):
+        Log.error("Does not accept a Dict")
 
     if isinstance(relation, dict):
         try:
@@ -178,19 +178,19 @@ def tuple(data, field_name):
             return output
     elif isinstance(field_name, list):
         paths = [_select_a_field(f) for f in field_name]
-        output = StructList()
+        output = DictList()
         _tuple((), unwrap(data), paths, 0, output)
         return output
     else:
         paths = [_select_a_field(field_name)]
-        output = StructList()
+        output = DictList()
         _tuple((), data, paths, 0, output)
         return output
 
 
 def _tuple(template, data, fields, depth, output):
     deep_path = None
-    deep_fields = StructList()
+    deep_fields = DictList()
     for d in data:
         record = template
         for f in fields:
@@ -225,10 +225,33 @@ def _tuple_deep(v, field, depth, record):
     return 0, None, record + (v.get(f, None), )
 
 
+def select_one(record, selection):
+    """
+    APPLY THE selection TO A SINGLE record
+    """
+    record = wrap(record)
+    selection = wrap(selection)
+
+    if isinstance(selection, dict):
+        selection = wrap(selection)
+        return record[selection.value]
+    elif isinstance(selection, basestring):
+        return record[selection]
+    elif isinstance(selection, list):
+        output = Dict()
+        for f in selection:
+            f = _normalize_select(f)
+            output[f.name]=record[f.value]
+        return output
+    else:
+        Log.error("Do not know how to handle")
+
 
 
 def select(data, field_name):
-# return list with values from field_name
+    """
+    return list with values from field_name
+    """
     if isinstance(data, Cube):
         return data._select(_normalize_selects(field_name))
 
@@ -236,7 +259,10 @@ def select(data, field_name):
         return data.select(field_name)
 
     if isinstance(data, UniqueIndex):
-        data = data._data.values()  # THE SELECT ROUTINE REQUIRES dicts, NOT Struct WHILE ITERATING
+        data = data._data.values()  # THE SELECT ROUTINE REQUIRES dicts, NOT Dict WHILE ITERATING
+
+    if isinstance(data, dict):
+        return select_one(data, field_name)
 
     if isinstance(field_name, dict):
         field_name = wrap(field_name)
@@ -248,17 +274,17 @@ def select(data, field_name):
     if isinstance(field_name, basestring):
         path = split_field(field_name)
         if len(path) == 1:
-            return StructList([d[field_name] for d in data])
+            return DictList([d[field_name] for d in data])
         else:
-            output = StructList()
+            output = DictList()
             flat_list._select1(data, path, 0, output)
             return output
     elif isinstance(field_name, list):
         keys = [_select_a_field(wrap(f)) for f in field_name]
-        return _select(Struct(), unwrap(data), keys, 0)
+        return _select(Dict(), unwrap(data), keys, 0)
     else:
         keys = [_select_a_field(field_name)]
-        return _select(Struct(), unwrap(data), keys, 0)
+        return _select(Dict(), unwrap(data), keys, 0)
 
 
 def _select_a_field(field):
@@ -272,12 +298,12 @@ def _select_a_field(field):
 
 
 def _select(template, data, fields, depth):
-    output = StructList()
+    output = DictList()
     deep_path = []
     deep_fields = UniqueIndex(["name"])
     for d in data:
-        if isinstance(d, Struct):
-            Log.error("programmer error, _select can not handle Struct")
+        if isinstance(d, Dict):
+            Log.error("programmer error, _select can not handle Dict")
 
         record = template.copy()
         children = None
@@ -397,7 +423,7 @@ def sort(data, fieldnames=None):
     """
     try:
         if data == None:
-            return StructList.EMPTY
+            return Null
 
         if fieldnames == None:
             return wrap(sorted(data))
@@ -408,9 +434,9 @@ def sort(data, fieldnames=None):
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
             if isinstance(fieldnames, basestring):
                 def comparer(left, right):
-                    return cmp(nvl(left, Struct())[fieldnames], nvl(right, Struct())[fieldnames])
+                    return cmp(nvl(left, Dict())[fieldnames], nvl(right, Dict())[fieldnames])
 
-                return StructList([unwrap(d) for d in sorted(data, cmp=comparer)])
+                return DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
             else:
                 # EXPECTING {"field":f, "sort":i} FORMAT
                 fieldnames.sort = sort_direction[fieldnames.sort]
@@ -418,15 +444,15 @@ def sort(data, fieldnames=None):
                 if fieldnames.field==None:
                     Log.error("Expecting sort to have 'field' attribute")
                 def comparer(left, right):
-                    return fieldnames["sort"] * cmp(nvl(left, Struct())[fieldnames["field"]], nvl(right, Struct())[fieldnames["field"]])
+                    return fieldnames["sort"] * cmp(nvl(left, Dict())[fieldnames["field"]], nvl(right, Dict())[fieldnames["field"]])
 
-                return StructList([unwrap(d) for d in sorted(data, cmp=comparer)])
+                return DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
 
         formal = query._normalize_sort(fieldnames)
 
         def comparer(left, right):
-            left = nvl(left, Struct())
-            right = nvl(right, Struct())
+            left = nvl(left, Dict())
+            right = nvl(right, Dict())
             for f in formal:
                 try:
                     result = f["sort"] * cmp(left[f["field"]], right[f["field"]])
@@ -437,9 +463,9 @@ def sort(data, fieldnames=None):
             return 0
 
         if isinstance(data, list):
-            output = StructList([unwrap(d) for d in sorted(data, cmp=comparer)])
+            output = DictList([unwrap(d) for d in sorted(data, cmp=comparer)])
         elif hasattr(data, "__iter__"):
-            output = StructList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
+            output = DictList([unwrap(d) for d in sorted(list(data), cmp=comparer)])
         else:
             Log.error("Do not know how to handle")
 
@@ -524,7 +550,7 @@ def drill_filter(esfilter, data):
 
         if filter["and"]:
             result = True
-            output = StructList()
+            output = DictList()
             for a in filter[u"and"]:
                 f = pe_filter(a, data, depth)
                 if f is False:
@@ -536,7 +562,7 @@ def drill_filter(esfilter, data):
             else:
                 return result
         elif filter["or"]:
-            output = StructList()
+            output = DictList()
             for o in filter[u"or"]:
                 f = pe_filter(o, data, depth)
                 if f is True:
@@ -713,7 +739,7 @@ def drill_filter(esfilter, data):
 
     # OUTPUT IS A LIST OF ROWS,
     # WHERE EACH ROW IS A LIST OF VALUES SEEN DURING A WALK DOWN A PATH IN THE HIERARCHY
-    uniform_output = StructList()
+    uniform_output = DictList()
     def recurse(row, depth):
         if depth == max:
             uniform_output.append(row)
@@ -856,6 +882,15 @@ def intervals(_min, _max=None, size=1):
     return output
 
 
+def accumulate(vals):
+    """
+    RETURN PAIRS IN FORM (sum(vals[0:i-1]), vals[i])
+    THE FIRST IN TUPLE IS THE SUM OF ALL VALUE BEFORE
+    """
+    sum = 0
+    for v in vals:
+        yield sum, v
+        sum += v
 
 def reverse(vals):
     # TODO: Test how to do this fastest

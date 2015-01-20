@@ -25,7 +25,7 @@ from pyLibrary.env.files import File
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
 from pyLibrary.strings import between
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 from pyLibrary.thread.multithread import Multithread
 from pyLibrary.times.durations import Duration
 from pyLibrary.times.timer import Timer

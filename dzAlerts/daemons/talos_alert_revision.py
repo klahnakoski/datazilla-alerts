@@ -11,18 +11,19 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from datetime import datetime
+
 from dzAlerts.daemons.util import update_alert_status
 from pyLibrary import convert
 from pyLibrary.debugs import startup
-from pyLibrary.env.files import File, elasticsearch
+from pyLibrary.env import elasticsearch
+from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.sql.db import DB
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import Q
-from pyLibrary.structs import nvl, Struct
-from pyLibrary.structs.lists import StructList
+from pyLibrary.dot import nvl, Dict, DictList
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
 
@@ -117,13 +118,13 @@ def talos_alert_revision(settings):
         with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
 
             dbq = DBQuery(alerts_db)
-            esq.addDimension(convert.JSON2object(File(settings.dimension.filename).read()))
+            esq.addDimension(convert.json2value(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB
             if UPDATE_EMAIL_TEMPLATE:
                 alerts_db.execute("update reasons set email_subject={{subject}}, email_template={{template}}, email_style={{style}} where code={{reason}}", {
-                    "template": convert.object2JSON(TEMPLATE),
-                    "subject": convert.object2JSON(SUBJECT),
+                    "template": convert.value2json(TEMPLATE),
+                    "subject": convert.value2json(SUBJECT),
                     "style": File("resources/css/email_style.css").read(),
                     "reason": REASON
                 })
@@ -160,17 +161,17 @@ def talos_alert_revision(settings):
                 "min_time": Date.MIN if DEBUG_TOUCH_ALL_ALERTS else NOW - LOOK_BACK
             })
             for a in existing_sustained_alerts:
-                a.details = convert.JSON2object(a.details)
+                a.details = convert.json2value(a.details)
                 try:
                     if a.revision.rtrim()[0] in ["{", "["]:
-                        a.revision = convert.JSON2object(a.revision)
+                        a.revision = convert.json2value(a.revision)
                 except Exception, e:
                     pass
 
             tests = Q.index(existing_sustained_alerts, ["revision", "details.Talos.Test"])
 
             # SUMMARIZE
-            alerts = StructList()
+            alerts = DictList()
 
             total_tests = esq.query({
                 "from": "talos",
@@ -189,7 +190,7 @@ def talos_alert_revision(settings):
                 revision = revision["Talos.Revision"]
                 total_exceptions = tests[(revision, )]  # FILTER BY revision
 
-                parts = StructList()
+                parts = DictList()
                 for g, exceptions in Q.groupby(total_exceptions, ["details.Talos.Test"]):
                     worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
                     example = worst_in_test.details
@@ -200,7 +201,7 @@ def talos_alert_revision(settings):
 
                     example.mercurial.url.branch = MECURIAL_PATH.get(branch, branch)
                     example.treeherder.url.repo = example.mercurial.url.branch.split('/')[-1]
-                    example.datazilla.url = Struct(
+                    example.datazilla.url = Dict(
                         project="talos",
                         product=example.Talos.Product,
                         repository=example.Talos.Branch, #+ ("" if worst_in_test.Talos.Branch.pgo else "-Non-PGO")
@@ -214,7 +215,7 @@ def talos_alert_revision(settings):
                         x86="true" if example.Talos.Platform == "x86" else "false",
                         x86_64="true" if example.Talos.Platform == "x86_64" else "false",
                     )
-                    example.charts.url = Struct(
+                    example.charts.url = Dict(
                         sampleMin=Date(start).floor().format("%Y-%m-%d"),
                         sampleMax=Date(stop).floor().format("%Y-%m-%d"),
                         suite=example.Talos.Test.suite + "." + example.Talos.Test.name,
@@ -240,7 +241,7 @@ def talos_alert_revision(settings):
                 parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
-                alerts.append(Struct(
+                alerts.append(Dict(
                     status= "NEW",
                     push_date= convert.milli2datetime(worst_in_revision.push_date),
                     reason= REASON,

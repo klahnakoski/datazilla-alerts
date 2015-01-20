@@ -18,8 +18,8 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.parsers import URL
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.strings import expand_template
-from pyLibrary.structs import nvl, Struct, wrap
-from pyLibrary.structs.lists import StructList
+from pyLibrary.dot import nvl, Dict, wrap
+from pyLibrary.dot.lists import DictList
 from pyLibrary.thread.multithread import Multithread
 from pyLibrary.times.timer import Timer
 
@@ -32,7 +32,7 @@ def get_all_uuid(settings):
     num_requests = 0
     baseurl = settings.url
 
-    output = StructList()
+    output = DictList()
     devices = requests.get(baseurl + '/devices.json').json()['devices']
     num_requests+=1
     for device_name, device_info in devices.items():
@@ -83,7 +83,7 @@ def get_all_uuid(settings):
 
 def etl(settings):
     es = Cluster(settings.elasticsearch).get_or_create_index(settings.elasticsearch)
-    counter = Struct(num_requests=0)
+    counter = Dict(num_requests=0)
 
     with Timer("get all uuid"):
         all_tests = get_all_uuid(settings)

@@ -9,8 +9,8 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.structs import nvl
-from pyLibrary.structs.wraps import wrap
+from pyLibrary.dot import nvl
+from pyLibrary.dot import wrap
 
 
 class Changeset(object):

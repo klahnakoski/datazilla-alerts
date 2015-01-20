@@ -13,8 +13,8 @@ from __future__ import division
 from datetime import datetime
 from time import clock
 from pyLibrary.collections import MAX
-from pyLibrary.structs.wraps import wrap
-from pyLibrary.structs import Struct
+from pyLibrary.dot import wrap
+from pyLibrary.dot import Dict
 
 ON = False
 profiles = {}
@@ -63,7 +63,7 @@ class Profiler(object):
 
 def write(profile_settings):
     from pyLibrary import convert
-    from .files import File
+    from pyLibrary.env.files import File
 
     profs = list(profiles.values())
     for p in profs:
@@ -92,7 +92,7 @@ def write(profile_settings):
         return
 
     r = range(max_samples)
-    profs.insert(0, Struct(description="index", samples=r))
+    profs.insert(0, Dict(description="index", samples=r))
     stats = [
         {p.description: wrap(p.samples)[i] for p in profs if p.samples}
         for i in r

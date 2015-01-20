@@ -15,9 +15,10 @@ from dzAlerts.imports.repos.changesets import Changeset
 from dzAlerts.imports.repos.pushs import Push
 from dzAlerts.imports.repos.revisions import Revision
 from pyLibrary import convert
-from pyLibrary.debugs.logs import Log
-from pyLibrary.structs import nvl
-from pyLibrary.structs.wraps import unwrap, wrap
+from pyLibrary.debugs.logs import Log, Except
+from pyLibrary.dot import nvl
+from pyLibrary.dot import unwrap, wrap
+from pyLibrary.maths import Math
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -39,16 +40,23 @@ class MozillaGraph(object):
         EXPECTING INCOMPLETE revision
         RETURNS revision
         """
+        if len(revision.changeset.id) < 12 and Math.is_integer(revision.changeset.id):
+            revision = "0" * (12 - len(revision.changeset.id))
+
         revision.branch = self.settings.branches[revision.branch.name.lower()]
         if revision in self.nodes:
-            return self.nodes[revision]
+            output = self.nodes[revision]
+            if isinstance(output, Except):
+                raise output  # WE STORE THIS EXCEPTION SO WE DO NOT TRY TO GET REVISION INFO TOO MANY TIMES
+            else:
+                return output
 
         url = revision.branch.url + "/json-info?node=" + revision.changeset.id
         try:
             Log.note("Reading details for from {{url}}", {"url": url})
 
             response = self._get_and_retry(url)
-            revs = convert.JSON2object(response.content.decode("utf8"))
+            revs = convert.json2value(response.content.decode("utf8"))
 
             if len(revs.keys()) != 1:
                 Log.error("Do not know how to handle")
@@ -71,7 +79,12 @@ class MozillaGraph(object):
             self.nodes[revision]=revision
             return output
         except Exception, e:
-            Log.error("Can not get revision info from {{url}}", {"url": url}, e)
+            try:
+                Log.error("Can not get revision info from {{url}}", {"url": url}, e)
+            except Exception, e:
+                self.nodes[revision] = e  # WE STORE THIS EXCEPTION SO WE DO NOT TRY TO GET REVISION INFO TOO MANY TIMES
+                raise e
+
 
     def get_push(self, revision):
         # http://hg.mozilla.org/mozilla-central/json-pushes?full=1&changeset=57c461500a0c
@@ -84,7 +97,7 @@ class MozillaGraph(object):
             url = revision.branch.url + "/json-pushes?full=1&changeset=" + revision.changeset.id
             try:
                 response = self._get_and_retry(url)
-                data = convert.JSON2object(response.content.decode("utf8"))
+                data = convert.json2value(response.content.decode("utf8"))
                 for index, _push in data.items():
                     push = Push(index, revision.branch, _push.date, _push.user)
                     for c in _push.changesets:

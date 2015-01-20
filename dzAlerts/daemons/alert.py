@@ -24,7 +24,7 @@ from pyLibrary.strings import expand_template
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
 from pyLibrary.sql.db import DB, SQL
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.durations import Duration
@@ -99,9 +99,9 @@ def send_alerts(settings, db):
             listeners = ";".join(db.query("SELECT email FROM listeners WHERE reason={{reason}}", {"reason": alert.reason}).email)
             body = [HEADER]
 
-            alert.details = convert.JSON2object(alert.details)
+            alert.details = convert.json2value(alert.details)
             try:
-                alert.revision = convert.JSON2object(alert.revision)
+                alert.revision = convert.json2value(alert.revision)
             except Exception, e:
                 pass
 
@@ -122,10 +122,10 @@ def send_alerts(settings, db):
                     e.date_range = (datetime.utcnow() - convert.milli2datetime(e.push_date_min)).total_seconds() / (24 * 60 * 60)  # REQUIRED FOR DATAZILLA B2G CHART REFERENCE
                     e.date_range = nvl(nvl(*[v for v in (7, 30, 60) if v > e.date_range]), 90)  # PICK FIRST v > CURRENT VALUE
 
-            subject = expand_template(convert.JSON2object(alert.email_subject), alert)
+            subject = expand_template(convert.json2value(alert.email_subject), alert)
             if len(subject) > 200:
                 subject = subject[:197] + "..."
-            body.append(expand_template(convert.JSON2object(alert.email_template), alert))
+            body.append(expand_template(convert.json2value(alert.email_template), alert))
             body = "".join(body) + FOOTER
             if alert.email_style == None:
                 Log.note("Email has no style")

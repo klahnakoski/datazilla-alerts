@@ -20,7 +20,7 @@ from pyLibrary.maths import Math
 # UPDATE?
 from pyLibrary.queries import Q
 from pyLibrary.sql.db import SQL
-from pyLibrary.structs import nvl
+from pyLibrary.dot import nvl
 
 SIGNIFICANT = 0.2
 DEBUG_TOUCH_ALL_ALERTS = False
@@ -49,7 +49,7 @@ def significant_score_difference(a, b):
 def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
     verbose = nvl(settings.param.verbose, VERBOSE)
 
-    found_alerts = Q.unique_index(found_alerts, "tdad_id")
+    found_alerts = Q.unique_index(found_alerts, "tdad_id", fail_on_dup=False)
     old_alerts = Q.unique_index(old_alerts, "tdad_id")
 
     new_alerts = found_alerts - old_alerts
@@ -67,7 +67,9 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
             a.id = SQL("util.newid()")
             a.last_updated = NOW
         try:
-            alerts_db.insert_list("alerts", new_alerts)
+            #TODO: MySQL APPEARS TO HAVE A SIZE LIMIT
+            for _, na in Q.groupby(new_alerts, size=100):
+                alerts_db.insert_list("alerts", na)
         except Exception, e:
             Log.error("problem with insert", e)
 
