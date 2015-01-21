@@ -8,12 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from copy import copy
 
 import functools
 import hashlib
 import json
-from scipy.weave.converters import default
 
 from dzAlerts.imports.mozilla_graph import MozillaGraph
 from pyLibrary import convert
