@@ -286,7 +286,7 @@ class TreeHerderImport(object):
         treeherder_max = Math.min(treeherder_max, self.settings.treeherder.max)
         treeherder_min = Math.max(self.settings.treeherder.min, 0)
         holes = set(range(treeherder_min, nvl(Math.max(*existing_ids), treeherder_min))) - existing_ids
-        missing_ids = set(range(treeherder_min, treeherder_max)) - existing_ids
+        missing_ids = set(range(treeherder_min, treeherder_max+1)) - existing_ids
 
         # https://treeherder.mozilla.org/api/project/mozilla-inbound/project_info
         # url = settings.treeherder.url+"/api/project/"+branch

@@ -93,9 +93,9 @@ def post(es, esQuery, limit):
 
         for facetName, f in postResult.facets.items():
             if f._type == "statistical":
-                return Null
+                continue
             if not f.terms:
-                return Null
+                continue
 
             if not DEBUG and not limit and len(f.terms) == limit:
                 Log.error("Not all data delivered (" + str(len(f.terms)) + "/" + str(f.total) + ") try smaller range")
