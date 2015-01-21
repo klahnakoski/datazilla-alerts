@@ -69,9 +69,9 @@ class TreeHerderImport(object):
         result = http.get("https://treeherder.mozilla.org/api/optioncollection/")
         options = convert.json2value(convert.utf82unicode(result.content))
         for v in options:
-            result = http.get("https://treeherder.mozilla.org/api/option/"+str(v.id)+"/")
+            result = http.get("https://treeherder.mozilla.org/api/option/"+str(v.option)+"/")
             option = convert.json2value(convert.utf82unicode(result.content))
-            self.options[v.option_collection_hash]=option.name
+            self.options[v.option_collection_hash] = option.name
 
 
     def treeherder2talos(self, r, url):
