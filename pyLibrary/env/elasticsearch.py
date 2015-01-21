@@ -245,7 +245,7 @@ class Index(object):
                     Log.error("version not supported {{version}}", {"version":self.cluster.version})
 
             if self.debug:
-                Log.note("{{num}} items added", {"num": len(items)})
+                Log.note("{{num}} documents added", {"num": len(items)})
         except Exception, e:
             if e.message.startswith("sequence item "):
                 Log.error("problem with {{data}}", {"data": repr(lines[int(e.message[14:16].strip())])}, e)
@@ -495,7 +495,7 @@ class Cluster(object):
         try:
             kwargs = wrap(kwargs)
             kwargs.setdefault("timeout", 60)
-            response = http.put(url, data=kwargs.data, **kwargs)
+            response = http.put(url, **kwargs)
             if self.debug:
                 Log.note(utf82unicode(response.content))
             return response

@@ -14,10 +14,11 @@ import argparse
 import os
 import tempfile
 import sys
+
 from pyLibrary.dot import listwrap, wrap, unwrap
-from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.env.files import File
+
 
 
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()
@@ -101,7 +102,7 @@ class SingleInstance:
     def __init__(self, flavor_id=""):
         self.initialized = False
         appname = os.path.splitext(os.path.abspath(sys.argv[0]))[0]
-        basename = ((appname + '-%s') % flavor_id).replace("/", "-").replace(":", "").replace("\\", "-") + '.lock'
+        basename = ((appname + '-%s') % flavor_id).replace("/", "-").replace(":", "").replace("\\", "-").replace("-.-", "-") + '.lock'
         self.lockfile = os.path.normpath(tempfile.gettempdir() + '/' + basename)
 
 

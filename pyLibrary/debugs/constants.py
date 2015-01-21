@@ -21,6 +21,8 @@ def set(constants):
     THINK OF THIS AS DEPENDENCY INJECTION FOR MODULES
     USEFUL FOR SETTING DEBUG FLAGS
     """
+    if not constants:
+        return
     constants = wrap(constants)
     sys_modules = sys.modules
 

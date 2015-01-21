@@ -8,12 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import unicode_literals
-from copy import copy
 
 import functools
 import hashlib
 import json
-from scipy.weave.converters import default
 
 from dzAlerts.imports.mozilla_graph import MozillaGraph
 from pyLibrary import convert
@@ -71,9 +69,9 @@ class TreeHerderImport(object):
         result = http.get("https://treeherder.mozilla.org/api/optioncollection/")
         options = convert.json2value(convert.utf82unicode(result.content))
         for v in options:
-            result = http.get("https://treeherder.mozilla.org/api/option/"+str(v.id)+"/")
+            result = http.get("https://treeherder.mozilla.org/api/option/"+str(v.option)+"/")
             option = convert.json2value(convert.utf82unicode(result.content))
-            self.options[v.option_collection_hash]=option.name
+            self.options[v.option_collection_hash] = option.name
 
 
     def treeherder2talos(self, r, url):
@@ -288,7 +286,7 @@ class TreeHerderImport(object):
         treeherder_max = Math.min(treeherder_max, self.settings.treeherder.max)
         treeherder_min = Math.max(self.settings.treeherder.min, 0)
         holes = set(range(treeherder_min, nvl(Math.max(*existing_ids), treeherder_min))) - existing_ids
-        missing_ids = set(range(treeherder_min, treeherder_max)) - existing_ids
+        missing_ids = set(range(treeherder_min, treeherder_max+1)) - existing_ids
 
         # https://treeherder.mozilla.org/api/project/mozilla-inbound/project_info
         # url = settings.treeherder.url+"/api/project/"+branch
