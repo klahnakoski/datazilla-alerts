@@ -118,10 +118,11 @@ def _all_default(d, default):
     if default is None:
         return
     for k, default_value in default.items():
-        existing_value = d.get(k, None)
-        if existing_value is None:
-            d[k] = default_value
-        elif isinstance(existing_value, dict) and isinstance(default_value, dict):
+        # existing_value = d.get(k, None)
+        existing_value = _get_attr(d, [k])
+        if existing_value == None:
+            _set_attr(d, [k], default_value)
+        elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, dict)) and isinstance(default_value, dict):
             _all_default(existing_value, default_value)
 
 
@@ -216,12 +217,15 @@ def _get_attr(obj, path):
             obj = obj[attr_name]
             return _get_attr(obj, path[1:])
         except Exception, f:
-            from pyLibrary.debugs.logs import Log
-            Log.error(PATH_NOT_FOUND)
+            return None
 
 
 def _set_attr(obj, path, value):
     obj = _get_attr(obj, path[:-1])
+    if obj is None:  # DELIBERATE, WE DO NOT WHAT TO CATCH Null HERE (THEY CAN BE SET)
+        from pyLibrary.debugs.logs import Log
+        Log.error(PATH_NOT_FOUND)
+
     attr_name = path[-1]
 
     # ACTUAL SETTING OF VALUE

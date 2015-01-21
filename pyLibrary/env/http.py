@@ -36,7 +36,7 @@ def request(method, url, **kwargs):
         Log.warning("The pyLibrary.env.http module was meant to add extra "
                     "default headers to all requests, specifically the 'From' "
                     "header with a URL to the project, or email of developer. "
-                    "Use the contants.set() function to set pyLibrary.env.http.default_headers"
+                    "Use the constants.set() function to set pyLibrary.env.http.default_headers"
         )
 
     session = sessions.Session()

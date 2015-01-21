@@ -198,6 +198,10 @@ class Dict(dict):
         return hash_value(d)
 
     def __eq__(self, other):
+        d = _get(self, "__dict__")
+        if not d and other == None:
+            return True
+
         if not isinstance(other, dict):
             return False
         e = unwrap(other)

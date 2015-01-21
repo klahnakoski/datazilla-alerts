@@ -17,7 +17,7 @@ from pyLibrary.collections import MIN, MAX
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
 from pyLibrary.queries.es_query import ESQuery
-from pyLibrary.debugs import startup
+from pyLibrary.debugs import startup, constants
 from pyLibrary.env import elasticsearch
 from pyLibrary.queries.db_query import DBQuery
 from pyLibrary import convert
@@ -485,6 +485,7 @@ def main():
         "dest": "restart"
     }])
     Log.start(settings.debug)
+    constants.set(settings.constants)
     try:
         with startup.SingleInstance(flavor_id=settings.args.filename):
             # MORE SETTINGS
@@ -492,7 +493,7 @@ def main():
 
             es = elasticsearch.Index(settings.query["from"])
             with ESQuery(es) as qb:
-                qb.addDimension(convert.json2value(File(settings.dimension.filename).read()))
+                qb.addDimension(settings.dimension)
 
                 with DB(settings.alerts) as alerts_db:
                     alert_sustained_median(

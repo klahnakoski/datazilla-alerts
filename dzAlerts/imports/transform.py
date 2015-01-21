@@ -45,7 +45,7 @@ class Talos2ES():
             pass
 
 
-    # CONVERT THE TESTS (WHICH ARE IN A dict) TO
+    # CONVERT THE TESTS (WHICH ARE IN A dict) TO MANY RECORDS WITH ONE result EACH
     def transform(self, uid, talos_test_result):
         try:
             r = talos_test_result

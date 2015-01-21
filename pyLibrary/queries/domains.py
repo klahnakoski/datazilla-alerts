@@ -13,7 +13,7 @@ import re
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries.unique_index import UniqueIndex
-from pyLibrary.dot import nvl, Dict
+from pyLibrary.dot import nvl, Dict, set_default
 from pyLibrary.dot.lists import DictList
 from pyLibrary.dot import wrap, unwrap
 
@@ -43,12 +43,19 @@ class Domain(object):
         self.min = desc.min
         self.max = desc.max
         self.interval = desc.interval
-        self.value = desc.value,
-        self.key = desc.key,
-        self.label = desc.label,
-        self.end = desc.end,
+        self.value = desc.value
+        self.key = desc.key
+        self.label = desc.label
+        self.end = desc.end
         self.isFacet = nvl(desc.isFacet, False)
         self.dimension = desc.dimension
+
+    def __copy__(self):
+        return Domain(**unwrap(self.dict))
+
+    def copy(self):
+        return Domain(**unwrap(self.dict))
+
 
     @property
     def dict(self):
@@ -149,19 +156,25 @@ class SetDomain(Domain):
         Domain.__init__(self, **desc)
         desc = wrap(desc)
 
+        self.type = "set"
+        self.order = {}
         self.NULL = Dict(value=None)
         self.partitions = DictList()
 
-        if isinstance(desc.key, set):
+        self.esfilter = None
+        set_default(self, desc)
+        if isinstance(self.key, set):
             Log.error("problem")
 
         if isinstance(desc.partitions[0], basestring):
             # ASSMUE PARTS ARE STRINGS, CONVERT TO REAL PART OBJECTS
             self.key = ("value", )
-            for p in desc.partitions:
+            self.order[None]=len(desc.partitions)
+            for i, p in enumerate(desc.partitions):
                 part = {"name": p, "value": p}
                 self.partitions.append(part)
                 self.map[p] = part
+                self.order[p] = i
         elif desc.partitions and desc.dimension.fields and len(desc.dimension.fields) > 1:
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.dimension.fields)
@@ -180,8 +193,10 @@ class SetDomain(Domain):
             self.key = desc.key
             self.map = dict()
             self.map[None] = self.NULL
-            for p in desc.partitions:
+            self.order[None] = len(desc.partitions)
+            for i, p in enumerate(desc.partitions):
                 self.map[p[self.key]] = p
+                self.order[p[self.key]] = i
 
         self.label = nvl(self.label, "name")
 
@@ -195,6 +210,16 @@ class SetDomain(Domain):
 
     def getCanonicalPart(self, part):
         return self.getPartByKey(part.value)
+
+    def getIndexByKey(self, key):
+        try:
+            output = self.order.get(key, None)
+            if output is None:
+                return len(self.partitions)
+            return output
+        except Exception, e:
+            Log.error("problem", e)
+
 
     def getPartByKey(self, key):
         try:
