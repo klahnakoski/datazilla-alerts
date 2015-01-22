@@ -432,7 +432,7 @@ def sort(data, fieldnames=None):
         if len(fieldnames) == 1:
             fieldnames = fieldnames[0]
             # SPECIAL CASE, ONLY ONE FIELD TO SORT BY
-            if isinstance(fieldnames, basestring):
+            if isinstance(fieldnames, (basestring, int)):
                 def comparer(left, right):
                     return cmp(nvl(left, Dict())[fieldnames], nvl(right, Dict())[fieldnames])
 
