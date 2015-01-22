@@ -9,11 +9,13 @@
 
 from __future__ import unicode_literals
 from __future__ import division
+import HTMLParser
 
 import StringIO
 import base64
 import cgi
 import datetime
+import hashlib
 import json
 import re
 import time
@@ -79,6 +81,8 @@ def json2value(json_string, params=None, flexible=False, paths=False):
                 json_string = "\n".join(remove_line_comment(l) for l in json_string.split("\n"))
                 # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
                 json_string = re.sub(r",\s*\}", r"}", json_string)
+                # ALLOW LISTS TO END WITH COMMA
+                json_string = re.sub(r",\s*\]", r"]", json_string)
 
             if params:
                 params = dict([(k, value2quote(v)) for k, v in params.items()])
@@ -233,6 +237,11 @@ def value2url(value):
     return output
 
 
+def html2unicode(value):
+    # http://stackoverflow.com/questions/57708/convert-xml-html-entities-into-unicode-string-in-python
+    return HTMLParser.HTMLParser().unescape(value)
+
+
 def unicode2html(value):
     return cgi.escape(value)
 
@@ -294,6 +303,11 @@ def base642bytearray(value):
 def bytearray2base64(value):
     return base64.b64encode(value)
 
+def bytearray2sha1(value):
+    if isinstance(value, unicode):
+        Log.error("can not convert unicode to sha1")
+    sha = hashlib.sha1(value)
+    return sha.hexdigest()
 
 def value2intlist(value):
     if value == None:

@@ -46,6 +46,111 @@ class Log(object):
     error_mode = False  # prevent error loops
 
     @classmethod
+    def start(cls, settings=None):
+        """
+        RUN ME FIRST TO SETUP THE THREADED LOGGING
+        http://victorlin.me/2012/08/good-logging-practice-in-python/
+
+        log       - LIST OF PARAMETERS FOR LOGGER(S)
+        trace     - SHOW MORE DETAILS IN EVERY LOG LINE (default False)
+        cprofile  - True==ENABLE THE C-PROFILER THAT COMES WITH PYTHON (default False)
+                    USE THE LONG FORM TO SET THE FILENAME {"enabled": True, "filename": "cprofile.tab"}
+        profile   - True==ENABLE pyLibrary SIMPLE PROFILING (default False) (eg with Profiler("some description"):)
+                    USE THE LONG FORM TO SET FILENAME {"enabled": True, "filename": "profile.tab"}
+        constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
+        """
+        if not settings:
+            return
+
+        cls.settings = settings
+        cls.trace = cls.trace | nvl(settings.trace, False)
+        if cls.trace:
+            from pyLibrary.thread.threads import Thread
+
+        if not settings.log:
+            return
+
+        cls.logging_multi = Log_usingMulti()
+        cls.main_log = Log_usingThread(cls.logging_multi)
+
+        for log in listwrap(settings.log):
+            Log.add_log(Log.new_instance(log))
+
+        if settings.cprofile:
+            if isinstance(settings.cprofile, bool):
+                settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
+
+            import cProfile
+
+            cls.cprofiler = cProfile.Profile()
+            cls.cprofiler.enable()
+
+        if settings.profile:
+            from pyLibrary.debugs import profiles
+
+            if isinstance(settings.profile, bool):
+                settings.profile = {"enabled": True, "filename": "profile.tab"}
+
+            if settings.profile.enabled:
+                profiles.ON = True
+
+        if settings.constants:
+            cls.please_setup_constants = True
+
+        if cls.please_setup_constants:
+            sys_modules = sys.modules
+            # ONE MODULE IS MISSING, THE CALLING MODULE
+            caller_globals = sys._getframe(1).f_globals
+            caller_file = caller_globals["__file__"]
+            if not caller_file.endswith(".py"):
+                raise Exception("do not know how to handle non-python caller")
+            caller_module = caller_file[:-3].replace("/", ".")
+
+            for k, v in wrap_dot(settings.constants).leaves():
+                module_name = join_field(split_field(k)[:-1])
+                attribute_name = split_field(k)[-1].lower()
+                if module_name in sys_modules and isinstance(sys_modules[module_name], ModuleType):
+                    mod = sys_modules[module_name]
+                    all_names = dir(mod)
+                    for name in all_names:
+                        if attribute_name == name.lower():
+                            setattr(mod, name, v)
+                    continue
+                elif caller_module.endswith(module_name):
+                    for name in caller_globals.keys():
+                        if attribute_name == name.lower():
+                            old_value = caller_globals[name]
+                            try:
+                                new_value = old_value.__class__(v)  # TRY TO MAKE INSTANCE OF SAME CLASS
+                            except Exception, e:
+                                new_value = v
+                            caller_globals[name] = new_value
+                            Log.note("Changed {{module}}[{{attribute}}] from {{old_value}} to {{new_value}}", {
+                                "module": module_name,
+                                "attribute": name,
+                                "old_value": old_value,
+                                "new_value": new_value
+                            })
+                            break
+                else:
+                    Log.note("Can not change {{module}}[{{attribute}}] to {{new_value}}", {
+                        "module": module_name,
+                        "attribute": k,
+                        "new_value": v
+                    })
+
+    @classmethod
+    def stop(cls):
+        from pyLibrary.debugs import profiles
+
+        if cls.cprofiler and hasattr(cls, "settings"):
+            write_profile(cls.settings.cprofile, cls.cprofiler)
+
+        if profiles.ON and hasattr(cls, "settings"):
+            profiles.write(cls.settings.profile)
+        cls.main_log.stop()
+
+    @classmethod
     def new_instance(cls, settings):
         settings = wrap(settings)
 
@@ -130,14 +235,17 @@ class Log(object):
 
         trace = extract_stack(1)
         e = Except(UNEXPECTED, template, params, cause, trace)
-        Log.note(unicode(e), {
-            "warning": {
-                "template": template,
-                "params": params,
-                "cause": cause,
-                "trace": trace
+        Log.note(
+            unicode(e),
+            {
+                "warning": {
+                    "template": template,
+                    "params": params,
+                    "cause": cause,
+                    "trace": trace
+                }
             }
-        })
+        )
 
 
     @classmethod
@@ -157,14 +265,18 @@ class Log(object):
 
         trace = extract_stack(stack_depth + 1)
         e = Except(WARNING, template, params, cause, trace)
-        Log.note(unicode(e), {
-            "warning": {# REDUNDANT INFO
-                "template": template,
-                "params": params,
-                "cause": cause,
-                "trace": trace
-            }
-        })
+        Log.note(
+            unicode(e),
+            {
+                "warning": {# REDUNDANT INFO
+                    "template": template,
+                    "params": params,
+                    "cause": cause,
+                    "trace": trace
+                }
+            },
+            stack_depth=stack_depth + 1
+        )
 
 
     @classmethod
@@ -248,68 +360,6 @@ class Log(object):
         cls.error_mode = error_mode
 
         sys.stderr.write(str_e)
-
-
-    @classmethod
-    def start(cls, settings=None):
-        """
-        RUN ME FIRST TO SETUP THE THREADED LOGGING
-        http://victorlin.me/2012/08/good-logging-practice-in-python/
-
-        log - LIST OF PARAMETERS FOR LOGGER(S)
-        trace - SHOW MORE DETAILS IN EVERY LOG LINE (default False)
-        cprofile - True==ENABLE THE C-PROFILER THAT COMES WITH PYTHON (default False)
-        profile - True==ENABLE pyLibrary SIMPLE PROFILING (default False) (eg with Profiler("some description"):)
-        constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
-        """
-        if not settings:
-            return
-
-        cls.settings = settings
-        cls.trace = cls.trace | nvl(settings.trace, False)
-        if cls.trace:
-            from pyLibrary.thread.threads import Thread
-
-        if not settings.log:
-            return
-
-        cls.logging_multi = Log_usingMulti()
-        cls.main_log = Log_usingThread(cls.logging_multi)
-
-        for log in listwrap(settings.log):
-            Log.add_log(Log.new_instance(log))
-
-        if settings.cprofile:
-            if isinstance(settings.cprofile, bool):
-                settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
-
-            import cProfile
-
-            cls.cprofiler = cProfile.Profile()
-            cls.cprofiler.enable()
-
-        if settings.profile:
-            from pyLibrary.debugs import profiles
-
-            if isinstance(settings.profile, bool):
-                settings.profile = {"enabled": True, "filename": "profile.tab"}
-
-            if settings.profile.enabled:
-                profiles.ON = True
-
-        if settings.constants:
-            constants.set(settings.constants)
-
-    @classmethod
-    def stop(cls):
-        from pyLibrary.debugs import profiles
-
-        if cls.cprofiler and hasattr(cls, "settings"):
-            write_profile(cls.settings.cprofile, cls.cprofiler)
-
-        if profiles.ON and hasattr(cls, "settings"):
-            profiles.write(cls.settings.profile)
-        cls.main_log.stop()
 
 
     def write(self):
