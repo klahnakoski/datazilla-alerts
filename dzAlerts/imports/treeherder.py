@@ -306,19 +306,24 @@ class TreeHerderImport(object):
 
                     num_not_found = 0
                     with Multithread(simple_etl, threads=self.settings.treeherder.threads) as many:
-                        results = many.execute([
-                            {"min_job_id": min_job_id, "max_job_id": max_job_id}
-                            for i, (min_job_id, max_job_id) in cluster(missing_ids, self.settings.treeherder.step)
-                        ])
-                        for result in results:
-                            if not result:
-                                num_not_found += 1
-                                if num_not_found > nvl(self.settings.treeherder.max_tries, 10):
-                                    many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
-                                    many.stop()
-                                    break
-                            else:
-                                num_not_found = 0
+                        try:
+                            results = many.execute([
+                                {"min_job_id": min_job_id, "max_job_id": max_job_id}
+                                for i, (min_job_id, max_job_id) in cluster(missing_ids, self.settings.treeherder.step)
+                            ])
+                            for result in results:
+                                if not result:
+                                    num_not_found += 1
+                                    if num_not_found > nvl(self.settings.treeherder.max_tries, 10):
+                                        many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
+                                        many.stop()
+                                        break
+                                else:
+                                    num_not_found = 0
+                        except (KeyboardInterrupt, SystemExit), e:
+                            many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
+                            many.stop()
+                            raise e
         except (KeyboardInterrupt, SystemExit):
             Log.println("Shutdown Started, please be patient")
         except Exception, e:
