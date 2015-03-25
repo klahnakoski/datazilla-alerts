@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 
 import functools
 import hashlib
+from httplib import HTTPConnection
 import json
 
 from dzAlerts.imports.mozilla_graph import MozillaGraph
@@ -442,5 +443,5 @@ def main():
     finally:
         Log.stop()
 
-
+HTTPConnection.debuglevel = 1
 main()
