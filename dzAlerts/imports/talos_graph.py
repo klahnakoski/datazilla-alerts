@@ -14,7 +14,7 @@ from dzAlerts.imports.mozilla_graph import MozillaGraph
 from pyLibrary.collections import UNION
 from pyLibrary.graphs import Graph
 from pyLibrary.graphs.algorithms import dfs
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 
 
 class TalosGraph(object):
@@ -71,6 +71,6 @@ class TalosGraph(object):
     def get_ordering(self, test_result):
         revision = self.repo_graph.get_node(test_result.revision)
         children = self.repo_graph.get_children(revision)
-        children = Q.sort(children, ["push.date", "index"])
+        children = qb.sort(children, ["push.date", "index"])
 
 

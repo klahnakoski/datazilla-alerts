@@ -18,7 +18,7 @@ from pynliner import Pynliner
 from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticker_alert_revision
 from pyLibrary import convert
 from pyLibrary.debugs import startup
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.queries.db_query import esfilter2sqlwhere
 from pyLibrary.strings import expand_template
 from pyLibrary.maths import Math
@@ -146,7 +146,7 @@ def send_alerts(settings, db):
             db.execute(
                 "UPDATE alerts SET last_sent={{time}} WHERE {{where}}", {
                     "time": datetime.utcnow(),
-                    "where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(new_alerts, "alert_id")}})
+                    "where": esfilter2sqlwhere(db, {"terms": {"id": qb.select(new_alerts, "alert_id")}})
                 })
 
     except Exception, e:

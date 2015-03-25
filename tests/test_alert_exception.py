@@ -21,7 +21,7 @@ from pyLibrary import convert
 from pyLibrary.debugs import startup
 from pyLibrary.sql.db import SQL, DB
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.maths.stats import closeEnough
 from util.testing import make_test_database
 
@@ -127,7 +127,7 @@ class test_alert_exception():
     def insert_test_results(self, test_data):
         ## diff_time IS REQUIRED TO TRANSLATE THE TEST DATE DATES TO SOMETHING MORE CURRENT
         now_time = convert.datetime2unix(datetime.utcnow())
-        max_time = max(Q.select(test_data, "timestamp"))
+        max_time = max(qb.select(test_data, "timestamp"))
         diff_time = now_time - max_time
 
         ## INSERT THE TEST RESULTS

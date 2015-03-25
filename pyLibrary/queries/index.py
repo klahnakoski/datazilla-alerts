@@ -10,9 +10,11 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-from pyLibrary.queries.unique_index import UniqueIndex
+from pyLibrary.debugs.logs import Log
 
+from pyLibrary.queries.unique_index import UniqueIndex
 from pyLibrary.dot import wrap, unwrap, tuplewrap
+
 
 class Index(object):
     """
@@ -62,13 +64,13 @@ class Index(object):
         key = value2key(self._keys, val)
         d = self._data
         for k in key[:-1]:
-            e = d.get(k, None)
+            e = d.get(k)
             if e is None:
                 e = {}
                 d[k] = e
             d = e
         k = key[-1]
-        e = d.get(k, None)
+        e = d.get(k)
         if e is None:
             e = []
             d[k] = e

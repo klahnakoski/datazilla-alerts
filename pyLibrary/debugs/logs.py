@@ -15,14 +15,12 @@ from __future__ import division
 from datetime import datetime
 import os
 import sys
-from types import ModuleType
 
-from pyLibrary.jsons import json_encoder
-from pyLibrary.thread import threads
-from pyLibrary.dot import nvl, Dict, split_field, join_field, set_default
-from pyLibrary.dot import listwrap, wrap, wrap_dot
+from pyLibrary.debugs import constants
+from pyLibrary.dot import nvl, Dict, set_default, listwrap, wrap
+from pyLibrary.jsons.encoder import json_encoder
+from pyLibrary.thread.threads import Thread, Lock, Queue
 from pyLibrary.strings import indent, expand_template
-from pyLibrary.thread.threads import Thread
 
 
 DEBUG_LOGGING = False
@@ -41,8 +39,79 @@ class Log(object):
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
     cprofiler = None  # screws up with pypy, but better than nothing
+    cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
     error_mode = False  # prevent error loops
-    please_setup_constants = False  # we intend to manipulate module-level constants for debugging
+
+    @classmethod
+    def start(cls, settings=None):
+        """
+        RUN ME FIRST TO SETUP THE THREADED LOGGING
+        http://victorlin.me/2012/08/good-logging-practice-in-python/
+
+        log       - LIST OF PARAMETERS FOR LOGGER(S)
+        trace     - SHOW MORE DETAILS IN EVERY LOG LINE (default False)
+        cprofile  - True==ENABLE THE C-PROFILER THAT COMES WITH PYTHON (default False)
+                    USE THE LONG FORM TO SET THE FILENAME {"enabled": True, "filename": "cprofile.tab"}
+        profile   - True==ENABLE pyLibrary SIMPLE PROFILING (default False) (eg with Profiler("some description"):)
+                    USE THE LONG FORM TO SET FILENAME {"enabled": True, "filename": "profile.tab"}
+        constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
+        """
+        if not settings:
+            return
+        settings = wrap(settings)
+
+        cls.settings = settings
+        cls.trace = cls.trace | nvl(settings.trace, False)
+        if cls.trace:
+            from pyLibrary.thread.threads import Thread
+
+        if settings.cprofile:
+            if isinstance(settings.cprofile, bool):
+                settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
+
+            import cProfile
+
+            cls.cprofiler = cProfile.Profile()
+            cls.cprofiler.enable()
+
+        if settings.profile:
+            from pyLibrary.debugs import profiles
+
+            if isinstance(settings.profile, bool):
+                profiles.ON = True
+                settings.profile = {"enabled": True, "filename": "profile.tab"}
+
+            if settings.profile.enabled:
+                profiles.ON = True
+
+        if settings.constants:
+            constants.set(settings.constants)
+
+        if not settings.log:
+            return
+
+        cls.logging_multi = Log_usingMulti()
+        cls.main_log = Log_usingThread(cls.logging_multi)
+
+        for log in listwrap(settings.log):
+            Log.add_log(Log.new_instance(log))
+
+
+
+
+    @classmethod
+    def stop(cls):
+        from pyLibrary.debugs import profiles
+
+        if cls.cprofiler and hasattr(cls, "settings"):
+            import pstats
+            cls.cprofiler_stats.add(pstats.Stats(cls.cprofiler))
+            write_profile(cls.settings.cprofile, cls.cprofiler_stats.pop_all())
+
+        if profiles.ON and hasattr(cls, "settings"):
+            profiles.write(cls.settings.profile)
+        cls.main_log.stop()
+        cls.main_log = Log_usingStream("sys.stdout")
 
     @classmethod
     def new_instance(cls, settings):
@@ -96,19 +165,24 @@ class Log(object):
 
     @classmethod
     def note(cls, template, params=None, stack_depth=0):
-        # USE replace() AS POOR MAN'S CHILD TEMPLATE
+        if len(template) > 10000:
+            template = template[:10000]
 
         log_params = Dict(
             template=template,
             params=set_default({}, params),
             timestamp=datetime.utcnow(),
         )
+
+        if not template.startswith("\n") and template.find("\n") > -1:
+            template = "\n" + template
+
         if cls.trace:
             log_template = "{{timestamp|datetime}} - {{thread.name}} - {{location.file}}:{{location.line}} ({{location.method}}) - " + template.replace("{{", "{{params.")
             f = sys._getframe(stack_depth + 1)
             log_params.location = {
                 "line": f.f_lineno,
-                "file": f.f_code.co_filename,
+                "file": f.f_code.co_filename.split(os.sep)[-1],
                 "method": f.f_code.co_name
             }
             thread = Thread.current()
@@ -129,15 +203,28 @@ class Log(object):
 
         trace = extract_stack(1)
         e = Except(UNEXPECTED, template, params, cause, trace)
-        Log.note(unicode(e), {
-            "warning": {
-                "template": template,
-                "params": params,
-                "cause": cause,
-                "trace": trace
+        Log.note(
+            unicode(e),
+            {
+                "warning": {
+                    "template": template,
+                    "params": params,
+                    "cause": cause,
+                    "trace": trace
+                }
             }
-        })
+        )
 
+    @classmethod
+    def alarm(cls, template, params=None, stack_depth=0):
+        # USE replace() AS POOR MAN'S CHILD TEMPLATE
+
+        template = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
+        Log.note(template, params=params, stack_depth=stack_depth + 1)
+
+    @classmethod
+    def alert(cls, template, params=None, stack_depth=0):
+        return Log.alarm(template, params, stack_depth+1)
 
     @classmethod
     def warning(
@@ -156,14 +243,18 @@ class Log(object):
 
         trace = extract_stack(stack_depth + 1)
         e = Except(WARNING, template, params, cause, trace)
-        Log.note(unicode(e), {
-            "warning": {# REDUNDANT INFO
-                "template": template,
-                "params": params,
-                "cause": cause,
-                "trace": trace
-            }
-        })
+        Log.note(
+            unicode(e),
+            {
+                "warning": {# REDUNDANT INFO
+                    "template": template,
+                    "params": params,
+                    "cause": cause,
+                    "trace": trace
+                }
+            },
+            stack_depth=stack_depth + 1
+        )
 
 
     @classmethod
@@ -190,7 +281,7 @@ class Log(object):
             cause = [cause]
         else:
             add_to_trace = True
-            if hasattr(cause, "message"):
+            if hasattr(cause, "message") and cause.message:
                 cause = [Except(ERROR, unicode(cause.message), trace=extract_tb(stack_depth))]
             else:
                 cause = [Except(ERROR, unicode(cause), trace=extract_tb(stack_depth))]
@@ -205,10 +296,10 @@ class Log(object):
     @classmethod
     def fatal(
         cls,
-        template, # human readable template
-        params=None, # parameters for template
-        cause=None, # pausible cause
-        stack_depth=0    # stack trace offset (==1 if you do not want to report self)
+        template,  # human readable template
+        params=None,  # parameters for template
+        cause=None,  # pausible cause
+        stack_depth=0  # stack trace offset (==1 if you do not want to report self)
     ):
         """
         SEND TO STDERR
@@ -249,112 +340,11 @@ class Log(object):
         sys.stderr.write(str_e)
 
 
-    @classmethod
-    def start(cls, settings=None):
-        """
-        RUN ME FIRST TO SETUP THE THREADED LOGGING
-        http://victorlin.me/2012/08/good-logging-practice-in-python/
-
-        log - LIST OF PARAMETERS FOR LOGGER(S)
-        trace - SHOW MORE DETAILS IN EVERY LOG LINE (default False)
-        cprofile - True==ENABLE THE C-PROFILER THAT COMES WITH PYTHON (default False)
-        profile - True==ENABLE pyLibrary SIMPLE PROFILING (default False) (eg with Profiler("some description"):)
-        constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
-        """
-        if not settings:
-            return
-
-        cls.settings = settings
-        cls.trace = cls.trace | nvl(settings.trace, False)
-        if cls.trace:
-            from pyLibrary.thread.threads import Thread
-
-        if not settings.log:
-            return
-
-        cls.logging_multi = Log_usingMulti()
-        cls.main_log = Log_usingThread(cls.logging_multi)
-
-        for log in listwrap(settings.log):
-            Log.add_log(Log.new_instance(log))
-
-        if settings.cprofile:
-            if isinstance(settings.cprofile, bool):
-                settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
-
-            import cProfile
-
-            cls.cprofiler = cProfile.Profile()
-            cls.cprofiler.enable()
-
-        if settings.profile:
-            from pyLibrary.debugs import profiles
-
-            if isinstance(settings.profile, bool):
-                settings.profile = {"enabled": True, "filename": "profile.tab"}
-
-            if settings.profile.enabled:
-                profiles.ON = True
-
-        if settings.constants:
-            cls.please_setup_constants = True
-
-        if cls.please_setup_constants:
-            sys_modules = sys.modules
-            # ONE MODULE IS MISSING, THE CALLING MODULE
-            caller_globals = sys._getframe(1).f_globals
-            caller_file = caller_globals["__file__"]
-            if not caller_file.endswith(".py"):
-                raise Exception("do not know how to handle non-python caller")
-            caller_module = caller_file[:-3].replace("/", ".")
-
-            for k, v in wrap_dot(settings.constants).leaves():
-                module_name = join_field(split_field(k)[:-1])
-                attribute_name = split_field(k)[-1].lower()
-                if module_name in sys_modules and isinstance(sys_modules[module_name], ModuleType):
-                    mod = sys_modules[module_name]
-                    all_names = dir(mod)
-                    for name in all_names:
-                        if attribute_name == name.lower():
-                            setattr(mod, name, v)
-                    continue
-                elif caller_module.endswith(module_name):
-                    for name in caller_globals.keys():
-                        if attribute_name == name.lower():
-                            old_value = caller_globals[name]
-                            try:
-                                new_value = old_value.__class__(v)  # TRY TO MAKE INSTANCE OF SAME CLASS
-                            except Exception, e:
-                                new_value = v
-                            caller_globals[name] = new_value
-                            Log.note("Changed {{module}}[{{attribute}}] from {{old_value}} to {{new_value}}", {
-                                "module": module_name,
-                                "attribute": name,
-                                "old_value": old_value,
-                                "new_value": new_value
-                            })
-                            break
-                else:
-                    Log.note("Can not change {{module}}[{{attribute}}] to {{new_value}}", {
-                        "module": module_name,
-                        "attribute": k,
-                        "new_value": v
-                    })
-
-    @classmethod
-    def stop(cls):
-        from pyLibrary.debugs import profiles
-
-        if cls.cprofiler and hasattr(cls, "settings"):
-            write_profile(cls.settings.cprofile, cls.cprofiler)
-
-        if profiles.ON and hasattr(cls, "settings"):
-            profiles.write(cls.settings.profile)
-        cls.main_log.stop()
-
-
     def write(self):
         raise NotImplementedError
+
+
+
 
 
 def extract_stack(start=0):
@@ -424,13 +414,24 @@ def extract_tb(start):
 def format_trace(tbs, start=0):
     trace = []
     for d in tbs[start::]:
-        d["file"] = d["file"].replace("/", "\\")
         item = expand_template('File "{{file}}", line {{line}}, in {{method}}\n', d)
         trace.append(item)
     return "".join(trace)
 
 
 class Except(Exception):
+
+    @staticmethod
+    def new_instance(desc):
+        return Except(
+            desc.type,
+            desc.template,
+            desc.params,
+            [Except.new_instance(c) for c in listwrap(desc.cause)],
+            desc.trace
+        )
+
+
     def __init__(self, type=ERROR, template=None, params=None, cause=None, trace=None):
         Exception.__init__(self)
         self.type = type
@@ -459,7 +460,7 @@ class Except(Exception):
     def message(self):
         return expand_template(self.template, self.params)
 
-    def contains(self, value):
+    def __contains__(self, value):
         if isinstance(value, basestring):
             if self.message.find(value) >= 0 or self.template.find(value) >= 0:
                 return True
@@ -468,7 +469,7 @@ class Except(Exception):
             return True
         if self.cause:
             for c in self.cause:
-                if c.contains(value):
+                if value in c:
                     return True
         return False
 
@@ -495,14 +496,17 @@ class Except(Exception):
     def __unicode__(self):
         return unicode(str(self))
 
-    def __json__(self):
-        return json_encoder(Dict(
+    def as_dict(self):
+        return Dict(
             type=self.type,
             template=self.template,
             params=self.params,
             cause=self.cause,
             trace=self.trace
-        ))
+        )
+
+    def __json__(self):
+        return json_encoder(self.as_dict())
 
 
 class BaseLog(object):
@@ -524,7 +528,7 @@ class Log_usingFile(BaseLog):
             self.file.backup()
             self.file.delete()
 
-        self.file_lock = threads.Lock("file lock for logging")
+        self.file_lock = Lock("file lock for logging")
 
     def write(self, template, params):
         with self.file_lock:
@@ -537,7 +541,7 @@ class Log_usingThread(BaseLog):
         # DELAYED LOAD FOR THREADS MODULE
         from pyLibrary.thread.threads import Queue
 
-        self.queue = Queue(max=10000, silent=True)
+        self.queue = Queue("logs", max=10000, silent=True)
         self.logger = logger
 
         def worker(please_stop):
@@ -614,12 +618,14 @@ class Log_usingMulti(BaseLog):
                 pass
 
 
-def write_profile(profile_settings, cprofiler):
+def write_profile(profile_settings, stats):
     from pyLibrary import convert
     from pyLibrary.env.files import File
-    import pstats
 
-    p = pstats.Stats(cprofiler)
+    acc = stats[0]
+    for s in stats[1:]:
+        acc.add(s)
+
     stats = [{
         "num_calls": d[1],
         "self_time": d[2],
@@ -630,7 +636,7 @@ def write_profile(profile_settings, cprofiler):
         "line": f[1],
         "method": f[2].lstrip("<").rstrip(">")
     }
-        for f, d, in p.stats.iteritems()
+        for f, d, in acc.stats.iteritems()
     ]
     stats_file = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
     stats_file.write(convert.list2tab(stats))
@@ -640,7 +646,5 @@ if not Log.main_log:
     from log_usingStream import Log_usingStream
 
     Log.main_log = Log_usingStream("sys.stdout")
-
-
 
 

@@ -12,11 +12,11 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.dot import listwrap, unwrap
-from pyLibrary.queries import es_query_util
-from pyLibrary.queries.es_query_util import aggregates, fix_es_stats, buildESQuery
-from pyLibrary.queries.filters import simplify
-from pyLibrary.queries import MVEL
+from pyLibrary.dot import listwrap, unwrap, literal_field
+from pyLibrary.queries.domains import is_keyword
+from pyLibrary.queries.es09.util import aggregates, fix_es_stats, build_es_query
+from pyLibrary.queries import es09
+from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries.cube import Cube
 
 
@@ -28,7 +28,7 @@ def is_aggop(query):
 
 def es_aggop(es, mvel, query):
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = build_es_query(query)
 
     isSimple = AND(aggregates[s.aggregate] == "count" for s in select)
     if isSimple:
@@ -40,26 +40,26 @@ def es_aggop(es, mvel, query):
 
     for s in select:
         if s.value not in value2facet:
-            if MVEL.isKeyword(s.value):
-                unwrap(esQuery.facets)[s.name] = {
+            if is_keyword(s.value):
+                unwrap(FromES.facets)[s.name] = {
                     "statistical": {
                         "field": s.value
                     },
-                    "facet_filter": simplify(query.where)
+                    "facet_filter": simplify_esfilter(query.where)
                 }
             else:
-                unwrap(esQuery.facets)[s.name] = {
+                unwrap(FromES.facets)[s.name] = {
                     "statistical": {
-                        "script": mvel.compile_expression(s.value, query)
+                        "script": es09.expressions.compile_expression(s.value, query)
                     },
-                    "facet_filter": simplify(query.where)
+                    "facet_filter": simplify_esfilter(query.where)
                 }
             value2facet[s.value] = s.name
         name2facet[s.name] = value2facet[s.value]
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = es09.util.post(es, FromES, query.limit)
 
-    matricies = {s.name: Matrix(value=fix_es_stats(unwrap(data.facets)[s.name])[aggregates[s.aggregate]]) for s in select}
+    matricies = {s.name: Matrix(value=fix_es_stats(data.facets[literal_field(s.name)])[aggregates[s.aggregate]]) for s in select}
     cube = Cube(query.select, [], matricies)
     cube.frum = query
     return cube
@@ -71,11 +71,11 @@ def es_countop(es, mvel, query):
     RETURN SINGLE COUNT
     """
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = build_es_query(query)
     for s in select:
 
-        if MVEL.isKeyword(s.value):
-            esQuery.facets[s.name] = {
+        if is_keyword(s.value):
+            FromES.facets[s.name] = {
                 "terms": {
                     "field": s.value,
                     "size": query.limit,
@@ -84,14 +84,14 @@ def es_countop(es, mvel, query):
             }
         else:
             # COMPLICATED value IS PROBABLY A SCRIPT, USE IT
-            esQuery.facets[s.name] = {
+            FromES.facets[s.name] = {
                 "terms": {
-                    "script_field": mvel.compile_expression(s.value, query),
+                    "script_field": es09.expressions.compile_expression(s.value, query),
                     "size": 200000
                 }
             }
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = es09.util.post(es, FromES, query.limit)
 
     matricies = {}
     for s in select:

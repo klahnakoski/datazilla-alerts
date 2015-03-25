@@ -12,7 +12,7 @@ from __future__ import division
 
 from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.dot.dicts import Dict
 
 
@@ -25,7 +25,7 @@ def partition(series, score_threshold):
     _partition(series, score_threshold, output)
 
     # REVIEW THE KNOTS TO ENSURE WE HAVE OPTIMAL PARTITIONS
-    for s1, s2 in Q.pairwise(output):
+    for s1, s2 in qb.pairwise(output):
         if welchs_ttest(s1, s2).score < score_threshold:
             Log.error("We seem to have determined a false knot")
     return output

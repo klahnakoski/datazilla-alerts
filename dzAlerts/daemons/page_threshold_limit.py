@@ -12,7 +12,7 @@ from __future__ import division
 
 from datetime import datetime
 
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.queries.db_query import esfilter2sqlwhere
 from pyLibrary.dot import nvl
 from pyLibrary import convert
@@ -112,7 +112,7 @@ def page_threshold_limit(db, debug):
         })
 
         if obsolete:
-            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": esfilter2sqlwhere(db, {"terms": {"id": Q.select(obsolete, "id")}})})
+            db.execute("UPDATE alerts SET status='obsolete' WHERE {{where}}", {"where": esfilter2sqlwhere(db, {"terms": {"id": qb.select(obsolete, "id")}})})
 
         db.execute(
             "UPDATE reasons SET last_run={{now}} WHERE code={{reason}}",

@@ -14,15 +14,17 @@ from __future__ import division
 from datetime import datetime
 import json
 import subprocess
+
 from pymysql import connect, InterfaceError
-from pyLibrary.jsons import json_scrub
+
+from pyLibrary import jsons
 from pyLibrary.maths import Math
-from pyLibrary.strings import expand_template, utf82unicode
-from pyLibrary.dot import nvl
-from pyLibrary.dot import wrap, listwrap, unwrap
+from pyLibrary.meta import use_settings
+from pyLibrary.strings import expand_template
+from pyLibrary.dot import nvl, wrap, listwrap, unwrap
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log, Except
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.strings import indent
 from pyLibrary.strings import outdent
 from pyLibrary.env.files import File
@@ -34,13 +36,24 @@ MAX_BATCH_SIZE = 100
 all_db = []
 
 
-class DB(object):
+class MySQL(object):
     """
     Parameterize SQL by name rather than by position.  Return records as objects
     rather than tuples.
     """
-
-    def __init__(self, settings, schema=None, preamble=None, readonly=False):
+    @use_settings
+    def __init__(
+        self,
+        host,
+        port,
+        username,
+        password,
+        debug=False,
+        schema=None,
+        preamble=None,
+        readonly=False,
+        settings=None
+    ):
         """
         OVERRIDE THE settings.schema WITH THE schema PARAMETER
         preamble WILL BE USED TO ADD COMMENTS TO THE BEGINNING OF ALL SQL
@@ -54,29 +67,19 @@ class DB(object):
         USE IN with CLAUSE, YOU CAN STILL SEND UPDATES, BUT MUST OPEN A
         TRANSACTION BEFORE YOU DO
         """
-        settings = wrap(settings)
-
-        if settings == None:
-            Log.warning("No settings provided")
-            return
-
         all_db.append(self)
 
-        if isinstance(settings, DB):
-            settings = settings.settings
+        self.settings = settings
 
-        self.settings = settings.copy()
-        self.settings.schema = nvl(schema, self.settings.schema, self.settings.database)
-
-        preamble = nvl(preamble, self.settings.preamble)
         if preamble == None:
             self.preamble = ""
         else:
             self.preamble = indent(preamble, "# ").strip() + "\n"
 
         self.readonly = readonly
-        self.debug = nvl(self.settings.debug, DEBUG)
-        self._open()
+        self.debug = nvl(debug, DEBUG)
+        if host:
+            self._open()
 
     def _open(self):
         """ DO NOT USE THIS UNLESS YOU close() FIRST"""
@@ -346,13 +349,21 @@ class DB(object):
         self.execute(content, param)
 
     @staticmethod
-    def execute_sql(settings, sql, param=None):
+    @use_settings
+    def execute_sql(
+        host,
+        username,
+        password,
+        sql,
+        schema=None,
+        param=None,
+        settings=None
+    ):
         """EXECUTE MANY LINES OF SQL (FROM SQLDUMP FILE, MAYBE?"""
-        settings = wrap(settings)
         settings.schema = nvl(settings.schema, settings.database)
 
         if param:
-            with DB(settings) as temp:
+            with MySQL(settings) as temp:
                 sql = expand_template(sql, temp.quote_param(param))
 
         # MWe have no way to execute an entire SQL file in bulk, so we
@@ -390,17 +401,26 @@ class DB(object):
             })
 
     @staticmethod
-    def execute_file(settings, filename, param=None, ignore_errors=False):
+    def execute_file(
+        filename,
+        host,
+        username,
+        password,
+        schema=None,
+        param=None,
+        ignore_errors=False,
+        settings=None
+    ):
         # MySQLdb provides no way to execute an entire SQL file in bulk, so we
         # have to shell out to the commandline client.
         sql = File(filename).read()
         if ignore_errors:
             try:
-                DB.execute_sql(settings, sql, param)
+                MySQL.execute_sql(sql=sql, param=param, settings=settings)
             except Exception, e:
                 pass
         else:
-            DB.execute_sql(settings, sql, param)
+            MySQL.execute_sql(settings, sql, param)
 
     def _execute_backlog(self):
         if not self.backlog: return
@@ -421,7 +441,7 @@ class DB(object):
             self.cursor.close()
             self.cursor = self.db.cursor()
         else:
-            for i, g in Q.groupby(backlog, size=MAX_BATCH_SIZE):
+            for i, g in qb.groupby(backlog, size=MAX_BATCH_SIZE):
                 sql = self.preamble + ";\n".join(g)
                 try:
                     if self.debug:
@@ -476,7 +496,7 @@ class DB(object):
         keys = set()
         for r in records:
             keys |= set(r.keys())
-        keys = Q.sort(keys)
+        keys = qb.sort(keys)
 
         try:
             command = \
@@ -580,7 +600,7 @@ class DB(object):
             return SQL(column_name.value + " AS " + self.quote_column(column_name.name))
 
     def sort2sqlorderby(self, sort):
-        sort = Q.normalize_sort_parameters(sort)
+        sort = qb.normalize_sort_parameters(sort)
         return ",\n".join([self.quote_column(s.field) + (" DESC" if s.sort == -1 else " ASC") for s in sort])
 
 
@@ -595,22 +615,6 @@ def utf8_to_unicode(v):
 
 
 
-class SQL(unicode):
-    """
-    ACTUAL SQL, DO NOT QUOTE THIS STRING
-    """
-    def __init__(self, template='', param=None):
-        unicode.__init__(self)
-        self.template = template
-        self.param = param
-
-    @property
-    def sql(self):
-        return expand_template(self.template, self.param)
-
-    def __str__(self):
-        Log.error("do not do this")
-
 
 def int_list_packer(term, values):
     """
@@ -623,7 +627,7 @@ def int_list_packer(term, values):
     ranges = []
     exclude = set()
 
-    sorted = Q.sort(values)
+    sorted = qb.sort(values)
 
     last = sorted[0]
     curr_start = last
@@ -681,10 +685,10 @@ def int_list_packer(term, values):
     if ranges:
         r = {"or": [{"range": {term: r}} for r in ranges]}
         if exclude:
-            r = {"and": [r, {"not": {"terms": {term: Q.sort(exclude)}}}]}
+            r = {"and": [r, {"not": {"terms": {term: qb.sort(exclude)}}}]}
         if singletons:
             return {"or": [
-                {"terms": {term: Q.sort(singletons)}},
+                {"terms": {term: qb.sort(singletons)}},
                 r
             ]}
         else:
@@ -717,7 +721,7 @@ json_encoder = json.JSONEncoder(
     separators=None,
     encoding='utf-8',
     default=None,
-    sort_keys=True   # <-- SEE?!  sort_keys==True
+    sort_keys=True   # <-- IMPORTANT!  sort_keys==True
 )
 
 
@@ -726,5 +730,5 @@ def json_encode(value):
     FOR PUTTING JSON INTO DATABASE (sort_keys=True)
     dicts CAN BE USED AS KEYS
     """
-    return unicode(json_encoder.encode(json_scrub(value)))
+    return unicode(json_encoder.encode(jsons.scrub(value)))
 

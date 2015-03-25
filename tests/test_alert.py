@@ -21,7 +21,7 @@ from pyLibrary import convert
 from pyLibrary.debugs import startup
 from pyLibrary.sql.db import DB
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.maths import Math
 from pyLibrary.strings import between, expand_template
 from pyLibrary.times.durations import Duration
@@ -173,7 +173,7 @@ class test_alert:
                 "send_time": self.now
             })
             expected_marked = set([d.id for d in self.test_data if convert.json2value(d.details).expect == 'pass'])
-            actual_marked = set(Q.select(alert_state, "id"))
+            actual_marked = set(qb.select(alert_state, "id"))
             assert expected_marked == actual_marked, expand_template(
                 "Expecting only id in {{expected}}, but instead got {{actual}}", {
                     "expected": str(expected_marked),

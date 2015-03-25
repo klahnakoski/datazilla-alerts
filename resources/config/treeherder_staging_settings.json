@@ -1,14 +1,12 @@
 {
 	"elasticsearch" : {
-//	    "host":"http://klahnakoski-es.corp.tor1.mozilla.com",
-		"host" : "http://localhost",
-//		"host" : "http://192.168.0.98",
+		"host" : "http://172.31.0.145",
 		"port" : 9200,
 		"index" : "talos",
 		"type" : "test_results",
 		"timeout" : 300,
-		"schema_file" : "./resources/schema/test_schema.json",
-		"debug": true
+		"schema" : {"$ref": "file://../schema/test_schema.json"},
+		"debug": false
 	},
 	"mozillaHG":{
 		"timeout":"30second"
@@ -22,8 +20,6 @@
 		"max_id_url": "https://treeherder.mozilla.org/api/project/{{branch}}/",
 		"signature_url": "https://treeherder.mozilla.org/api/project/{{branch}}/performance-data/0/get_signature_properties/?signatures={{signature}}",
 		"threads" : 5,
-		"min" : 800000,
-//		"max": 1016200,
 		"step" : 100,
 		"max_tries": 100,
 		"timeout": 600
@@ -32,19 +28,31 @@
 		"schema_file" : "./resources/schema/test_schema.json",
 		"output_file" : "./results/recent.tab"
 	},
+	"constants": {
+		"pyLibrary.env.http.default_headers":{
+			"from":"https://wiki.mozilla.org/Auto-tools/Projects/Alerts"
+		}
+	},
 	"debug" : {
+		"trace": true,
 		"profile" : false,
 		"log" : [
 			{
-				"class" : "logging.handlers.RotatingFileHandler",
-				"filename" : "./results/logs/treeherder_extract.log",
-				"maxBytes" : 10000000,
-				"backupCount" : 100,
-				"encoding" : "utf8"
+				"log_type": "console"
 			},
 			{
-				"log_type" : "stream",
-				"stream" : "sys.stdout"
+				"log_type": "elasticsearch",
+				"host": "http://172.31.0.145",
+				"index": "debug",
+				"type": "treeherder_import"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[Developer Alert][STAGING] Problem in Treeherder import",
+				"$ref": "file://~/private_dzalerts.json#email"
+
 			}
 		]
 	}

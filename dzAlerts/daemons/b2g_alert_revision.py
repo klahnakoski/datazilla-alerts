@@ -22,7 +22,7 @@ from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
 from pyLibrary.queries.es_query import ESQuery
 from pyLibrary.sql.db import DB
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.dot import nvl, Dict, DictList
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import Duration
@@ -147,7 +147,7 @@ def b2g_alert_revision(settings):
                 except Exception, e:
                     pass
 
-            tests = Q.index(existing_sustained_alerts, ["revision", "details.B2G.Test"])
+            tests = qb.index(existing_sustained_alerts, ["revision", "details.B2G.Test"])
 
             # SUMMARIZE
             alerts = DictList()
@@ -165,14 +165,14 @@ def b2g_alert_revision(settings):
 
             # GROUP BY ONE DIMENSION ON 1D CUBE IS REALLY JUST ITERATING OVER THAT DIMENSION, BUT EXPENSIVE
             # THIS IS A existing_sustained_alerts LEFT JOIN total_tests ON (revision,)
-            for revision, total_exceptions in Q.groupby(existing_sustained_alerts, ["details.B2G.Revision"]):
+            for revision, total_exceptions in qb.groupby(existing_sustained_alerts, ["details.B2G.Revision"]):
             # FIND TOTAL TDAD FOR EACH INTERESTING REVISION
                 revision = revision["details.B2G.Revision"]
                 total_test_count = total_tests[{"B2G.Revision": revision}]
 
                 parts = DictList()
-                for g, exceptions in Q.groupby(total_exceptions, ["details.B2G.Test"]):
-                    worst_in_test = Q.sort(exceptions, ["confidence", "details.diff_percent"]).last()
+                for g, exceptions in qb.groupby(total_exceptions, ["details.B2G.Test"]):
+                    worst_in_test = qb.sort(exceptions, ["confidence", "details.diff_percent"]).last()
                     example = worst_in_test.details
 
                     num_except = len(exceptions)
@@ -188,7 +188,7 @@ def b2g_alert_revision(settings):
                     }
                     parts.append(part)
 
-                parts = Q.sort(parts, [{"field": "confidence", "sort": -1}])
+                parts = qb.sort(parts, [{"field": "confidence", "sort": -1}])
                 worst_in_revision = parts[0].example
 
                 alerts.append(Dict(
@@ -249,7 +249,7 @@ def b2g_alert_revision(settings):
             """, {
                 "where": esfilter2sqlwhere(alerts_db, {"and": [
                     {"term": {"p.reason": settings.param.reason}},
-                    {"terms": {"p.revision": set(Q.select(existing_sustained_alerts, "revision"))}},
+                    {"terms": {"p.revision": set(qb.select(existing_sustained_alerts, "revision"))}},
                     {"missing": "h.parent"}
                 ]}),
                 "parent_reason": REASON

@@ -1,0 +1,64 @@
+{
+	"elasticsearch": {
+//	    "host":"http://klahnakoski-es.corp.tor1.mozilla.com",
+		"host": "http://localhost",
+//		"host" : "http://52.11.57.80",
+		"port": 9200,
+		"index": "talos",
+		"type": "test_results",
+		"timeout": 300,
+		"schema": {
+			"$ref": "file://../schema/test_schema.json"
+		},
+		"debug": false,
+		"limit_replicas": true
+	},
+	"mozillaHG": {
+		"timeout": "30second"
+	},
+	"treeherder": {
+		"url": "https://treeherder.mozilla.org",
+		"branches": {
+			"url": "https://treeherder.mozilla.org/api/repository/"
+		},
+		"blob_url": "https://treeherder.mozilla.org/api/project/{{branch}}/performance_artifact/?id__gte={{min}}&id__lte={{max}}&count={{count}}",
+		"max_id_url": "https://treeherder.mozilla.org/api/project/{{branch}}/",
+		"signature_url": "https://treeherder.mozilla.org/api/project/{{branch}}/performance-data/0/get_signature_properties/?signatures={{signature}}",
+		"threads": 5,
+		"step": 100,
+		"max_tries": 100,
+		"timeout": 600
+	},
+	"param": {
+		"schema_file": "./resources/schema/test_schema.json",
+		"output_file": "./results/recent.tab"
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"from": "https://wiki.mozilla.org/Auto-tools/Projects/Alerts"
+		}
+	},
+	"debug": {
+		"trace": true,
+		"profile": false,
+		"log": [
+			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "./results/logs/treeherder_extract.log",
+				"maxBytes": 10000000,
+				"backupCount": 100,
+				"encoding": "utf8"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"index": "debug",
+				"type": "treeherder_import"
+			},
+			{
+				"log_type": "stream",
+				"stream": "sys.stdout"
+			}
+		]
+	}
+}
