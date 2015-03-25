@@ -21,16 +21,19 @@ class UniqueIndex(object):
     STILL MAINTAINING list-LIKE FEATURES
     """
 
-    def __init__(self, keys, fail_on_dup=True):
+    def __init__(self, keys, data=None, fail_on_dup=True):
         self._data = {}
         self._keys = tuplewrap(keys)
         self.count = 0
         self.fail_on_dup = fail_on_dup
+        if data:
+            for d in data:
+                self.add(d)
 
     def __getitem__(self, key):
         try:
             key = value2key(self._keys, key)
-            d = self._data.get(key, None)
+            d = self._data.get(key)
             return wrap(d)
         except Exception, e:
             Log.error("something went wrong", e)
@@ -38,7 +41,7 @@ class UniqueIndex(object):
     def __setitem__(self, key, value):
         try:
             key = value2key(self._keys, key)
-            d = self._data.get(key, None)
+            d = self._data.get(key)
             if d != None:
                 Log.error("key already filled")
 
@@ -51,7 +54,10 @@ class UniqueIndex(object):
 
     def add(self, val):
         key = value2key(self._keys, val)
-        d = self._data.get(key, None)
+        if key == None:
+            Log.error("Expecting key to not be None")
+
+        d = self._data.get(key)
         if d is None:
             self._data[key] = unwrap(val)
             self.count += 1

@@ -19,7 +19,8 @@ from pyLibrary.debugs.logs import Log
 from pyLibrary.env import http
 from pyLibrary.maths.randoms import Random
 from pyLibrary.maths import Math
-from pyLibrary.queries import Q
+from pyLibrary.meta import use_settings
+from pyLibrary.queries import qb
 from pyLibrary.strings import utf82unicode
 from pyLibrary.dot import nvl, Null, Dict
 from pyLibrary.dot.lists import DictList
@@ -42,43 +43,52 @@ class Index(object):
     IF ANY YET.
 
     """
-
-    def __init__(self, settings):
-        """
-        settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
-        settings.timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
-        """
-        if settings.index == settings.alias:
+    @use_settings
+    def __init__(
+        self,
+        index,  # NAME OF THE INDEX, EITHER ALIAS NAME OR FULL VERSION NAME
+        type,  # SCHEMA NAME
+        alias=None,
+        explore_metadata=True,  # PROBING THE CLUSTER FOR METADATA IS ALLOWED
+        timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        debug=False,  # DO NOT SHOW THE DEBUG STATEMENTS
+        settings=None
+    ):
+        if index == alias:
             Log.error("must have a unique index name")
 
-        settings = wrap(settings)
-        assert settings.index, "expecting index attribute"
-        assert settings.type, "expecting type attribute"
-        settings.setdefault("explore_metadata", True)
-
-        self.debug = settings.debug
+        self.debug = debug
         if self.debug:
-            Log.note("elasticsearch debugging is on")
+            Log.alert("elasticsearch debugging for index {{index}} is on", {"index": settings.index})
 
         self.settings = settings
         self.cluster = Cluster(settings)
 
         try:
-            index = self.get_index(settings.index)
-            if index and settings.alias==None:
+            index = self.get_index(index)
+            if index and alias==None:
                 settings.alias = settings.index
                 settings.index = index
         except Exception, e:
             # EXPLORING (get_metadata()) IS NOT ALLOWED ON THE PUBLIC CLUSTER
             pass
 
-        self.path = "/" + settings.index + "/" + settings.type
+        self.path = "/" + index + "/" + type
 
+    @property
+    def url(self):
+        return self.cluster.path + "/" + self.path
 
-    def get_schema(self):
+    def get_schema(self, retry=True):
         if self.settings.explore_metadata:
             indices = self.cluster.get_metadata().indices
             index = indices[self.settings.index]
+
+            if index == None and retry:
+                #TRY AGAIN, JUST IN CASE
+                self.cluster.cluster_metadata = None
+                return self.get_schema(retry=False)
+
             if not index.mappings[self.settings.type]:
                 Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", self.settings)
             return index.mappings[self.settings.type]
@@ -102,17 +112,30 @@ class Index(object):
             if re.match(re.escape(prefix) + "\\d{8}_\\d{6}", a.index) and a.index != name:
                 self.cluster.delete_index(a.index)
 
-    def add_alias(self):
-        self.cluster_metadata = None
-        self.cluster._post(
-            "/_aliases",
-            data=convert.unicode2utf8(convert.value2json({
-                "actions": [
-                    {"add": {"index": self.settings.index, "alias": self.settings.alias}}
-                ]
-            })),
-            timeout=nvl(self.settings.timeout, 30)
-        )
+    def add_alias(self, alias=None):
+        if alias:
+            self.cluster_metadata = None
+            self.cluster._post(
+                "/_aliases",
+                data=convert.unicode2utf8(convert.value2json({
+                    "actions": [
+                        {"add": {"index": self.settings.index, "alias": alias}}
+                    ]
+                })),
+                timeout=nvl(self.settings.timeout, 30)
+            )
+        else:
+            # SET ALIAS ACCORDING TO LIFECYCLE RULES
+            self.cluster_metadata = None
+            self.cluster._post(
+                "/_aliases",
+                data=convert.unicode2utf8(convert.value2json({
+                    "actions": [
+                        {"add": {"index": self.settings.index, "alias": self.settings.alias}}
+                    ]
+                })),
+                timeout=nvl(self.settings.timeout, 30)
+            )
 
     def get_proto(self, alias):
         """
@@ -155,15 +178,18 @@ class Index(object):
                 return False
         return True
 
+    def flush(self):
+        self.cluster._post("/" + self.settings.index + "/_refresh")
+
     def delete_record(self, filter):
         self.cluster.get_metadata()
 
-        if self.cluster.node_metatdata.version.number.startswith("0.90"):
+        if self.cluster.node_metadata.version.number.startswith("0.90"):
             query = {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
             }}
-        elif self.cluster.node_metatdata.version.number.startswith("1.0"):
+        elif self.cluster.node_metadata.version.number.startswith("1.0"):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter
@@ -195,7 +221,7 @@ class Index(object):
         lines = []
         try:
             for r in records:
-                id = r.get("id", None)
+                id = r.get("id")
                 if id == None:
                     id = Random.hex(40)
 
@@ -220,6 +246,7 @@ class Index(object):
             except Exception, e:
                 Log.error("can not make request body from\n{{lines|indent}}", {"lines": lines}, e)
 
+
             response = self.cluster._post(
                 self.path + "/_bulk",
                 data=data_bytes,
@@ -236,7 +263,7 @@ class Index(object):
                             "line": lines[i * 2 + 1]
                         })
                 elif self.cluster.version.startswith("1.4."):
-                    if not item.index.status==201:
+                    if item.index.status not in [200, 201]:
                         Log.error("{{error}} while loading line:\n{{line}}", {
                             "error": item.index.error,
                             "line": lines[i * 2 + 1]
@@ -266,18 +293,24 @@ class Index(object):
         else:
             interval = unicode(seconds) + "s"
 
-        response = self.cluster.put(
-            "/" + self.settings.index + "/_settings",
-            data='{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'
-        )
-
-        result = convert.json2value(utf82unicode(response.content))
         if self.cluster.version.startswith("0.90."):
+            response = self.cluster.put(
+                "/" + self.settings.index + "/_settings",
+                data='{"index":{"refresh_interval":' + convert.value2json(interval) + '}}'
+            )
+
+            result = convert.json2value(utf82unicode(response.content))
             if not result.ok:
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.content)
                 })
         elif self.cluster.version.startswith("1.4."):
+            response = self.cluster.put(
+                "/" + self.settings.index + "/_settings",
+                data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}')
+            )
+
+            result = convert.json2value(utf82unicode(response.content))
             if not result.acknowledged:
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.content)
@@ -306,44 +339,53 @@ class Index(object):
                 "query": query
             }, e)
 
-    def threaded_queue(self, size=None, period=None):
-        return ThreadedQueue(self, size=size, period=period)
+    def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
+        return ThreadedQueue("elasticsearch: " + self.settings.index, self, batch_size=batch_size, max_size=max_size, period=period, silent=silent)
 
     def delete(self):
         self.cluster.delete_index(index=self.settings.index)
 
 
 class Cluster(object):
-    def __init__(self, settings):
+    @use_settings
+    def __init__(self, host, port=9200, settings=None):
         """
-        settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METATDATA IS ALLOWED
+        settings.explore_metadata == True - IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
         settings.timeout == NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
         """
 
-        settings = wrap(settings)
-        assert settings.host, "Expecting cluster host name"
         settings.setdefault("explore_metadata", True)
 
         self.cluster_metadata = None
-        settings.setdefault("port", 9200)
         self.debug = settings.debug
         self.settings = settings
         self.version = None
         self.path = settings.host + ":" + unicode(settings.port)
 
-    def get_or_create_index(self, settings, schema=None, limit_replicas=None):
+    @use_settings
+    def get_or_create_index(
+        self,
+        index,
+        alias=None,
+        schema=None,
+        limit_replicas=None,
+        settings=None
+    ):
+        from pyLibrary.queries import qb
+
         settings = deepcopy(settings)
         aliases = self.get_aliases()
 
-        indexes = Q.sort([
+        indexes = qb.sort([
             a
             for a in aliases
             if (a.alias == settings.index and settings.alias == None) or
                (re.match(re.escape(settings.index) + "\\d{8}_\\d{6}", a.index) and settings.alias == None) or
-               (a.index == settings.index and a.alias == settings.alias )
+            (a.index == settings.index and (a.alias == None or a.alias == settings.alias ))
         ], "index")
         if not indexes:
-            self.create_index(settings, schema, limit_replicas=limit_replicas)
+            output = self.create_index(settings=settings, schema=schema, limit_replicas=limit_replicas)
+            return output
         elif indexes.last().alias != None:
             settings.alias = indexes.last().alias
             settings.index = indexes.last().index
@@ -352,7 +394,8 @@ class Cluster(object):
             settings.index = indexes.last().index
         return Index(settings)
 
-    def get_index(self, settings):
+
+    def get_index(self, index, alias=None, settings=None):
         """
         TESTS THAT THE INDEX EXISTS BEFORE RETURNING A HANDLE
         """
@@ -366,7 +409,30 @@ class Cluster(object):
             return Index(settings)
         Log.error("Can not find index {{index_name}}", {"index_name": settings.index})
 
-    def create_index(self, settings, schema=None, limit_replicas=None):
+    def get_alias(self, alias):
+        """
+        RETURN REFERENCE TO ALIAS (MANY INDEXES)
+        USER MUST BE SURE NOT TO SEND UPDATES
+        """
+        aliases = self.get_aliases()
+        if alias in aliases.alias:
+            settings = self.settings.copy()
+            settings.alias = alias
+            settings.index = alias
+            return Index(settings)
+        Log.error("Can not find any index with alias {{alias_name}}", {"alias_name": alias})
+
+
+
+    @use_settings
+    def create_index(
+        self,
+        index,
+        alias=None,
+        schema=None,
+        limit_replicas=None,
+        settings=None
+    ):
         if not settings.alias:
             settings.alias = settings.index
             settings.index = proto_name(settings.alias)
@@ -375,17 +441,12 @@ class Cluster(object):
             Log.error("Expecting index name to conform to pattern")
 
         if settings.schema_file:
-            Log.error('schema_file attribute not suported.  Use {"$ref":<filename>} instead')
+            Log.error('schema_file attribute not supported.  Use {"$ref":<filename>} instead')
 
         if isinstance(schema, basestring):
             schema = convert.json2value(schema, paths=True)
         else:
             schema = convert.json2value(convert.value2json(schema), paths=True)
-
-        if not schema:
-            schema = settings.schema
-
-        limit_replicas = nvl(limit_replicas, settings.limit_replicas)
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS
@@ -429,37 +490,34 @@ class Cluster(object):
             if not self.cluster_metadata:
                 response = self.get("/_cluster/state")
                 self.cluster_metadata = response.metadata
-                self.node_metatdata = self.get("/")
-                self.version = self.node_metatdata.version.number
+                self.node_metadata = self.get("/")
+                self.version = self.node_metadata.version.number
         else:
             Log.error("Metadata exploration has been disabled")
         return self.cluster_metadata
 
-    def _post(self, path, **kwargs):
 
+    def _post(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
         try:
-            kwargs = wrap(kwargs)
-            kwargs.setdefault("timeout", 600)
-            kwargs.headers["Accept-Encoding"] = "gzip,deflate"
-            kwargs = unwrap(kwargs)
-
+            wrap(kwargs).headers["Accept-Encoding"] = "gzip,deflate"
 
             if "data" in kwargs and not isinstance(kwargs["data"], str):
                 Log.error("data must be utf8 encoded string")
 
             if self.debug:
-                Log.note("{{url}}:\n{{data|left(300)|indent}}", {"url": url, "data": kwargs["data"]})
+                sample = kwargs["data"][:300]
+                Log.note("{{url}}:\n{{data|indent}}", {"url": url, "data": sample})
 
             response = http.post(url, **kwargs)
             if self.debug:
-                Log.note(utf82unicode(response.content)[:130])
+                Log.note("response: {{response}}", {"response": utf82unicode(response.content)[:130]})
             details = convert.json2value(utf82unicode(response.content))
             if details.error:
                 Log.error(convert.quote2string(details.error))
             if details._shards.failed > 0:
-                Log.error("Shard failure")
+                Log.error("Shard failures {{failures|indent}}", {"failures": "---\n".join(r.replace(";", ";\n") for r in details._shards.failures.reason)})
             return details
         except Exception, e:
             if url[0:4] != "http":
@@ -467,19 +525,22 @@ class Cluster(object):
             else:
                 suggestion = ""
 
-            Log.error("Problem with call to {{url}}" + suggestion + "\n{{body|left(10000}}", {
-                "url": url,
-                "body": kwargs["data"] if self.debug else kwargs["data"][0:100]
-            }, e)
+            if kwargs.get("data"):
+                Log.error("Problem with call to {{url}}" + suggestion + "\n{{body|left(10000}}", {
+                    "url": url,
+                    "body": kwargs["data"][0:10000] if self.debug else kwargs["data"][0:100]
+                }, e)
+            else:
+                Log.error("Problem with call to {{url}}" + suggestion, {"url": url}, e)
+
+
 
     def get(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
         try:
-            kwargs = wrap(kwargs)
-            kwargs.setdefault("timeout", 600)
             response = http.get(url, **kwargs)
             if self.debug:
-                Log.note(utf82unicode(response.content)[:130])
+                Log.note("response: {{response}}", {"response": utf82unicode(response.content)[:130]})
             details = wrap(convert.json2value(utf82unicode(response.content)))
             if details.error:
                 Log.error(details.error)
@@ -491,13 +552,12 @@ class Cluster(object):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
 
         if self.debug:
-            Log.note("PUT {{url}}:\n{{data|indent}}", {"url": url, "data": kwargs["data"]})
+            sample = kwargs["data"][:300]
+            Log.note("PUT {{url}}:\n{{data|indent}}", {"url": url, "data": sample})
         try:
-            kwargs = wrap(kwargs)
-            kwargs.setdefault("timeout", 60)
             response = http.put(url, **kwargs)
             if self.debug:
-                Log.note(utf82unicode(response.content))
+                Log.note("response: {{response}}", {"response": utf82unicode(response.content)[0:300:]})
             return response
         except Exception, e:
             Log.error("Problem with call to {{url}}", {"url": url}, e)
@@ -505,7 +565,6 @@ class Cluster(object):
     def delete(self, path, **kwargs):
         url = self.settings.host + ":" + unicode(self.settings.port) + path
         try:
-            kwargs.setdefault("timeout", 60)
             response = convert.json2value(utf82unicode(http.delete(url, **kwargs).content))
             if self.debug:
                 Log.note("delete response {{response}}", {"response": response})
@@ -573,4 +632,83 @@ def _scrub(r):
     except Exception, e:
         Log.warning("Can not scrub: {{json}}", {"json": r})
 
+
+
+class Alias(object):
+    @use_settings
+    def __init__(
+        self,
+        type,  # SCHEMA NAME
+        alias,  # NAME OF THE ALIAS
+        explore_metadata=True,  # IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
+        debug=False,
+        timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        settings=None
+    ):
+        self.debug = debug
+        if self.debug:
+            Log.alert("elasticsearch debugging on index {{index}} is on", {"index": settings.index})
+
+        self.settings = settings
+        self.cluster = Cluster(settings)
+
+        self.path = "/" + alias + "/" + type
+
+    @property
+    def url(self):
+        return self.cluster.path + "/" + self.path
+
+    def get_schema(self, retry=True):
+        if self.settings.explore_metadata:
+            indices = self.cluster.get_metadata().indices
+            candidates = [(name, i) for name, i in indices.items() if self.settings.index in i.aliases]
+            index = qb.sort(candidates, 0).last()[1]
+
+            if index == None and retry:
+                #TRY AGAIN, JUST IN CASE
+                self.cluster.cluster_metadata = None
+                return self.get_schema(retry=False)
+
+            properties = index.mappings[self.settings.type]
+
+
+            #TODO: REMOVE THIS BUG CORRECTION
+            if not properties and self.settings.type=="test_result":
+                properties = index.mappings["test_results"]
+            # DONE BUG CORRECTION
+
+
+            if not properties:
+                Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", {
+                    "index":self.settings.index,
+                    "type":self.settings.type
+                })
+            return properties
+        else:
+            mapping = self.cluster.get(self.path + "/_mapping")
+            if not mapping[self.settings.type]:
+                Log.error("{{index}} does not have type {{type}}", self.settings)
+            return wrap({"mappings": mapping[self.settings.type]})
+
+
+    def search(self, query, timeout=None):
+        query = wrap(query)
+        try:
+            if self.debug:
+                if len(query.facets.keys()) > 20:
+                    show_query = query.copy()
+                    show_query.facets = {k: "..." for k in query.facets.keys()}
+                else:
+                    show_query = query
+                Log.note("Query:\n{{query|indent}}", {"query": show_query})
+            return self.cluster._post(
+                self.path + "/_search",
+                data=convert.value2json(query).encode("utf8"),
+                timeout=nvl(timeout, self.settings.timeout)
+            )
+        except Exception, e:
+            Log.error("Problem with search (path={{path}}):\n{{query|indent}}", {
+                "path": self.path + "/_search",
+                "query": query
+            }, e)
 

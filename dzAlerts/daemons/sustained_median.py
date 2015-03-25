@@ -24,7 +24,7 @@ from pyLibrary import convert
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.sql.db import DB
 from pyLibrary.dot import Null, split_field, literal_field, set_default, Dict, nvl, wrap_dot, listwrap
 from pyLibrary.thread.threads import Thread
@@ -93,7 +93,7 @@ def get_parameters_specific(settings, fields, g):
     EG: LIST OF {"where":<condition>, "values":<overrides>} TO CONSTRUCT A SOPHISTICATED PARAMETER OBJECT
     """
     lookup = []
-    for f in Q.reverse(listwrap(fields)):
+    for f in qb.reverse(listwrap(fields)):
         if isinstance(f, basestring):
             lookup.append(settings.param.test[literal_field(g[settings.param.test_dimension])])
         elif f.name and f.value:
@@ -186,7 +186,7 @@ def alert_sustained_median(settings, qb, alerts_db):
     all_touched = set()
     evaled_tests = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
-    for g, min_push_date in Q.groupby(new_test_points, query.edges):
+    for g, min_push_date in qb.groupby(new_test_points, query.edges):
         if not min_push_date:
             continue
         try:
@@ -239,13 +239,13 @@ def alert_sustained_median(settings, qb, alerts_db):
                 "sort": test_param.sort.name
             })
 
-            all_touched.update(Q.select(all_test_results, source_ref.name))
+            all_touched.update(qb.select(all_test_results, source_ref.name))
 
             # REMOVE ALL TESTS EXCEPT MOST RECENT FOR EACH REVISION
             # REMOVE TESTS MISSING A VALUE
             # THIS MAKES THE PAST WINDOW TOO SMALL, THEN FORCING A RECALC.
             # THIS CONVERGES TO 'DONE' EVENTUALLY
-            test_results = Q.run({
+            test_results = qb.run({
                 "from": all_test_results,
                 "window": [
                     {
@@ -275,7 +275,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 return None
 
             # APPLY WINDOW FUNCTIONS
-            stats = Q.run({
+            stats = qb.run({
                 "from": {
                     "from": test_results,
                     "where": {"exists": {"field": test_param.sort.name}},  # FOR THE RARE CASE WHEN THIS ATTRIBUTE IS MISSING
@@ -357,21 +357,21 @@ def alert_sustained_median(settings, qb, alerts_db):
             })
 
             # PICK THE BEST SCORE FOR EACH is_diff==True REGION
-            for g2, data in Q.groupby(stats, "is_diff", contiguous=True):
+            for g2, data in qb.groupby(stats, "is_diff", contiguous=True):
                 if g2.is_diff:
-                    best = Q.sort(data, ["ttest_result.score", "diff"]).last()
+                    best = qb.sort(data, ["ttest_result.score", "diff"]).last()
                     if best.ttest_result.score > test_param.min_tscore:
                         best["pass"] = True
 
             # TESTS THAT HAVE BEEN (RE)EVALUATED GIVEN THE NEW INFORMATION
-            evaled_tests.update(Q.run({
+            evaled_tests.update(qb.run({
                 "from": test_results,
                 "select": source_ref.name,
                 "where": {"term": {"ignored": False}}
             }))
 
             if debug:
-                File("test_values.txt").write(convert.list2tab(Q.run({
+                File("test_values.txt").write(convert.list2tab(qb.run({
                     "from": stats,
                     "select": [
                         {"name": test_param.sort.name, "value": lambda x: convert.datetime2string(convert.milli2datetime(x[test_param.sort.name]), "%d-%b-%Y %H:%M:%S")},
@@ -386,7 +386,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                 })))
 
             # TESTS THAT HAVE SHOWN THEMSELVES TO BE EXCEPTIONAL
-            new_exceptions = Q.filter(stats, {"term": {"pass": True}})
+            new_exceptions = qb.filter(stats, {"term": {"pass": True}})
             for v in new_exceptions:
                 if v.ignored:
                     continue
@@ -428,7 +428,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         # REALLY, THEY ARE LONG LISTS OF DATA, SO THERE IS OPPORTUNITY FOR COMPRESSION;
         # WE COULD CREATE TABLE, LOAD TABLE, THEN EXECUTE QUERY USING A JOIN
         # WE COULD SEND A STORED PROCEDURE, AND THEN CALL IT WITH THE DATA (BUT IS THAT SMALLER?)
-        for i, et in Q.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
+        for i, et in qb.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
             old_alerts.extend(DBQuery(alerts_db).query({
                 "from": "alerts",
                 "select": [
@@ -461,13 +461,13 @@ def alert_sustained_median(settings, qb, alerts_db):
             "ids": source_ref.name
         })
 
-    for g, t in Q.groupby(all_touched, source_ref.leftBut(1).name):
+    for g, t in qb.groupby(all_touched, source_ref.leftBut(1).name):
         try:
             qb.update({
                 "set": {settings.param.mark_complete: "done"},
                 "where": {"and": [
                     {"and": [
-                        {"terms": {source_ref.last().value: Q.select(t, source_ref.last().name)}}
+                        {"terms": {source_ref.last().value: qb.select(t, source_ref.last().name)}}
                     ]},
                     {"term": g},
                     {"missing": {"field": settings.param.mark_complete}}

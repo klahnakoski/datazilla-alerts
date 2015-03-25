@@ -18,7 +18,7 @@ from pyLibrary.maths import Math
 
 # ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
 # UPDATE?
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from pyLibrary.sql.db import SQL
 from pyLibrary.dot import nvl
 
@@ -49,8 +49,8 @@ def significant_score_difference(a, b):
 def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
     verbose = nvl(settings.param.verbose, VERBOSE)
 
-    found_alerts = Q.unique_index(found_alerts, "tdad_id", fail_on_dup=False)
-    old_alerts = Q.unique_index(old_alerts, "tdad_id")
+    found_alerts = qb.unique_index(found_alerts, "tdad_id", fail_on_dup=False)
+    old_alerts = qb.unique_index(old_alerts, "tdad_id")
 
     new_alerts = found_alerts - old_alerts
     changed_alerts = found_alerts & old_alerts
@@ -68,7 +68,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
             a.last_updated = NOW
         try:
             #TODO: MySQL APPEARS TO HAVE A SIZE LIMIT
-            for _, na in Q.groupby(new_alerts, size=100):
+            for _, na in qb.groupby(new_alerts, size=100):
                 alerts_db.insert_list("alerts", na)
         except Exception, e:
             Log.error("problem with insert", e)
@@ -92,7 +92,7 @@ def update_alert_status(settings, alerts_db, found_alerts, old_alerts):
             alerts_db.update("alerts", {"id": old_alert.id}, new_alert)
 
     # OBSOLETE THE ALERTS THAT ARE NO LONGER VALID
-    for old_alert in Q.filter(obsolete_alerts, {"not": {"term": {"status": "obsolete"}}}):
+    for old_alert in qb.filter(obsolete_alerts, {"not": {"term": {"status": "obsolete"}}}):
         alerts_db.update("alerts", {"id": old_alert.id}, {"status": "obsolete", "last_updated": NOW})
 
     alerts_db.flush()

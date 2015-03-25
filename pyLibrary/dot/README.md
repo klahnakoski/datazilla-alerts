@@ -3,7 +3,7 @@ Consistent dicts, lists and Nones
 =================================
 
 This library is solving the problem of consistency (closure) under the dot(.)
-and slice [::] operators.  The most significant difference is in the dealing
+and slice [::] operators.  The most significant differences involve dealing
 with None, missing keys, and missing items in lists.
 
 Dict replaces dict
@@ -46,24 +46,35 @@ a.b.c += 1
 a.b.c += 42
 &gt;&gt;&gt; a == {"b": {"c": 43}}
 </pre>
- 7. attribute names (keys) are corrected to unicode - it appears Python
+ 7. `+=` on lists (`[]`) will `append()`<pre>
+a = wrap({})
+&gt;&gt;&gt; a == {}
+a.b.c += [1]
+&gt;&gt;&gt; a == {"b": {"c": [1]}}
+a.b.c += [42]
+&gt;&gt;&gt; a == {"b": {"c": [1, 42]}}
+</pre>
+ 8. attribute names (keys) are corrected to unicode - it appears Python
  object.getattribute() is called with str() even when using `from __future__
  import unicode_literals`
- 8. by allowing dot notation, the IDE does tab completion and my spelling
+ 9. by allowing dot notation, the IDE does tab completion and my spelling
  mistakes get found at "compile time"
 
-### Examples in the wild###
+### Examples in the wild ###
 
 `Dict` is a common pattern in many frameworks even though it goes by
 different names and slightly different variations, some examples are:
 
  * `jinja2.environment.Environment.getattr()`  to allow convenient dot notation
  * `argparse.Environment()` - code performs `setattr(e, name, value)` on
-  instances of Environment to provide dot(.) accessors
+  instances of Environment to provide dot(`.`) accessors
  * `collections.namedtuple()` - gives attribute names to tuple indicies
   effectively providing <code>a.b</code> rather than <code>a["b"]</code>
      offered by dicts
- * [configman's DotDict](https://github.com/mozilla/configman/blob/master/configman/dotdict.py) allows dot notation, and path setting:
+ * [configman's DotDict](https://github.com/mozilla/configman/blob/master/configman/dotdict.py)
+  allows dot notation, and path setting
+ * [Fabric's _AttributeDict](https://github.com/fabric/fabric/blob/19f5cffaada0f6f6132cd06742acd34e65cf1977/fabric/utils.py#L216)
+  allows dot notation
  * C# Linq requires anonymous types to avoid large amounts of boilerplate code.
  * D3 has many of these conventions ["The function's return value is
   then used to set each element's attribute. A null value will remove the
@@ -85,9 +96,9 @@ is missing one of those properties we set it to None.  Let us call it this the
 "*Missing Value*" definition.
 
 Another interpretation for None (or null), is that the instance simply does not
-have that property: Asking for the physical height of poem is non-sensical, and
+have that property: Asking for the physical height of poem is nonsense, and
 we return None/null to indicate this.  Databases use `null` in this way to
-simultaneously deal with multiple (sub)types and keep everything in fewer tables
+simultaneously deal with multiple (sub)types and keep records in fewer tables
 to minimize query complexity.  Call this version of None the "*Out of Context*"
 definition.
 
@@ -99,7 +110,7 @@ one of many ephemeral 'types' that only have meaning in a few lines of a method.
 
 Assuming None means *Out of Context* makes our code forgiving when encountering
 changing type definitions, flexible in the face of polymorphism, makes code
-more generic when dealing with sets and lists of non-uniform type.
+more generic when dealing with sets and lists with members of non-uniform type.
 
 I would like to override `None` in order to change its behaviour.
 Unfortunately, `None` is a primitive that can not be extended, so we create
@@ -142,8 +153,13 @@ in `Null`:
  * `a ∘ Null == Null`
  * `Null ∘ a == Null`
 
-where `∘` is any binary operator.
+where `∘` is most binary operators.  `and` and `or` are exceptions, and behave
+as expected:
 
+ * `True or Null == True`
+ * `False or Null == Null`
+ * `False and Null == False`
+ * `True and Null == Null`
 
 DictList is "Flat"
 ----------------------------------------
@@ -195,15 +211,15 @@ For the sake of completeness, we have two more convenience methods:
 DictList Dot (.) Operator
 ----------------------------
 
-The dot operator on a `DictList` will return a list of property values
+The dot operator on a `DictList` performs a simple projection; it will return a list of property values
 
-    `python
+```python
     myList.name == [x["name"] for x in myList]
-    `
+```
 
 
-Motivation for DictList
------------------------
+Motivation for DictList (optional reading)
+------------------------------------------
 
 `DictList` is the final type required to to provide closure under the
 dot(.) and slice [::] operators.  Not only must `DictList` deal with

@@ -5,9 +5,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-#
-# MONKEY-PATCH datetime FOR MORE AWESOME FUN
-#
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
@@ -16,7 +13,10 @@ from __future__ import division
 
 from datetime import datetime, date, timedelta
 import math
+import re
+from pyLibrary.dot import Null
 
+from pyLibrary.times.durations import Duration, MILLI_VALUES
 from pyLibrary.vendor.dateutil.parser import parse as parse_date
 
 try:
@@ -33,7 +33,7 @@ class Date(object):
 
     def __new__(cls, *args, **kwargs):
         if len(args) == 1 and args[0] == None:
-            return None
+            return Null
         return object.__new__(cls, *args)
 
     def __init__(self, *args):
@@ -47,8 +47,10 @@ class Date(object):
                 elif isinstance(a0, (int, long, float)):
                     if a0 == 9999999999000:  # PYPY BUG https://bugs.pypy.org/issue1697
                         self.value = Date.MAX
+                    elif a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
+                        self.value = datetime.utcfromtimestamp(a0 / 1000)
                     else:
-                        self.value = datetime.utcfromtimestamp(a0/1000)
+                        self.value = datetime.utcfromtimestamp(a0)
                 elif isinstance(a0, basestring):
                     self.value = unicode2datetime(a0)
                 else:
@@ -66,10 +68,13 @@ class Date(object):
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return Date(math.floor(self.milli / 86400000) * 86400000)
+        elif duration.milli % (7*86400000) ==0:
+            offset = 4*86400000
+            return Date(math.floor((self.milli+offset) / duration.milli) * duration.milli - offset)
         elif not duration.month:
             return Date(math.floor(self.milli / duration.milli) * duration.milli)
         else:
-            month = math.floor(self.value.month / duration.month) * duration.month
+            month = int(math.floor(self.value.month / duration.month) * duration.month)
             return Date(datetime(self.value.year, month, 1))
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
@@ -81,6 +86,10 @@ class Date(object):
 
     @property
     def milli(self):
+        return self.unix*1000
+
+    @property
+    def unix(self):
         try:
             if self.value == None:
                 return None
@@ -93,14 +102,10 @@ class Date(object):
                 Log.error("Can not convert {{value}} of type {{type}}", {"value": self.value, "type": self.value.__class__})
 
             diff = self.value - epoch
-            return long(diff.total_seconds()) * 1000L + long(diff.microseconds / 1000)
+            return diff.total_seconds()
         except Exception, e:
             from pyLibrary.debugs.logs import Log
             Log.error("Can not convert {{value}}", {"value": self.value}, e)
-
-    @property
-    def unix(self):
-        return self.milli/1000
 
     def addDay(self):
         return Date(self.value + timedelta(days=1))
@@ -148,10 +153,19 @@ class Date(object):
     def today():
         return Date(datetime.utcnow()).floor()
 
+    @staticmethod
+    def range(min, max, interval):
+        v = min
+        while v < max:
+            yield v
+            v = v + interval
+
     def __str__(self):
         return str(self.value)
 
     def __sub__(self, other):
+        if other == None:
+            return None
         if isinstance(other, datetime):
             return Duration(self.milli-Date(other).milli)
         if isinstance(other, Date):
@@ -219,6 +233,53 @@ def set_day(offset, day):
     return output
 
 
+def parse(value):
+    def simple_date(sign, dig, type, floor):
+        if dig or sign:
+            from pyLibrary.debugs.logs import Log
+            Log.error("can not accept a multiplier on a datetime")
+
+        if floor:
+            return Date(type).floor(Duration(floor))
+        else:
+            return Date(type)
+
+    terms = re.match(r'(\d*[|\w]+)\s*([+-]\s*\d*[|\w]+)*', value).groups()
+
+    sign, dig, type = re.match(r'([+-]?)\s*(\d*)([|\w]+)', terms[0]).groups()
+    if "|" in type:
+        type, floor = type.split("|")
+    else:
+        floor = None
+
+    if type in MILLI_VALUES.keys():
+        value = Duration(dig+type)
+    else:
+        value = simple_date(sign, dig, type, floor)
+
+    for term in terms[1:]:
+        if not term:
+            continue
+        sign, dig, type = re.match(r'([+-])\s*(\d*)([|\w]+)', term).groups()
+        if "|" in type:
+            type, floor = type.split("|")
+        else:
+            floor = None
+
+        op = {"+": "__add__", "-": "__sub__"}[sign]
+        if type in MILLI_VALUES.keys():
+            if floor:
+                from pyLibrary.debugs.logs import Log
+                Log.error("floor (|) of duration not accepted")
+            value = value.__getattribute__(op)(Duration(dig+type))
+        else:
+            value = value.__getattribute__(op)(simple_date(sign, dig, type, floor))
+
+    return value
+
+
+
+
 def unicode2datetime(value, format=None):
     """
     CONVERT UNICODE STRING TO datetime VALUE
@@ -226,6 +287,15 @@ def unicode2datetime(value, format=None):
     ## http://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
     if value == None:
         return None
+
+    value = value.strip()
+    if value.lower() == "now":
+        return Date.now().value
+    elif value.lower() == "today":
+        return Date.today().value
+
+    if any(value.lower().find(n) >= 0 for n in ["now", "today"] + list(MILLI_VALUES.keys())):
+        return parse(value).value
 
     if format != None:
         try:
@@ -278,5 +348,3 @@ def unicode2datetime(value, format=None):
         from pyLibrary.debugs.logs import Log
         Log.error("Can not interpret {{value}} as a datetime", {"value": value})
 
-
-from pyLibrary.times.durations import Duration

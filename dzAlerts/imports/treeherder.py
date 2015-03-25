@@ -14,16 +14,15 @@ import hashlib
 import json
 
 from dzAlerts.imports.mozilla_graph import MozillaGraph
-from pyLibrary import convert
+from pyLibrary import convert, jsons, queries
 from pyLibrary.collections import MAX
 from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.files import File
 from pyLibrary.debugs.profiles import Profiler
-from pyLibrary.jsons import json_scrub
 from pyLibrary.maths import Math
-from pyLibrary.queries import Q
-from pyLibrary.queries.es_query import ESQuery
+from pyLibrary.queries import qb
+from pyLibrary.queries.qb_usingES import FromES
 from pyLibrary.strings import expand_template
 from pyLibrary.debugs.logs import Log
 from pyLibrary.debugs import startup, constants
@@ -66,13 +65,10 @@ class TreeHerderImport(object):
 
         # GRAB THE OPTIONS
         # https://bugzilla.mozilla.org/show_bug.cgi?id=1116601
-        result = http.get("https://treeherder.mozilla.org/api/optioncollection/")
+        result = http.get("https://treeherder.mozilla.org/api/optioncollectionhash/")
         options = convert.json2value(convert.utf82unicode(result.content))
-        for v in options:
-            result = http.get("https://treeherder.mozilla.org/api/option/"+str(v.option)+"/")
-            option = convert.json2value(convert.utf82unicode(result.content))
-            self.options[v.option_collection_hash] = option.name
-
+        self.options = {v.option_collection_hash: {o.name.lower(): True for o in v.options} for v in options}
+        return
 
     def treeherder2talos(self, r, url):
 
@@ -80,26 +76,26 @@ class TreeHerderImport(object):
             """
             MAP PROPERTIES BACK TO ORIGINAL STRUCTURE
             """
-            output.test_machine.os = sig_properties.machine_os_name
-            output.test_machine.osversion = sig_properties.machine_platform
-            output.test_machine.platform = sig_properties.machine_architecture
-            output.test_machine.device_name = sig_properties.device_name
+            output.machine.os = sig_properties.machine_os_name
+            output.machine.osversion = sig_properties.machine_platform
+            output.machine.platform = sig_properties.machine_architecture
+            output.machine.device_name = sig_properties.device_name
 
-            output.test_build.branch = sig_properties.repository
-            output.test_build.os = sig_properties.build_os_name
-            output.test_build.osversion = sig_properties.build_platform
-            output.test_build.option = self.options[sig_properties.option_collection_hash]
-            output.test_build.platform = sig_properties.build_architecture
-            output.test_build.build_system = sig_properties.build_system_type
+            output.build.branch = sig_properties.repository
+            output.build.os = sig_properties.build_os_name
+            output.build.osversion = sig_properties.build_platform
+            output.build.options = self.options[sig_properties.option_collection_hash]
+            output.build.platform = sig_properties.build_architecture
+            output.build.build_system = sig_properties.build_system_type
 
-            output.testrun.suite = sig_properties.suite
+            output.run.suite = sig_properties.suite
 
-            output.testrun.options.e10s = th.signature_properties.job_group_symbol.endswith("e10s")
+            output.run.options.e10s = th.signature_properties.job_group_symbol.endswith("e10s")
             if sig_properties.job_group_symbol not in ["T", "T-e10s"]:
                 Log.error("do not know how to deal with {{symbol}}", {"symbol":sig_properties.job_group_symbol})
 
-            output.testrun.job_group = sig_properties.job_group_name
-            output.testrun.job_type = sig_properties.job_type_name
+            output.run.job_group = sig_properties.job_group_name
+            output.run.job_type = sig_properties.job_type_name
 
         th = convert.json2value(r.blob).blob
 
@@ -112,13 +108,13 @@ class TreeHerderImport(object):
             "perf_id": r.id,
             "url": url
         }
-        talos.test_build = th.metadata.test_build
+        talos.build = th.metadata.test_build
         convert_properties(talos, th.signature_properties)
 
-        set_default(talos.testrun.options, th.metadata.options)
-        talos.testrun.date = th.date
-        talos.results_aux = talos.metatdata.results_aux
-        talos.results_xperf = talos.metatdata.results_xperf
+        set_default(talos.run.options, th.metadata.options)
+        talos.run.date = th.date
+        talos.results_aux = talos.metadata.results_aux
+        talos.results_xperf = talos.metadata.results_xperf
         talos.results[literal_field(th.test)] = th.replicates
         return talos
 
@@ -199,7 +195,7 @@ class TreeHerderImport(object):
                 if DEBUG:
                     Log.println("Add {{id}} for revision {{revision}} ({{bytes}} bytes)", {
                         "id": id,
-                        "revision": t.test_build.revision,
+                        "revision": t.build.revision,
                         "bytes": len(convert.value2json(r))
                     })
                 with Profiler("transform"):
@@ -209,6 +205,8 @@ class TreeHerderImport(object):
                     es_sink.extend({"value": d} for d in result)
 
             if num_results == 0:
+                if len(data) == 0:
+                    return True
                 return False
 
             Log.println("{{num}} records added", {"num": num_results})
@@ -219,7 +217,7 @@ class TreeHerderImport(object):
             return False
 
     def test_result_to_uid(self, test_result):
-        return hashlib.sha1(uid_json_encoder.encode(json_scrub(test_result))).hexdigest()
+        return hashlib.sha1(uid_json_encoder.encode(jsons.scrub(test_result))).hexdigest()
 
     def get_existing_ids(self, es):
         #FIND WHAT'S IN ES
@@ -229,7 +227,7 @@ class TreeHerderImport(object):
             # SIMPLY RELOAD THIS SMALL NUMBER
             return set([])
 
-        with ESQuery(es) as esq:
+        with FromES(es.settings) as esq:
             try:
                 max_id = esq.query({
                     "from": es.settings.alias,
@@ -237,19 +235,20 @@ class TreeHerderImport(object):
                     "where": {"term": {"treeherder.branch": self.current_branch}}
                 })
             except Exception, e:
-                if e.contains("failed to find mapping for treeherder.perf_id"):  # HAPPENS DURING NEW INDEX AND NO TEST DATA
+                e = wrap(e)
+                if "failed to find mapping for treeherder.perf_id" in e:  # HAPPENS DURING NEW INDEX AND NO TEST DATA
                     max_id = self.settings.treeherder.min
-                elif e.contains("No mapping found for field [treeherder.perf_id]"):
+                elif "No mapping found for field [treeherder.perf_id]" in e:
                     max_id = self.settings.treeherder.min
-                elif e.contains("does not have type"):
+                elif "does not have type" in e:
                     max_id = self.settings.treeherder.min
                 else:
                     raise e
 
-            max_id = MAX(max_id, self.settings.treeherder.min)
+            max_id = MAX(max_id, self.settings.treeherder.min, 0)
 
             es_interval_size = 200000
-            for mini, maxi in Q.intervals(self.settings.treeherder.min, max_id, es_interval_size):
+            for mini, maxi in qb.intervals(self.settings.treeherder.min, max_id, es_interval_size):
                 existing_ids = es.search({
                     "query": {"match_all": {}},
                     "from": 0,
@@ -301,8 +300,8 @@ class TreeHerderImport(object):
 
         #COPY MISSING DATA TO ES
         try:
-            with ThreadedQueue(es, size=nvl(es.settings.batch_size, 100)) as es_sink:
-                with ThreadedQueue(File(self.settings.param.output_file), size=50) as file_sink:
+            with ThreadedQueue("push to es", es, batch_size=nvl(es.settings.batch_size, 100)) as es_sink:
+                with ThreadedQueue("push to file", File(self.settings.param.output_file), batch_size=100) as file_sink:
                     simple_etl = functools.partial(self.etl, *[es_sink, file_sink, transformer])
 
                     num_not_found = 0
@@ -348,7 +347,7 @@ def cluster(values, max_size):
     mini = None
     maxi = None
 
-    for v in Q.sort(values):
+    for v in qb.sort(values):
         if mini is None:
             mini = v
             maxi = v + 1
@@ -395,9 +394,14 @@ def main():
         Log.start(settings.debug)
 
         with startup.SingleInstance(flavor_id=settings.args.filename):
-            settings.treeherder.timeout = nvl(settings.treeherder.timeout, 30)
-            settings.treeherder.step = nvl(settings.treeherder.step, NUM_PER_BATCH)
-            settings.treeherder.threads = nvl(settings.treeherder.threads, 1)
+            queries.config.default.settings = settings.elasticsearch
+
+            set_default(settings.treeherder, {
+                "timeout": 30,
+                "min": 1,
+                "step": NUM_PER_BATCH,
+                "threads": 1
+            })
             settings.param.output_file = nvl(settings.param.output_file, "./results/raw_json_blobs.tab")
 
             worker = TreeHerderImport(settings)
@@ -419,6 +423,8 @@ def main():
             for b in branches.keys():
                 if branches[b].dvcs_type != "hg":
                     continue
+                # if branches[b].name != "mozilla-central":
+                #     continue
 
                 try:
                     worker.current_branch = b

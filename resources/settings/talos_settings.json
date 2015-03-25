@@ -1,6 +1,6 @@
 {
 	"dimension": {
-		"filename": "dimension_talos.json"
+		"$ref": "file://dimension_talos.json"
 	},
 	"param": {
 		"default": {
@@ -13,9 +13,10 @@
 			},
 			"sort": {
 				"name": "push_date",
-				"value": "test_build.push_date"
+				"value": "build.push_date"
 			},
 			"units": "unknown",
+			"better": "lower",
 			"min_regression": "5%",
 			"min_mscore": 2.5,
 			"min_tscore": 4.0,
@@ -127,16 +128,29 @@
 		"branch_dimension": "Talos.Branch",
 		"source_ref": [
 			"Talos.Test",
-			{"name": "test_run_id", "value": "datazilla.test_run_id"}
+			{"name": "test_run_id", "value": "treeherder.perf_id"}
 		],
 		"verbose": true,
-		"mark_complete": "talos_sustained_median",
-		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+		"mark_complete": {"$ref":"file://~/private_dzalerts.json#mark_complete",
+		"combo_limit": 50, // SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+		"debug": true,    // SET TO true TO INJECT debug_filters INTO THE QUERY STREAM AND FOCUS ON THOSE
+		"debug_filter": {
+			"or": [
+				{
+					"and": [
+//						{"term": {"run.suite": "tp5o"}},
+						{"term": {"result.test_name": "tpaint"}},
+						{"term": {"machine.osversion": "6.1.7601"}},
+						{"term": {"build.branch": "Fx-Team-Non-PGO"}}
+					]
+				}
+			]
+		}
 	},
 	"query": {
 		"from": {
 			"name": "talos",
-			"host": "http://elasticsearch-private.bugs.scl3.mozilla.com",
+			"host": "http://localhost",
 			"port": 9200,
 			"index": "talos",
 			"type": "test_results",
@@ -147,27 +161,25 @@
 			"Talos.Branch",
 			"Talos.OS",
 			"Talos.Platform",
-			"Talos.Test"
+			"Talos.Test",
+			"Talos.Build_Options",
+			"Talos.e10s"
 		]
 	},
 	"alerts": {
-		"host": "localhost",
-		"port": 3306,
-		"username": "username",
-		"password": "password",
-		"schema": "alerts",
-		"debug": true
+		"$ref": "file://~/private_dzalerts.json#alerts_db"
 	},
 	"pushlog": {
 		"schema": "pushlog_hgmozilla_1"
 	},
 	"email": {
 		"from_address": "klahnakoski@mozilla.com",
-		"host": "mail.mozilla.com",
-		"port": 465,
-		"username": "username",
-		"password": "password",
-		"use_ssl": 1
+		"$ref": "file://~/private_dzalerts.json#email"
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers":{
+			"from":"https://wiki.mozilla.org/Auto-tools/Projects/Alerts"
+		}
 	},
 	"debug": {
 		"trace": false,

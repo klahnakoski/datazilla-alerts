@@ -14,7 +14,7 @@ from dzAlerts.daemons.email_send import email_send
 from pyLibrary.debugs import startup
 from pyLibrary.sql.db import DB
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 from util import testing
 
 
@@ -102,7 +102,7 @@ class test_email_send():
     def verify_delivery(self, mail_content, to_list):
         # VERIFY DELIVERY IN DATABASE IS SAME AS LIST
         mail_delivery = self.db.query("SELECT id, deliver_to FROM mail.delivery WHERE content={{content_id}}", {"content_id": mail_content.id})
-        mail_delivery = set(Q.select(mail_delivery, "deliver_to"))
+        mail_delivery = set(qb.select(mail_delivery, "deliver_to"))
         assert mail_delivery == set(to_list)
 
 

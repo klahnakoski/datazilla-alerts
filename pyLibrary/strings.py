@@ -15,6 +15,7 @@ from datetime import datetime as builtin_datetime
 import re
 import math
 import __builtin__
+
 from pyLibrary.dot import nvl, wrap
 
 
@@ -116,24 +117,102 @@ def outdent(value):
         Log.error("can not outdent value", e)
 
 
-def round(value, decimal=None, digits=None):
+def round(value, decimal=None, digits=None, places=None):
+    """
+    :param value:  THE VALUE TO ROUND
+    :param decimal: NUMBER OF DECIMAL PLACES TO ROUND (NEGATIVE IS LEFT-OF-DECIMAL)
+    :param digits: ROUND TO SIGNIFICANT NUMBER OF digits
+    :param places: SAME AS digits
+    :return:
+    """
     value = float(value)
+    if value == 0.0:
+        return "0"
+
+    digits = nvl(digits, places)
     if digits != None:
-        m = pow(10, math.ceil(math.log10(abs(value))))
-        return __builtin__.round(value / m, digits) * m
+        left_of_decimal = int(math.ceil(math.log10(abs(value))))
+        decimal = digits - left_of_decimal
 
-    return __builtin__.round(value, decimal)
+    right_of_decimal = max(decimal, 0)
+    format = "{:." + unicode(right_of_decimal) + "f}"
+    return format.format(__builtin__.round(value, decimal))
 
 
-def percent(value, decimal=None, digits=None):
-    per = round(value * 100, decimal, digits)
-    return str(per) + "%"
+def percent(value, decimal=None, digits=None, places=None):
+    value = float(value)
+    if value == 0.0:
+        return "0%"
+
+    digits = nvl(digits, places)
+    if digits != None:
+        left_of_decimal = int(math.ceil(math.log10(abs(value)))) + 2
+        decimal = digits - left_of_decimal
+
+    right_of_decimal = max(decimal, 0)
+    format = "{:." + unicode(right_of_decimal) + "%}"
+    return format.format(__builtin__.round(value, decimal + 2))
+
+
+def find(value, find, start=0):
+    """
+    MUCH MORE USEFUL VERSION OF string.find()
+    """
+    l = len(value)
+    if isinstance(find, list):
+        m = l
+        for f in find:
+            i = value.find(f, start)
+            if i == -1:
+                continue
+            m = min(m, i)
+        return m
+    else:
+        i = value.find(find, start)
+        if i == -1:
+            return l
+        return i
+
+
+def strip(value):
+    """
+    REMOVE WHITESPACE (INCLUDING CONTROL CHARACTERS)
+    """
+    if not value or (ord(value[0]) > 32 and ord(value[-1]) > 32):
+        return value
+
+    s = 0
+    e = len(value)
+    while s < e:
+        if ord(value[s]) > 32:
+            break
+        s += 1
+    else:
+        return ""
+
+    for i in reversed(range(s, e)):
+        if ord(value[i]) > 32:
+            return value[s:i + 1]
+
+    return ""
+
+
+def trim(value):
+    return strip(value)
 
 
 def between(value, prefix, suffix):
     value = toString(value)
+    if prefix == None:
+        e = value.find(suffix)
+        if e == -1:
+            return None
+        else:
+            return value[:e]
+
     s = value.find(prefix)
-    if s == -1: return None
+    if s == -1:
+        return None
     s += len(prefix)
 
     e = value.find(suffix, s)
@@ -141,6 +220,7 @@ def between(value, prefix, suffix):
         return None
 
     s = value.rfind(prefix, 0, e) + len(prefix)  # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
+
     return value[s:e]
 
 
@@ -166,6 +246,51 @@ def left(value, len):
     if len <= 0:
         return u""
     return value[0:len]
+
+
+def comma(value):
+    """
+    FORMAT WITH THOUSANDS COMMA (,) SEPARATOR
+    """
+    try:
+        if float(value) == __builtin__.round(float(value), 0):
+            output = "{:,}".format(int(value))
+        else:
+            output = "{:,}".format(float(value))
+    except Exception:
+        output = unicode(value)
+
+    return output
+
+
+def quote(value):
+    from pyLibrary import convert
+
+    return convert.string2quote(value)
+
+
+def split(value, sep="\n"):
+    # GENERATOR VERSION OF split()
+    # SOMETHING TERRIBLE HAPPENS, SOMETIMES, IN PYPY
+    s = 0
+    len_sep = len(sep)
+    n = value.find(sep, s)
+    while n > -1:
+        yield value[s:n]
+        s = n + len_sep
+        n = value.find(sep, s)
+    yield value[s:]
+    value = None
+
+
+def common_prefix(*args):
+    prefix = args[0]
+    for a in args[1:]:
+        for i in range(min(len(prefix), len(a))):
+            if a[i] != prefix[i]:
+                prefix = prefix[:i]
+                break
+    return prefix
 
 
 def find_first(value, find_arr, start=0):
@@ -231,7 +356,9 @@ def _simple_expand(template, seq):
         var = path.lstrip(".")
         depth = min(len(seq), max(1, len(path) - len(var)))
         try:
-            val = seq[-depth][var]
+            val = seq[-depth]
+            if var:
+                val = val[var]
             for filter in ops[1:]:
                 parts = filter.split('(')
                 if len(parts) > 1:
@@ -280,7 +407,7 @@ def toString(val):
     if val == None:
         return ""
     elif isinstance(val, (dict, list, set)):
-        from pyLibrary.jsons import json_encoder
+        from pyLibrary.jsons.encoder import json_encoder
 
         return json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
