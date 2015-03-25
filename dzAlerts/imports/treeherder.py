@@ -443,5 +443,5 @@ def main():
     finally:
         Log.stop()
 
-HTTPConnection.debuglevel = 1
+
 main()
