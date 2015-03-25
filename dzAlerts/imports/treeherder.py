@@ -323,11 +323,12 @@ class TreeHerderImport(object):
                                 else:
                                     num_not_found = 0
                         except (KeyboardInterrupt, SystemExit), e:
+                            Log.alert("Shutdown requested")
                             many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
                             many.stop()
                             raise e
         except (KeyboardInterrupt, SystemExit):
-            Log.println("Shutdown Started, please be patient")
+            Log.alert("Shutdown Started, please be patient")
         except Exception, e:
             Log.error("Unusual shutdown!", e)
 
