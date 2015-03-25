@@ -1,0 +1,59 @@
+{
+	"elasticsearch" : {
+		"host" : "http://172.31.0.145",
+		"port" : 9200,
+		"index" : "talos",
+		"type" : "test_results",
+		"timeout" : 300,
+		"schema" : {"$ref": "file://../schema/test_schema.json"},
+		"debug": false
+	},
+	"mozillaHG":{
+		"timeout":"30second"
+	},
+	"treeherder" : {
+		"url": "https://treeherder.mozilla.org",
+		"branches":{
+			"url":"https://treeherder.mozilla.org/api/repository/"
+		},
+		"blob_url" : "https://treeherder.mozilla.org/api/project/{{branch}}/performance_artifact/?id__gte={{min}}&id__lte={{max}}&count={{count}}",
+		"max_id_url": "https://treeherder.mozilla.org/api/project/{{branch}}/",
+		"signature_url": "https://treeherder.mozilla.org/api/project/{{branch}}/performance-data/0/get_signature_properties/?signatures={{signature}}",
+		"threads" : 5,
+		"step" : 100,
+		"max_tries": 100,
+		"timeout": 600
+	},
+	"param" : {
+		"schema_file" : "./resources/schema/test_schema.json",
+		"output_file" : "./results/recent.tab"
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers":{
+			"from":"https://wiki.mozilla.org/Auto-tools/Projects/Alerts"
+		}
+	},
+	"debug" : {
+		"trace": true,
+		"profile" : false,
+		"log" : [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://172.31.0.145",
+				"index": "debug",
+				"type": "unittest_etl"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[Developer Alert][STAGING] Problem in Treeherder import",
+				"$ref": "file://~/private-dzalerts.json#email"
+
+			}
+		]
+	}
+}
