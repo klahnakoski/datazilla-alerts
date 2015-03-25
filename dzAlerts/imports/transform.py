@@ -22,7 +22,7 @@ from pyLibrary.dot import literal_field, Dict, nvl
 from pyLibrary.dot.lists import DictList
 from pyLibrary.thread.threads import Lock
 from pyLibrary.debugs.logs import Log
-from pyLibrary.queries import Q
+from pyLibrary.queries import qb
 
 
 DEBUG = False
@@ -45,13 +45,10 @@ class Talos2ES():
             pass
 
 
-    # CONVERT THE TESTS (WHICH ARE IN A dict) TO
+    # CONVERT THE TESTS (WHICH ARE IN A dict) TO MANY RECORDS WITH ONE result EACH
     def transform(self, uid, talos_test_result):
         try:
             r = talos_test_result
-
-            #CONVERT UNIX TIMESTAMP TO MILLISECOND TIMESTAMP
-            r.testrun.date *= 1000
 
             def mainthread_transform(r):
                 if r == None:
@@ -85,32 +82,32 @@ class Talos2ES():
             mainthread_transform(r.results_xperf)
 
 
-            branch = r.test_build.branch
+            branch = r.build.branch
             if branch.lower().endswith("-non-pgo"):
                 branch = branch[0:-8]
-                r.test_build.branch = branch
-                r.test_build.pgo = False
+                r.build.branch = branch
+                r.build.pgo = False
             else:
-                r.test_build.pgo = True
+                r.build.pgo = True
 
-            if r.test_machine.osversion.endswith(".e"):
-                r.test_machine.osversion = r.test_machine.osversion[:-2]
-                r.test_machine.e10s = True
+            if r.machine.osversion.endswith(".e"):
+                r.machine.osversion = r.machine.osversion[:-2]
+                r.machine.e10s = True
 
 
             #ADD PUSH LOG INFO
             try:
                 with Profiler("get from pushlog"):
-                    revision = Revision(**{"branch": {"name":branch}, "changeset": {"id": r.test_build.revision}})
+                    revision = Revision(**{"branch": {"name":branch}, "changeset": {"id": r.build.revision}})
                     with self.locker:
                         revision = self.repo.get_node(revision)
 
                     with self.locker:
                         push = self.repo.get_push(revision)
 
-                    r.test_build.push_date = int(Math.round(push.date * 1000))
+                    r.build.push_date = push.date
             except Exception, e:
-                Log.warning("{{test_build.branch}} @ {{test_build.revision}} (perf_id=={{treeherder.perf_id}}) has no pushlog", r, e)
+                Log.warning("{{build.branch}} @ {{build.revision}} (perf_id=={{treeherder.perf_id}}) has no pushlog", r, e)
                 # TRY AGAIN LATER
                 return []
 
@@ -124,16 +121,16 @@ class Talos2ES():
 
             #RECORD TEST RESULTS
             total = DictList()
-            if r.testrun.suite in ["dromaeo_css", "dromaeo_dom"]:
+            if r.run.suite in ["dromaeo_css", "dromaeo_dom"]:
                 #dromaeo IS SPECIAL, REPLICATES ARE IN SETS OF FIVE
                 #RECORD ALL RESULTS
                 for i, (test_name, replicates) in enumerate(r.results.items()):
-                    for g, sub_results in Q.groupby(replicates, size=5):
+                    for g, sub_results in qb.groupby(replicates, size=5):
                         new_record = Dict(
-                            test_machine=r.test_machine,
+                            machine=r.machine,
                             treeherder=r.treeherder,
-                            testrun=r.testrun,
-                            test_build=r.test_build,
+                            run=r.run,
+                            build=r.build,
                             result={
                                 "test_name": unicode(test_name) + "." + unicode(g),
                                 "ordering": i,
@@ -150,10 +147,10 @@ class Talos2ES():
             else:
                 for i, (test_name, replicates) in enumerate(r.results.items()):
                     new_record = Dict(
-                        test_machine=r.test_machine,
+                        machine=r.machine,
                         treeherder=r.treeherder,
-                        testrun=r.testrun,
-                        test_build=r.test_build,
+                        run=r.run,
+                        build=r.build,
                         result={
                             "test_name": test_name,
                             "ordering": i,
@@ -172,10 +169,10 @@ class Talos2ES():
                 # ADD RECORD FOR GEOMETRIC MEAN SUMMARY
 
                 new_record = Dict(
-                    test_machine=r.test_machine,
+                    machine=r.machine,
                     treeherder=r.treeherder,
-                    testrun=r.testrun,
-                    test_build=r.test_build,
+                    run=r.run,
+                    build=r.build,
                     result={
                         "test_name": "SUMMARY",
                         "ordering": -1,
@@ -184,16 +181,16 @@ class Talos2ES():
                 )
                 new_records.append(new_record)
 
-                # ADD RECORD FOR GRAPH SERVER SUMMARY
+                # ADD RECORD FOR GRAPH SERVER SUMMARYh
                 new_record = Dict(
-                    test_machine=r.test_machine,
+                    machine=r.machine,
                     treeherder=r.treeherder,
-                    testrun=r.testrun,
-                    test_build=r.test_build,
+                    run=r.run,
+                    build=r.build,
                     result={
                         "test_name": "summary_old",
                         "ordering": -1,
-                        "stats": Stats(samples=Q.sort(total.mean)[:len(total)-1:])
+                        "stats": Stats(samples=qb.sort(total.mean)[:len(total)-1:])
                     }
                 )
                 new_records.append(new_record)

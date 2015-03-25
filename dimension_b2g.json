@@ -1,9 +1,9 @@
 {"name":"B2G", "index":"b2g_alerts", "edges":[
-    {"name":"Device", "field":"test_machine.type", "type":"set", "limit":100},
-    {"name":"OS", "field":"test_machine.os", "type":"set", "limit":100},
-    {"name":"OS Version", "field":["test_machine.os", "test_machine.osversion"], "type":"set", "limit":100},
-    {"name":"Branch", "field":"test_build.branch", "type":"set", "limit":100},
-    {"name":"Test", "field":{"suite":"testrun.suite", "name":"result.test_name"}, "type":"set", "esfilter": true, "limit":1000},
-    {"name":"Platform", "field":"test_machine.platform", "type":"set", "limit":100},
-    {"name":"Revision", "field":{"gaia": "test_build.gaia_revision", "gecko": "test_build.gecko_revision", "gecko_repository":"test_build.gecko_repository"}, "type":"uid"}
+    {"name":"Device", "field":"machine.type", "type":"set", "limit":100},
+    {"name":"OS", "field":"machine.os", "type":"set", "limit":100},
+    {"name":"OS Version", "field":["machine.os", "machine.osversion"], "type":"set", "limit":100},
+    {"name":"Branch", "field":"build.branch", "type":"set", "limit":100},
+    {"name":"Test", "field":{"suite":"run.suite", "name":"result.test_name"}, "type":"set", "esfilter": true, "limit":1000},
+    {"name":"Platform", "field":"machine.platform", "type":"set", "limit":100},
+    {"name":"Revision", "field":{"gaia": "build.gaia_revision", "gecko": "build.gecko_revision", "gecko_repository":"build.gecko_repository"}, "type":"uid"}
 ]}

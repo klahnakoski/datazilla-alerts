@@ -100,10 +100,10 @@
 			"B2G.Test",
 			{"name": "test_run_id",	"value": "datazilla.test_run_id"}
 		],
-		"debug": false,
+		"debug": true,
 		"verbose": true,
-		"mark_complete": "b2g_sustained_median",
-		"combo_limit": 50  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
+		"mark_complete": "kyle_test_b2g_sustained_median",
+		"combo_limit": 100  //SO WE DO NOT DO TOO MUCH WORK EACH TIME (BE SURE TO MULTIPLY BY NUMBER OF TESTS IN A SUITE)
 	},
 	"query": {
 		"from": {
@@ -123,25 +123,21 @@
 		]
 	},
 	"alerts": {
-		"host": "localhost",
-		"port": 3306,
-		"username": "username",
-		"password": "password",
-		"schema": "alerts",
-		"debug": true
+		"$ref": "file://~/private_dzalerts.json#alert_db"
 	},
 	"pushlog": {
 		"schema": "pushlog_hgmozilla_1"
 	},
 	"email": {
 		"from_address": "klahnakoski@mozilla.com",
-		"host": "mail.mozilla.com",
-		"port": 465,
-		"username": "username",
-		"password": "password",
-		"use_ssl": 1
+		"$ref":"file://~/private_dzalerts.json#email",
 	},
 	"debug": {
+		"constants":{
+//			"dzAlerts.daemons.alert.mail_limit":1000000,
+			"dzAlerts.daemons.alert.look_back":"10year"
+		},
+		"trace": true,
 		"log": [
 			{
 				"class": "logging.handlers.RotatingFileHandler",

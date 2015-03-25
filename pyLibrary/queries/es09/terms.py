@@ -12,10 +12,10 @@ from __future__ import division
 
 from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.queries import Q
-from pyLibrary.queries import es_query_util
-from pyLibrary.queries.es_query_util import aggregates, buildESQuery, compileEdges2Term
-from pyLibrary.queries.filters import simplify
+from pyLibrary.queries import qb
+from pyLibrary.queries.es09.util import aggregates, build_es_query, compileEdges2Term
+from pyLibrary.queries import es09
+from pyLibrary.queries.filters import simplify_esfilter
 from pyLibrary.queries.cube import Cube
 from pyLibrary.dot import nvl
 from pyLibrary.dot.lists import DictList
@@ -42,21 +42,21 @@ def es_terms(es, mvel, query):
         return _es_terms2(es, mvel, query)
 
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = build_es_query(query)
     packed_term = compileEdges2Term(mvel, query.edges, wrap([]))
     for s in select:
-        esQuery.facets[s.name] = {
+        FromES.facets[s.name] = {
             "terms": {
                 "field": packed_term.field,
                 "script_field": packed_term.expression,
                 "size": nvl(query.limit, 200000)
             },
-            "facet_filter": simplify(query.where)
+            "facet_filter": simplify_esfilter(query.where)
         }
 
     term2Parts = packed_term.term2parts
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = es09.util.post(es, FromES, query.limit)
 
     # GETTING ALL PARTS WILL EXPAND THE EDGES' DOMAINS
     # BUT HOW TO UNPACK IT FROM THE term FASTER IS UNKNOWN
@@ -64,11 +64,11 @@ def es_terms(es, mvel, query):
         for t in f.terms:
             term2Parts(t.term)
 
-    # NUMBER ALL EDGES FOR Qb INDEXING
+    # NUMBER ALL EDGES FOR qb INDEXING
     for f, e in enumerate(query.edges):
         e.index = f
         if e.domain.type in ["uid", "default"]:
-            # e.domain.partitions = Q.sort(e.domain.partitions, "value")
+            # e.domain.partitions = qb.sort(e.domain.partitions, "value")
             for p, part in enumerate(e.domain.partitions):
                 part.dataIndex = p
             e.domain.NULL.dataIndex = len(e.domain.partitions)
@@ -106,27 +106,27 @@ def _es_terms2(es, mvel, query):
     values1 = es_terms(es, mvel, q1).edges[0].domain.partitions.value
 
     select = listwrap(query.select)
-    esQuery = buildESQuery(query)
+    FromES = build_es_query(query)
     for s in select:
         for i, v in enumerate(values1):
-            esQuery.facets[s.name + "," + str(i)] = {
+            FromES.facets[s.name + "," + str(i)] = {
                 "terms": {
                     "field": query.edges[1].value,
                     "size": nvl(query.limit, 200000)
                 },
-                "facet_filter": simplify({"and": [
+                "facet_filter": simplify_esfilter({"and": [
                     query.where,
                     {"term": {query.edges[0].value: v}}
                 ]})
             }
 
-    data = es_query_util.post(es, esQuery, query.limit)
+    data = es09.util.post(es, FromES, query.limit)
 
     # UNION ALL TERMS FROM SECOND DIMENSION
     values2 = set()
     for k, f in data.facets.items():
         values2.update(f.terms.term)
-    values2 = Q.sort(values2)
+    values2 = qb.sort(values2)
     term2index = {v: i for i, v in enumerate(values2)}
     query.edges[1].domain.partitions = DictList([{"name": v, "value": v} for v in values2])
 

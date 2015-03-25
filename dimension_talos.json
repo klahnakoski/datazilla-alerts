@@ -1,9 +1,11 @@
 {"name":"Talos", "index":"talos", "edges":[
-	{"name":"Product", "field":"test_build.name", "type":"set", "limit":1000},
-	{"name":"Branch", "field":"test_build.branch", "type":"set", "limit":1000},
-	{"name":"OS", "field":{"name": "test_machine.os", "version":"test_machine.osversion"}, "type":"set", "limit":1000},
-	{"name":"Platform", "field":"test_machine.platform", "type":"set", "limit":1000},
-	{"name":"Test", "field":{"suite":"testrun.suite", "name":"result.test_name"}, "type":"set", "limit":1000},
-	{"name":"Revision", "field":"test_build.revision", "type":"uid"}
+	{"name":"Product", "field":"build.name", "type":"set", "limit":1000},
+	{"name":"Branch", "field":"build.branch", "type":"set", "limit":1000},
+	{"name":"OS", "field":{"name": "machine.os", "version":"machine.osversion"}, "type":"set", "limit":1000},
+	{"name":"Platform", "field":"machine.platform", "type":"set", "limit":1000},
+	{"name":"Test", "field":{"suite":"run.suite", "name":"result.test_name"}, "type":"set", "limit":1000},
+	{"name":"Build_Options", "field":"build.option", "type":"set"},
+	{"name":"e10s", "field":"run.options.e10s", "type":"set"},
+	{"name":"Revision", "field":"build.revision", "type":"uid"}
 ]}
 

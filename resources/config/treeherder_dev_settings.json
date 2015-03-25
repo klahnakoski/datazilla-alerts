@@ -2,13 +2,14 @@
 	"elasticsearch" : {
 //	    "host":"http://klahnakoski-es.corp.tor1.mozilla.com",
 		"host" : "http://localhost",
-//		"host" : "http://192.168.0.98",
+//		"host" : "http://52.11.57.80",
 		"port" : 9200,
 		"index" : "talos",
 		"type" : "test_results",
 		"timeout" : 300,
-		"schema_file" : "./resources/schema/test_schema.json",
-		"debug": true
+		"schema" : {"$ref": "file://../schema/test_schema.json"},
+		"debug": false,
+		"limit_replicas": true
 	},
 	"mozillaHG":{
 		"timeout":"30second"
@@ -22,8 +23,6 @@
 		"max_id_url": "https://treeherder.mozilla.org/api/project/{{branch}}/",
 		"signature_url": "https://treeherder.mozilla.org/api/project/{{branch}}/performance-data/0/get_signature_properties/?signatures={{signature}}",
 		"threads" : 5,
-		"min" : 800000,
-//		"max": 1016200,
 		"step" : 100,
 		"max_tries": 100,
 		"timeout": 600
@@ -32,7 +31,13 @@
 		"schema_file" : "./resources/schema/test_schema.json",
 		"output_file" : "./results/recent.tab"
 	},
+	"constants": {
+		"pyLibrary.env.http.default_headers":{
+			"from":"https://wiki.mozilla.org/Auto-tools/Projects/Alerts"
+		}
+	},
 	"debug" : {
+		"trace": true,
 		"profile" : false,
 		"log" : [
 			{

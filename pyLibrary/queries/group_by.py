@@ -69,7 +69,7 @@ def groupby(data, keys=None, size=None, min_size=None, max_size=None, contiguous
         agg = {}
         for d in data:
             key = value2key(keys, d)
-            pair = agg.get(key, None)
+            pair = agg.get(key)
             if pair is None:
                 pair = (get_keys(d), DictList())
                 agg[key] = pair
@@ -166,7 +166,7 @@ def groupby_min_max_size(data, min_size=0, max_size=None, ):
                 if out:
                     # AT LEAST TRY TO RETURN WHAT HAS BEEN PROCESSED SO FAR
                     yield g, out
-                Log.error("Problem inside Q.groupby", e)
+                Log.error("Problem inside qb.groupby", e)
 
         return _iter()
     elif not isinstance(data, Multiset):

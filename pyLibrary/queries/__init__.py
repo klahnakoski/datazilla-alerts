@@ -9,27 +9,59 @@
 #
 from __future__ import unicode_literals
 
-from pyLibrary.dot.dicts import Dict, nvl
+from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import wrap, set_default, split_field
+from pyLibrary.dot.dicts import Dict
 
-INDEX_CACHE = {}  # MATCH NAMES TO FULL CONNECTION INFO
+
+type2container = Dict()
+config = Dict()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
 
 
+def _delayed_imports():
+    global type2container
 
-def _normalize_select(select, schema=None):
-    if isinstance(select, basestring):
-        if schema:
-            s = schema[select]
-            if s:
-                return s.getSelect()
-        return Dict(
-            name=select.rstrip("."),  # TRAILING DOT INDICATES THE VALUE, BUT IS INVALID FOR THE NAME
-            value=select,
-            aggregate="none"
-        )
+    from pyLibrary.queries.qb_usingMySQL import FromMySQL
+    from pyLibrary.queries.qb_usingES import FromES
+    set_default(type2container, {
+        "elasticsearch": FromES,
+        "mysql": FromMySQL,
+        "memory": None
+    })
+
+
+def wrap_from(frum, schema=None):
+    """
+    :param frum:
+    :param schema:
+    :return:
+    """
+    if not type2container:
+        _delayed_imports()
+
+    frum = wrap(frum)
+
+    if isinstance(frum, basestring):
+        if not config.default.settings:
+            from pyLibrary.debugs.logs import Log
+            Log.error("expecting pyLibrary.queries.query.config.default.settings to contain default elasticsearch connection info")
+
+        settings = set_default({
+            "index": split_field(frum)[0],
+            "name": frum,
+        }, config.default.settings)
+        return type2container["elasticsearch"](settings)
+    elif isinstance(frum, dict) and frum.type and type2container[frum.type]:
+        # TODO: Ensure the frum.name is set, so we capture the deep queries
+        if not frum.type:
+            Log.error("Expecting from clause to have a 'type' property")
+        return type2container[frum.type](frum.settings)
+    elif isinstance(frum, dict) and (frum["from"] or isinstance(frum["from"], (list, set))):
+        from pyLibrary.queries.query import Query
+        return Query(frum, schema=schema)
     else:
-        if not select.name:
-            select = select.copy()
-            select.name = nvl(select.value, select.aggregate)
+        return frum
 
-        select.aggregate = nvl(select.aggregate, "none")
-        return select
+
+
+import es09.util

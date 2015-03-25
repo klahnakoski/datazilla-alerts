@@ -7,26 +7,35 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+# THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
+# THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
+# FOR FAST AND PREDICTABLE SHUTDOWN AND CLEANUP OF THREADS
+
 from __future__ import unicode_literals
 from __future__ import division
 from collections import deque
-
 from datetime import datetime, timedelta
 import thread
 import threading
 import time
 import sys
 import gc
+from pyLibrary import strings
 
-# THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
-# THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
-# FOR FAST AND PREDICTABLE SHUTDOWN AND CLEANUP OF THREADS
 from pyLibrary.dot import nvl, Dict
 from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import Duration
+from pyLibrary.times.durations import Duration, SECOND
 
+
+Log=None
+def _late_import():
+    global Log
+    from pyLibrary.debugs.logs import Log
 
 DEBUG = True
+MAX_DATETIME = datetime(2286, 11, 20, 17, 46, 39)
+
+
 
 
 class Lock(object):
@@ -37,7 +46,7 @@ class Lock(object):
     def __init__(self, name=""):
         self.monitor = threading.Condition()
         # if not name:
-        #     if "extract_stack" not in globals():
+        # if "extract_stack" not in globals():
         #         from pyLibrary.debugs.logs import extract_stack
         #
         #     self.name = extract_stack(1)[0].method
@@ -65,18 +74,20 @@ class Lock(object):
 
 class Queue(object):
     """
-    SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH IS HARD TO USE JUST BETWEEN THREADS
+     SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
+     IS DIFFICULT TO USE JUST BETWEEN THREADS (SERIALIZATION REQUIRED)
     """
 
-    def __init__(self, max=None, silent=False):
+    def __init__(self, name, max=None, silent=False):
         """
         max - LIMIT THE NUMBER IN THE QUEUE, IF TOO MANY add() AND extend() WILL BLOCK
         silent - COMPLAIN IF THE READERS ARE TOO SLOW
         """
+        self.name = name
         self.max = nvl(max, 2 ** 10)
         self.silent = silent
         self.keep_running = True
-        self.lock = Lock("lock for queue")
+        self.lock = Lock("lock for queue " + name)
         self.queue = deque()
         self.next_warning = datetime.utcnow()  # FOR DEBUGGING
         self.gc_count = 0
@@ -88,12 +99,9 @@ class Queue(object):
                 if value is not Thread.STOP:
                     yield value
             except Exception, e:
-                from pyLibrary.debugs.logs import Log
-
                 Log.warning("Tell me about what happened here", e)
 
-        from pyLibrary.debugs.logs import Log
-        Log.note ("queue iterator is done")
+        Log.note("queue iterator is done")
 
 
     def add(self, value):
@@ -130,9 +138,8 @@ class Queue(object):
                     now = datetime.utcnow()
                     if self.next_warning < now:
                         self.next_warning = now + timedelta(seconds=wait_time)
-                        from pyLibrary.debugs.logs import Log
-
-                        Log.warning("Queue is full ({{num}}} items), thread(s) have been waiting {{wait_time}} sec", {
+                        Log.alert("Queue {{name}} is full ({{num}} items), thread(s) have been waiting {{wait_time}} sec", {
+                            "name": self.name,
                             "num": len(self.queue),
                             "wait_time": wait_time
                         })
@@ -145,27 +152,48 @@ class Queue(object):
         with self.lock:
             return any(r != Thread.STOP for r in self.queue)
 
-    def pop(self):
+    def pop(self, till=None):
+        """
+        WAIT FOR NEXT ITEM ON THE QUEUE
+        RETURN Thread.STOP IF QUEUE IS CLOSED
+        IF till IS PROVIDED, THEN pop() CAN TIMEOUT AND RETURN None
+        """
         with self.lock:
-            while self.keep_running:
-                if self.queue:
-                    value = self.queue.popleft()
-                    self.gc_count += 1
-                    if self.gc_count % 1000 == 0:
-                        gc.collect()
-                    if value is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
-                        self.keep_running = False
-                    return value
+            if till == None:
+                while self.keep_running:
+                    if self.queue:
+                        value = self.queue.popleft()
+                        self.gc_count += 1
+                        if self.gc_count % 1000 == 0:
+                            gc.collect()
+                        if value is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
+                            self.keep_running = False
+                        return value
 
-                try:
-                    self.lock.wait()
-                except Exception, e:
-                    pass
+                    try:
+                        self.lock.wait()
+                    except Exception, e:
+                        pass
+            else:
+                while self.keep_running:
+                    if self.queue:
+                        value = self.queue.popleft()
+                        if value is Thread.STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
+                            self.keep_running = False
+                        return value
+                    elif Date.now() > till:
+                        break
 
-            from pyLibrary.debugs.logs import Log
-            Log.note("queue stopped")
+                    try:
+                        self.lock.wait(till=till)
+                    except Exception, e:
+                        pass
+                if self.keep_running:
+                    return None
 
-            return Thread.STOP
+        Log.note("queue stopped")
+        return Thread.STOP
+
 
     def pop_all(self):
         """
@@ -189,6 +217,12 @@ class Queue(object):
         with self.lock:
             self.keep_running = False
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 
 class AllThread(object):
     """
@@ -196,6 +230,8 @@ class AllThread(object):
     """
 
     def __init__(self):
+        if not Log:
+            _late_import()
         self.threads = []
 
     def __enter__(self):
@@ -213,13 +249,9 @@ class AllThread(object):
                 if "exception" in response:
                     exceptions.append(response["exception"])
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
-
             Log.warning("Problem joining", e)
 
         if exceptions:
-            from pyLibrary.debugs.logs import Log
-
             Log.error("Problem in child threads", exceptions)
 
 
@@ -249,6 +281,8 @@ class Thread(object):
 
 
     def __init__(self, name, target, *args, **kwargs):
+        if not Log:
+            _late_import()
         self.id = -1
         self.name = name
         self.target = target
@@ -262,7 +296,7 @@ class Thread(object):
         self.please_stop = self.kwargs["please_stop"]
 
         self.stopped = Signal()
-
+        self.cprofiler = None
 
     def __enter__(self):
         return self
@@ -280,15 +314,19 @@ class Thread(object):
     def start(self):
         try:
             thread.start_new_thread(Thread._run, (self, ))
+            return self
         except Exception, e:
-            from pyLibrary.debugs.logs import Log
-
             Log.error("Can not start thread", e)
 
     def stop(self):
         self.please_stop.go()
 
     def _run(self):
+        if Log.cprofiler:
+            import cProfile
+            self.cprofiler = cProfile.Profile()
+            self.cprofiler.enable()
+
         self.id = thread.get_ident()
         with ALL_LOCK:
             ALL[self.id] = self
@@ -302,8 +340,6 @@ class Thread(object):
             with self.synch_lock:
                 self.response = Dict(exception=e)
             try:
-                from pyLibrary.debugs.logs import Log
-
                 Log.fatal("Problem in thread {{name}}", {"name": self.name}, e)
             except Exception, f:
                 sys.stderr.write("ERROR in thread: " + str(self.name) + " " + str(e) + "\n")
@@ -312,6 +348,12 @@ class Thread(object):
             del self.target, self.args, self.kwargs
             with ALL_LOCK:
                 del ALL[self.id]
+
+        if self.cprofiler:
+            import pstats
+            self.cprofiler.disable()
+            Log.cprofiler_stats.add(pstats.Stats(self.cprofiler))
+            del self.cprofiler
 
     def is_alive(self):
         return not self.stopped
@@ -332,8 +374,6 @@ class Thread(object):
                         self.synch_lock.wait(0.5)
 
                 if DEBUG:
-                    from pyLibrary.debugs.logs import Log
-
                     Log.note("Waiting on thread {{thread|json}}", {"thread": self.name})
         else:
             self.stopped.wait_for_go(till=till)
@@ -346,10 +386,11 @@ class Thread(object):
 
     @staticmethod
     def run(name, target, *args, **kwargs):
+        if not Log:
+            _late_import()
+
         # ENSURE target HAS please_stop ARGUMENT
         if "please_stop" not in target.__code__.co_varnames:
-            from pyLibrary.debugs.logs import Log
-
             Log.error("function must have please_stop argument for signalling emergency shutdown")
 
         Thread.num_threads += 1
@@ -364,16 +405,17 @@ class Thread(object):
         if please_stop is not None or isinstance(till, Signal):
             if isinstance(till, Signal):
                 please_stop = till
-                till = Date.MAX
+                till = MAX_DATETIME
 
             if seconds is not None:
-                till = datetime.utcnow() + (Duration.SECOND * seconds)
+                till = datetime.utcnow() + timedelta(seconds=seconds)
             elif till is None:
-                till = Date.MAX
+                till = MAX_DATETIME
 
             while not please_stop:
-                if till > datetime.utcnow():
-                    time.sleep(1)
+                time.sleep(1)
+                if till < datetime.utcnow():
+                    break
             return
 
         if seconds is not None:
@@ -395,15 +437,19 @@ class Thread(object):
 
 
     @staticmethod
-    def wait_for_shutdown_signal(please_stop=False):
+    def wait_for_shutdown_signal(
+        please_stop=False,  # ASSIGN SIGNAL TO STOP EARLY
+        allow_exit=False    # ALLOW "exit" COMMAND ON CONSOLE TO ALSO STOP THE APP
+    ):
         """
         SLEEP UNTIL keyboard interrupt
-
-        please_stop - ASSIGN SIGNAL TO STOP EARLY
-
         """
+        if allow_exit:
+            Thread('waiting for "exit"', readloop, please_stop=please_stop).start()
+
         if Thread.current() != MAIN_THREAD:
-            from pyLibrary.debugs.logs import Log
+            if not Log:
+                _late_import()
             Log.error("Only the main thread can sleep forever (waiting for KeyboardInterrupt)")
 
         if not isinstance(please_stop, Signal):
@@ -411,7 +457,7 @@ class Thread(object):
 
         # DEOS NOT SEEM TO WOKR
         # def stopper():
-        #     Log.note("caught breaker")
+        # Log.note("caught breaker")
         #     please_stop.go()
         #
         #
@@ -424,7 +470,8 @@ class Thread(object):
                 except Exception, e:
                     pass
         except KeyboardInterrupt, SystemExit:
-            pass
+            please_stop.go()
+            Log.alert("SIGINT Detected!  Stopping...")
 
 
     @staticmethod
@@ -510,41 +557,98 @@ class ThreadedQueue(Queue):
     """
     TODO: Check that this queue is not dropping items at shutdown
     DISPATCH TO ANOTHER (SLOWER) queue IN BATCHES OF GIVEN size
-
-    queue          - THE SLOWER QUEUE
-    max            - SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
-    silent = False - WRITES WILL COMPLAIN IF THEY ARE WAITING TOO LONG
     """
 
-    def __init__(self, queue, size=None, max=None, period=None, silent=False):
-        if max == None:
-            # REASONABLE DEFAULT
-            max = size * 2
+    def __init__(
+        self,
+        name,
+        queue,  # THE SLOWER QUEUE
+        batch_size=None,  # THE MAX SIZE OF BATCHES SENT TO THE SLOW QUEUE
+        max_size=None,  # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
+        period=None,  # MAX TIME BETWEEN FLUSHES TO SLOWER QUEUE
+        silent=False  # WRITES WILL COMPLAIN IF THEY ARE WAITING TOO LONG
+    ):
+        if not Log:
+            _late_import()
 
-        Queue.__init__(self, max=max, silent=silent)
+        batch_size = nvl(batch_size, int(nvl(max_size, 0)/2), 900)
+        max_size = nvl(max_size, batch_size * 2)  # REASONABLE DEFAULT
+        period = nvl(period, SECOND)
+        bit_more_time = 5 * SECOND
 
-        def size_pusher(please_stop):
+        Queue.__init__(self, name=name, max=max_size, silent=silent)
+
+        def worker_bee(please_stop):
             please_stop.on_go(lambda: self.add(Thread.STOP))
 
-            # queue IS A MULTI-THREADED QUEUE, SO THIS WILL BLOCK UNTIL THE size ARE READY
-            from pyLibrary.queries import Q
+            _buffer = []
+            next_time = Date.now() + period   # THE TIME WE SHOULD DO A PUSH
 
-            for i, g in Q.groupby(self, size=size):
+            while not please_stop:
                 try:
-                    queue.extend(g)
-                    if please_stop:
-                        from pyLibrary.debugs.logs import Log
+                    if not _buffer:
+                        item = self.pop()
+                        now = Date.now()
 
-                        Log.warning("ThreadedQueue stopped early, with {{num}} items left in queue", {
-                            "num": len(self)
-                        })
+                        if item is Thread.STOP:
+                            queue.extend(_buffer)
+                            please_stop.go()
+                            return
+                        elif item is not None:
+                            _buffer.append(item)
+
+                        next_time = now + period  # NO NEED TO SEND TOO EARLY
+                        continue
+
+                    item = self.pop(till=next_time)
+                    now = Date.now()
+
+                    if item is Thread.STOP:
+                        queue.extend(_buffer)
+                        please_stop.go()
                         return
+                    elif item is not None:
+                        _buffer.append(item)
+
                 except Exception, e:
-                    from pyLibrary.debugs.logs import Log
+                    Log.warning("Unexpected problem", {
+                        "name": name,
+                    }, e)
 
-                    Log.warning("Problem with pushing {{num}} items to data sink", {"num": len(g)}, e)
+                try:
+                    if len(_buffer) >= batch_size or now > next_time:
+                        next_time = now + period
+                        if _buffer:
+                            queue.extend(_buffer)
+                            _buffer = []
+                            # A LITTLE MORE TIME TO FILL THE NEXT BUFFER
+                            now = Date.now()
+                            if now > next_time:
+                                next_time = now + bit_more_time
 
-        self.thread = Thread.run("threaded queue " + unicode(id(self)), size_pusher)
+                except Exception, e:
+                    Log.warning("Problem with {{name}} pushing {{num}} items to data sink", {
+                        "name": name,
+                        "num": len(_buffer)
+                    }, e)
+
+        self.thread = Thread.run("threaded queue for " + name, worker_bee)
+
+
+    def add(self, value):
+        with self.lock:
+            self.wait_for_queue_space()
+            if self.keep_running:
+                self.queue.append(value)
+        return self
+
+    def extend(self, values):
+        with self.lock:
+            # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
+            self.wait_for_queue_space()
+            if self.keep_running:
+                self.queue.extend(values)
+        return self
 
 
     def __enter__(self):
@@ -555,4 +659,12 @@ class ThreadedQueue(Queue):
         if isinstance(b, BaseException):
             self.thread.please_stop.go()
         self.thread.join()
+
+
+def readloop(please_stop):
+    while not please_stop:
+        command = sys.stdin.readline()
+        if strings.strip(command) == "exit":
+            break
+    please_stop.go()
 

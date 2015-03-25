@@ -38,7 +38,7 @@ Setup Alert Database
 --------------------
 USing the **dev** branch You can use [setup.py](tests/resources/python/setup.py) to setup the alerts database,
 
-    python tests/resources/python/setup.py --settings=tests/resources/settings/setup_settings.json
+    python tests/resources/python/setup.py --settings=tests/resources/config/setup_settings.json
 
 or you may simply execute the various sql files found in [resources/schema](resources/schema)
 

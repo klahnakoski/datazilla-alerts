@@ -16,7 +16,7 @@ import shutil
 
 from pyLibrary.strings import utf82unicode
 from pyLibrary.maths import crypto
-from pyLibrary.dot import nvl
+from pyLibrary.dot import nvl, set_default, split_field, join_field
 from pyLibrary.dot import listwrap, wrap
 from pyLibrary import convert
 
@@ -103,7 +103,7 @@ class File(object):
         """
         path = self._filename.split("/")
         parts = path[-1].split(".")
-        if len(parts)==1:
+        if len(parts) == 1:
             parts.append(ext)
         else:
             parts[-1] = ext
@@ -139,55 +139,28 @@ class File(object):
                 return content
 
     def read_json(self, encoding="utf8"):
+        from pyLibrary.jsons import ref
+
         content = self.read(encoding=encoding)
         value = convert.json2value(content, flexible=True, paths=True)
-        return wrap(self._replace_ref(value))
-
-    def _replace_ref(self, node):
-        if isinstance(node, dict):
-            ref = node["$ref"]
-            if not ref:
-                return_value=node
-                candidate = {}
-                for k, v in node.items():
-                    new_v = self._replace_ref(v)
-                    candidate[k] = new_v
-                    if new_v is not v:
-                        return_value = candidate
-                return return_value
-
-            if ref.startswith("http://"):
-                from pyLibrary.env import http
-
-                return convert.json2value(http.get(ref), flexible=True, paths=True)
-            elif ref.startswith("file://"):
-                ref = ref[7::]
-
-            if ref.startswith("/"):
-                return File(ref).read_json(ref)
-            else:
-                return File.new_instance(self.parent, ref).read_json()
-        elif isinstance(node, list):
-            candidate = [self._replace_ref(n) for n in node]
-            if all(p[0] is p[1] for p in zip(candidate, node)):
-                return node
-            return candidate
-
-        return node
+        abspath = self.abspath
+        if os.sep == "\\":
+            abspath = "/" + abspath.replace(os.sep, "/")
+        return ref.expand(value, "file://" + abspath)
 
     def is_directory(self):
         return os.path.isdir(self._filename)
 
-    def read_ascii(self):
+    def read_bytes(self):
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "r") as f:
+        with open(self._filename, "rb") as f:
             return f.read()
 
-    def write_ascii(self, content):
+    def write_bytes(self, content):
         if not self.parent.exists:
             self.parent.create()
-        with open(self._filename, "w") as f:
+        with open(self._filename, "wb") as f:
             f.write(content)
 
     def write(self, data):
@@ -199,7 +172,14 @@ class File(object):
 
                 Log.error("list of data and keys are not supported, encrypt before sending to file")
 
-            for d in listwrap(data):
+            if isinstance(data, list):
+                pass
+            elif isinstance(data, basestring):
+                data=[data]
+            elif hasattr(data, "__iter__"):
+                pass
+
+            for d in data:
                 if not isinstance(d, unicode):
                     from pyLibrary.debugs.logs import Log
 
@@ -215,7 +195,12 @@ class File(object):
         # http://effbot.org/zone/wide-finder.htm
         def output():
             try:
-                with io.open(self._filename, "rb") as f:
+                path = self._filename
+                if path.startswith("~"):
+                    home_path = os.path.expanduser("~")
+                    path = home_path + path[1::]
+
+                with io.open(path, "rb") as f:
                     for line in f:
                         yield utf82unicode(line)
             except Exception, e:
@@ -247,6 +232,7 @@ class File(object):
                 for c in content:
                     if isinstance(c, str):
                         from pyLibrary.debugs.logs import Log
+
                         Log.error("expecting to write unicode only")
 
                     output_file.write(c.encode("utf-8"))

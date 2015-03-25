@@ -139,7 +139,7 @@
 						}
 					}
 				},
-				"testrun": {
+				"run": {
 					"properties": {
 						"suite": {
 							"index": "not_analyzed",
@@ -202,11 +202,7 @@
 						}
 					}
 				},
-				"results": {
-					"properties": {
-					}
-				},
-				"test_machine": {
+				"machine": {
 					"properties": {
 						"platform": {
 							"index": "not_analyzed",
@@ -258,7 +254,7 @@
 					"index": "no",
 					"store": "yes"
 				},
-				"test_build": {
+				"build": {
 					"properties": {
 						"id": {
 							"type": "long"
@@ -278,7 +274,7 @@
 							"type": "string"
 						},
 						"push_date": {
-							"type": "long"
+							"type": "double"
 						},
 						"branch": {
 							"index": "not_analyzed",
