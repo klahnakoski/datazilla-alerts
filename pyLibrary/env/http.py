@@ -19,15 +19,14 @@
 
 from __future__ import unicode_literals
 from __future__ import division
-import StringIO
-import gzip
+from copy import copy
 
 from requests import sessions, Response
 
 from pyLibrary import convert
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot import Dict, nvl
-from pyLibrary.env.big_data import safe_size, MAX_STRING_SIZE, CompressedLines, LazyLines, GzipLines, ZipfileLines
+from pyLibrary.env.big_data import safe_size, CompressedLines, ZipfileLines
 
 
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -57,9 +56,25 @@ def request(method, url, **kwargs):
         compressed = convert.bytes2zip(kwargs["data"])
         kwargs["headers"]['content-encoding'] = 'gzip'
         kwargs["data"] = compressed
+
+        _header_to_ascii(kwargs["headers"])
         return session.request(method=method, url=url, **kwargs)
     else:
+        _header_to_ascii(kwargs.get("headers"))
         return session.request(method=method, url=url, **kwargs)
+
+def _header_to_ascii(headers):
+    if headers is None:
+        return
+    for k, v in copy(headers).items():
+        if isinstance(k, unicode):
+            del headers[k]
+            if isinstance(v, unicode):
+                headers[k.encode("ascii")] = v.encode("ascii")
+            else:
+                headers[k.encode("ascii")] = v
+        elif isinstance(v, unicode):
+            headers[k] = v.encode("ascii")
 
 
 def get(url, **kwargs):
