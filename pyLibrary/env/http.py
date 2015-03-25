@@ -50,20 +50,24 @@ def request(method, url, **kwargs):
     session = sessions.Session()
     session.headers.update(default_headers)
 
-    kwargs['timeout'] = nvl(kwargs.get('timeout'), default_timeout)
+    if isinstance(url, unicode):
+        url = url.encode("ascii")
 
-    if len(nvl(kwargs.get("data"))) > 1000:
-        compressed = convert.bytes2zip(kwargs["data"])
-        kwargs["headers"]['content-encoding'] = 'gzip'
-        kwargs["data"] = compressed
+    _to_ascii_dict(kwargs)
+    kwargs[b'timeout'] = nvl(kwargs.get(b'timeout'), default_timeout)
 
-        _header_to_ascii(kwargs["headers"])
+    if len(nvl(kwargs.get(b"data"))) > 1000:
+        compressed = convert.bytes2zip(kwargs[b"data"])
+        kwargs[b"headers"][b'content-encoding'] = 'gzip'
+        kwargs[b"data"] = compressed
+
+        _to_ascii_dict(kwargs[b"headers"])
         return session.request(method=method, url=url, **kwargs)
     else:
-        _header_to_ascii(kwargs.get("headers"))
+        _to_ascii_dict(kwargs.get(b"headers"))
         return session.request(method=method, url=url, **kwargs)
 
-def _header_to_ascii(headers):
+def _to_ascii_dict(headers):
     if headers is None:
         return
     for k, v in copy(headers).items():
@@ -80,38 +84,38 @@ def _header_to_ascii(headers):
 def get(url, **kwargs):
     kwargs.setdefault('allow_redirects', True)
     kwargs["stream"] = True
-    return HttpResponse(request('get', url, **kwargs))
+    return HttpResponse(request(b'get', url, **kwargs))
 
 
 def options(url, **kwargs):
     kwargs.setdefault('allow_redirects', True)
     kwargs["stream"] = True
-    return HttpResponse(request('options', url, **kwargs))
+    return HttpResponse(request(b'options', url, **kwargs))
 
 
 def head(url, **kwargs):
     kwargs.setdefault('allow_redirects', False)
     kwargs["stream"] = True
-    return HttpResponse(request('head', url, **kwargs))
+    return HttpResponse(request(b'head', url, **kwargs))
 
 
 def post(url, **kwargs):
     kwargs["stream"] = True
-    return HttpResponse(request('post', url, **kwargs))
+    return HttpResponse(request(b'post', url, **kwargs))
 
 
 def put(url, **kwargs):
-    return HttpResponse(request('put', url, **kwargs))
+    return HttpResponse(request(b'put', url, **kwargs))
 
 
 def patch(url, **kwargs):
     kwargs["stream"] = True
-    return HttpResponse(request('patch', url, **kwargs))
+    return HttpResponse(request(b'patch', url, **kwargs))
 
 
 def delete(url, **kwargs):
     kwargs["stream"] = True
-    return HttpResponse(request('delete', url, **kwargs))
+    return HttpResponse(request(b'delete', url, **kwargs))
 
 
 class HttpResponse(Response):
