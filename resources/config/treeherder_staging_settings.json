@@ -51,7 +51,7 @@
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
 				"subject": "[Developer Alert][STAGING] Problem in Treeherder import",
-				"$ref": "file://~/private-dzalerts.json#email"
+				"$ref": "file://~/private_dzalerts.json#email"
 
 			}
 		]
