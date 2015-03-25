@@ -38,6 +38,13 @@ _warning_sent = False
 
 
 def request(method, url, **kwargs):
+    """
+     JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
+
+     THE BYTE_STRINGS (b"") ARE NECESSARY TO PREVENT httplib.py FROM **FREAKING OUT**
+     IT APPEARS requests AND httplib.py SIMPLY CONCATENATE STRINGS BLINDLY, WHICH
+     INCLUDES url AND headers
+    """
     global _warning_sent
     if not default_headers and not _warning_sent:
         _warning_sent = True
@@ -51,6 +58,8 @@ def request(method, url, **kwargs):
     session.headers.update(default_headers)
 
     if isinstance(url, unicode):
+        # httplib.py WILL **FREAK OUT** IF IT SEES ANY UNICODE
+        # IT APPEARS TO
         url = url.encode("ascii")
 
     _to_ascii_dict(kwargs)
@@ -58,7 +67,7 @@ def request(method, url, **kwargs):
 
     if len(nvl(kwargs.get(b"data"))) > 1000:
         compressed = convert.bytes2zip(kwargs[b"data"])
-        kwargs[b"headers"][b'content-encoding'] = 'gzip'
+        kwargs[b"headers"][b'content-encoding'] = b'gzip'
         kwargs[b"data"] = compressed
 
         _to_ascii_dict(kwargs[b"headers"])
@@ -82,25 +91,25 @@ def _to_ascii_dict(headers):
 
 
 def get(url, **kwargs):
-    kwargs.setdefault('allow_redirects', True)
-    kwargs["stream"] = True
+    kwargs.setdefault(b'allow_redirects', True)
+    kwargs[b"stream"] = True
     return HttpResponse(request(b'get', url, **kwargs))
 
 
 def options(url, **kwargs):
-    kwargs.setdefault('allow_redirects', True)
-    kwargs["stream"] = True
+    kwargs.setdefault(b'allow_redirects', True)
+    kwargs[b"stream"] = True
     return HttpResponse(request(b'options', url, **kwargs))
 
 
 def head(url, **kwargs):
-    kwargs.setdefault('allow_redirects', False)
-    kwargs["stream"] = True
+    kwargs.setdefault(b'allow_redirects', False)
+    kwargs[b"stream"] = True
     return HttpResponse(request(b'head', url, **kwargs))
 
 
 def post(url, **kwargs):
-    kwargs["stream"] = True
+    kwargs[b"stream"] = True
     return HttpResponse(request(b'post', url, **kwargs))
 
 
@@ -109,12 +118,12 @@ def put(url, **kwargs):
 
 
 def patch(url, **kwargs):
-    kwargs["stream"] = True
+    kwargs[b"stream"] = True
     return HttpResponse(request(b'patch', url, **kwargs))
 
 
 def delete(url, **kwargs):
-    kwargs["stream"] = True
+    kwargs[b"stream"] = True
     return HttpResponse(request(b'delete', url, **kwargs))
 
 
