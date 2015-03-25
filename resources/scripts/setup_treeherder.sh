@@ -12,4 +12,9 @@ cd /home/ec2-user/datazilla-alerts/
 git checkout treeherder
 sudo pip install -r requirements.txt
 
-cat > pulse_logger_staging_settings.json
+#INSTALL CRON JOB
+cd  /home/ec2-user
+chmod +x /home/ec2-user/datazilla-alerts/resources/scripts/treeherder_import.sh
+echo "*/10 * * * * /home/ec2-user/datazilla-alerts/resources/scripts/treeherder_import.sh" > cron.txt
+crontab cron.txt
+rm -rf cron.txt

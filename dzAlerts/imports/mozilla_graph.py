@@ -59,6 +59,9 @@ class MozillaGraph(object):
             response = self._get_and_retry(url)
             revs = convert.json2value(response.content.decode("utf8"))
 
+            if revs.startswith("unknown revision "):
+                Log.error(revs)
+
             if len(revs.keys()) != 1:
                 Log.error("Do not know how to handle")
 

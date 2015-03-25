@@ -116,6 +116,7 @@ class TreeHerderImport(object):
         talos.run.date = th.date
         talos.results_aux = talos.metadata.results_aux
         talos.results_xperf = talos.metadata.results_xperf
+        talos.talos_aux = talos.metadata.talos_aux
         talos.results[literal_field(th.test)] = th.replicates
         return talos
 
