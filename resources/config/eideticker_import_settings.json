@@ -9,7 +9,7 @@
 			"port": 9200,
 			"index": "eideticker",
 			"type": "results",
-			"schema_file": "resources/settings/eideticker_schema.json",
+			"schema": {"$ref": "//./eideticker_schema.json"},
 			"debug": true,
 			"limit_replicas": true
 		}
