@@ -30,7 +30,6 @@
 		"timeout": 600
 	},
 	"param": {
-		"schema_file": "./resources/schema/test_schema.json",
 		"output_file": "./results/recent.tab"
 	},
 	"constants": {

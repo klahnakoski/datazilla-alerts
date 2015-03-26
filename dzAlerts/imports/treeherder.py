@@ -302,31 +302,37 @@ class TreeHerderImport(object):
 
         #COPY MISSING DATA TO ES
         try:
-            with ThreadedQueue("push to es", es, batch_size=nvl(es.settings.batch_size, 100)) as es_sink:
-                with ThreadedQueue("push to file", File(self.settings.param.output_file), batch_size=100) as file_sink:
-                    simple_etl = functools.partial(self.etl, *[es_sink, file_sink, transformer])
+            if self.settings.param.output_file:
+                file_sink = ThreadedQueue("push to file", File(self.settings.param.output_file), batch_size=100)
+            else:
+                def do_nothing(*_):
+                    pass
 
-                    num_not_found = 0
-                    with Multithread(simple_etl, threads=self.settings.treeherder.threads) as many:
-                        try:
-                            results = many.execute([
-                                {"min_job_id": min_job_id, "max_job_id": max_job_id}
-                                for i, (min_job_id, max_job_id) in cluster(missing_ids, self.settings.treeherder.step)
-                            ])
-                            for result in results:
-                                if not result:
-                                    num_not_found += 1
-                                    if num_not_found > nvl(self.settings.treeherder.max_tries, 10):
-                                        many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
-                                        many.stop()
-                                        break
-                                else:
-                                    num_not_found = 0
-                        except (KeyboardInterrupt, SystemExit), e:
-                            Log.alert("Shutdown requested")
-                            many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
-                            many.stop()
-                            raise e
+                file_sink = wrap({"add": do_nothing})
+            with ThreadedQueue("push to es", es, batch_size=nvl(es.settings.batch_size, 100)) as es_sink:
+                simple_etl = functools.partial(self.etl, *[es_sink, file_sink, transformer])
+
+                num_not_found = 0
+                with Multithread(simple_etl, threads=self.settings.treeherder.threads) as many:
+                    try:
+                        results = many.execute([
+                            {"min_job_id": min_job_id, "max_job_id": max_job_id}
+                            for i, (min_job_id, max_job_id) in cluster(missing_ids, self.settings.treeherder.step)
+                        ])
+                        for result in results:
+                            if not result:
+                                num_not_found += 1
+                                if num_not_found > nvl(self.settings.treeherder.max_tries, 10):
+                                    many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
+                                    many.stop()
+                                    break
+                            else:
+                                num_not_found = 0
+                    except (KeyboardInterrupt, SystemExit), e:
+                        Log.alert("Shutdown requested")
+                        many.inbound.pop_all()  # CLEAR THE QUEUE OF OTHER WORK
+                        many.stop()
+                        raise e
         except (KeyboardInterrupt, SystemExit):
             Log.alert("Shutdown Started, please be patient")
         except Exception, e:
@@ -410,7 +416,6 @@ def main():
                 "step": NUM_PER_BATCH,
                 "threads": 1
             })
-            settings.param.output_file = nvl(settings.param.output_file, "./results/raw_json_blobs.tab")
 
             worker = TreeHerderImport(settings)
 
