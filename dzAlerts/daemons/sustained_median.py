@@ -169,6 +169,7 @@ def alert_sustained_median(settings, qb, alerts_db):
                     nvl(settings.param.debug_filter, True)
                 ]}
             ]},
+            "format": "table",  # SPARSENESS REQUIRED
             "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
 
