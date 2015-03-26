@@ -3,7 +3,7 @@
 	{"name":"Branch", "field":"build.branch", "type":"set", "limit":1000},
 	{"name":"OS", "field":{"name": "machine.os", "version":"machine.osversion"}, "type":"set", "limit":1000},
 	{"name":"Platform", "field":"machine.platform", "type":"set", "limit":1000},
-	{"name":"Test", "field":{"suite":"run.suite", "name":"result.test_name"}, "type":"set", "limit":1000},
+	{"name":"Test", "field":{"suite":"run.suite", "name":"result.test_name"}, "esfilter":true, "type":"set", "limit":1000},
 	{"name":"Build_Options", "field":"build.option", "type":"set"},
 	{"name":"e10s", "field":"run.options.e10s", "type":"set"},
 	{"name":"Revision", "field":"build.revision", "type":"uid"}

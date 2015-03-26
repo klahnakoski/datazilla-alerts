@@ -18,9 +18,9 @@ from pyLibrary.debugs import startup
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
-from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
-from pyLibrary.queries.es_query import ESQuery
-from pyLibrary.sql.db import DB
+from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.queries.qb_usingMySQL import esfilter2sqlwhere
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
 from pyLibrary.dot import nvl, Dict
@@ -92,9 +92,9 @@ def eideticker_alert_revision(settings):
 
 
 
-    with DB(settings.alerts) as alerts_db:
-        with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
-            dbq = DBQuery(alerts_db)
+    with MySQL(settings.alerts) as alerts_db:
+        with FromES(elasticsearch.Index(settings.query["from"])) as esq:
+            dbq = MySQL(alerts_db)
 
             esq.addDimension(convert.json2value(File(settings.dimension.filename).read()))
 

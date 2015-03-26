@@ -14,7 +14,7 @@ from datetime import datetime
 
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.sql.db import DB
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.dot import nvl
 
@@ -81,7 +81,7 @@ def main():
     Log.start(settings.debug)
     try:
         Log.note("Running email using schema {{schema}}", {"schema": settings.perftest.schema})
-        with DB(settings.alerts) as db:
+        with MySQL(settings.alerts) as db:
             email_send(
                 db=db,
                 emailer=Emailer(settings.email),

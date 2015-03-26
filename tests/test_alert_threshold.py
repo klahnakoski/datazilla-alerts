@@ -16,7 +16,7 @@ from dzAlerts.daemons.page_threshold_limit import page_threshold_limit, REASON
 from pyLibrary import struct
 from pyLibrary import convert
 from pyLibrary.debugs import startup
-from pyLibrary.sql.db import SQL, DB
+from pyLibrary.sql.mysql import SQL, MySQL
 from pyLibrary.debugs.logs import Log
 from util import testing
 
@@ -283,7 +283,7 @@ def test_1(settings):
         ]
     })
 
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         tester = test_alert_threshold(db, test_data)
         tester.test_alert_generated()
         tester.test_alert_obsolete()

@@ -16,16 +16,14 @@ from dzAlerts.daemons.util.welchs_ttest import welchs_ttest
 from pyLibrary.collections import MIN, MAX
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
-from pyLibrary.queries.es_query import ESQuery
+from pyLibrary.queries.qb_usingES import FromES
 from pyLibrary.debugs import startup, constants
-from pyLibrary.env import elasticsearch
-from pyLibrary.queries.db_query import DBQuery
-from pyLibrary import convert
+from pyLibrary import convert, queries
 from pyLibrary.queries import windows
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
-from pyLibrary.sql.db import DB
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.dot import Null, split_field, literal_field, set_default, Dict, nvl, wrap_dot, listwrap
 from pyLibrary.thread.threads import Thread
 from pyLibrary.times.dates import Date
@@ -122,7 +120,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         debug = settings.param.debug
 
     if debug:
-        Log.warning("Debugging is ON")
+        Log.alert("Sustained Median Debugging is ON")
     query = settings.query
 
     def is_bad(r, test_param):
@@ -429,7 +427,7 @@ def alert_sustained_median(settings, qb, alerts_db):
         # WE COULD CREATE TABLE, LOAD TABLE, THEN EXECUTE QUERY USING A JOIN
         # WE COULD SEND A STORED PROCEDURE, AND THEN CALL IT WITH THE DATA (BUT IS THAT SMALLER?)
         for i, et in qb.groupby(evaled_tests, size=100):  # SMALLER SQL STATEMENTS
-            old_alerts.extend(DBQuery(alerts_db).query({
+            old_alerts.extend(MySQL(alerts_db).query({
                 "from": "alerts",
                 "select": [
                     "id",
@@ -491,11 +489,13 @@ def main():
             # MORE SETTINGS
             Log.note("Finding exceptions in index {{index_name}}", {"index_name": settings.query["from"].name})
 
-            es = elasticsearch.Index(settings.query["from"])
-            with ESQuery(es) as qb:
+            es_settings = settings.query["from"].settings
+            queries.config.default.settings = es_settings
+
+            with FromES(es_settings) as qb:
                 qb.addDimension(settings.dimension)
 
-                with DB(settings.alerts) as alerts_db:
+                with MySQL(settings.alerts) as alerts_db:
                     alert_sustained_median(
                         settings,
                         qb,

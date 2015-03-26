@@ -18,9 +18,8 @@ from pyLibrary.debugs import startup
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.files import File
 from pyLibrary.maths import Math
-from pyLibrary.queries.db_query import esfilter2sqlwhere, DBQuery
-from pyLibrary.queries.es_query import ESQuery
-from pyLibrary.sql.db import DB
+from pyLibrary.queries.qb_usingES import FromES
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
 from pyLibrary.dot import nvl, Dict, DictList
@@ -114,10 +113,10 @@ TEMPLATE = [
 def talos_alert_revision(settings):
     assert settings.alerts != None
     settings.db.debug = settings.param.debug
-    with DB(settings.alerts) as alerts_db:
-        with ESQuery(elasticsearch.Index(settings.query["from"])) as esq:
+    with MySQL(settings.alerts) as alerts_db:
+        with FromES(elasticsearch.Index(settings.query["from"])) as esq:
 
-            dbq = DBQuery(alerts_db)
+            dbq = MySQL(alerts_db)
             esq.addDimension(convert.json2value(File(settings.dimension.filename).read()))
 
             # TODO: REMOVE, LEAVE IN DB

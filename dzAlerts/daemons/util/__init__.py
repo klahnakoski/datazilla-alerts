@@ -19,7 +19,7 @@ from pyLibrary.maths import Math
 # ARE THESE SEVERITY OR CONFIDENCE NUMBERS SIGNIFICANTLY DIFFERENT TO WARRANT AN
 # UPDATE?
 from pyLibrary.queries import qb
-from pyLibrary.sql.db import SQL
+from pyLibrary.sql import SQL
 from pyLibrary.dot import nvl
 
 SIGNIFICANT = 0.2

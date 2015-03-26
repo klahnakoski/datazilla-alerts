@@ -1,6 +1,6 @@
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
-from pyLibrary.sql.db import DB
+from pyLibrary.sql.mysql import MySQL
 
 
 def main():
@@ -11,17 +11,17 @@ def main():
 
         for i in range(2):
             # DUE TO CIRCULAR DEPENDENCIES, RUN THESE TWICE
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/util.sql", ignore_errors=True)
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/debug.sql", ignore_errors=True)
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/cnv.sql", ignore_errors=True)
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/string.sql", ignore_errors=True)
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/math.sql", ignore_errors=True)
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/json.sql", ignore_errors=True)
-            DB.execute_file(settings.database, settings.sql.rstrip("/")+"/util/mail.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/util.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/debug.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/cnv.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/string.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/math.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/json.sql", ignore_errors=True)
+            MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/util/mail.sql", ignore_errors=True)
 
-        DB.execute_file(settings.database, settings.sql.rstrip("/")+"/alerts.sql")
-        DB.execute_file(settings.database, settings.sql.rstrip("/")+"/alerts_migrate01.sql")
-        DB.execute_file(settings.database, settings.sql.rstrip("/")+"/alerts_migrate02.sql")
+        MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/alerts.sql")
+        MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/alerts_migrate01.sql")
+        MySQL.execute_file(settings.database, settings.sql.rstrip("/")+"/alerts_migrate02.sql")
 
         Log.note("DB setup complete")
     except Exception, e:

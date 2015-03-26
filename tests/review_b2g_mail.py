@@ -19,7 +19,7 @@ from dzAlerts.daemons.email_send import email_send
 from pyLibrary.debugs import startup
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.debugs.logs import Log
-from pyLibrary.sql.db import DB, SQL
+from pyLibrary.sql.mysql import MySQL, SQL
 from pyLibrary.dot import nvl, Dict
 from pyLibrary.times.durations import Duration
 
@@ -34,7 +34,7 @@ def main():
         dzAlerts.daemons.alert.NOW = datetime(2014, 9, 4)
         dzAlerts.daemons.alert.LOOK_BACK = Duration(days=90)
 
-        with DB(settings.alerts) as db:
+        with MySQL(settings.alerts) as db:
             REVISION = '{\"gaia\": \"0952f21286deca9901748ce708d632dbcebc1a19\", \"gecko\": \"8005e3ce1ada\", \"gecko_repository\": \"https://hg.mozilla.org/integration/b2g-inbound\"}'
             db.execute("DELETE FROM hierarchy WHERE parent IN (SELECT id FROM alerts WHERE revision={{rev}} OR tdad_id='{\"B2G\": {\"Test\": {\"name\": \"startup_>_moz-app-visually-complete\", \"suite\": \"video\"}}, \"test_run_id\": 425046}')", {"rev": REVISION})
             db.execute("DELETE FROM hierarchy WHERE child  IN (SELECT id FROM alerts WHERE revision={{rev}} OR tdad_id='{\"B2G\": {\"Test\": {\"name\": \"startup_>_moz-app-visually-complete\", \"suite\": \"video\"}}, \"test_run_id\": 425046}')", {"rev": REVISION})
@@ -62,7 +62,7 @@ def main():
 
         b2g_alert_revision(settings)
 
-        with DB(settings.alerts) as db:
+        with MySQL(settings.alerts) as db:
             send_alerts(
                 settings=settings,
                 db=db

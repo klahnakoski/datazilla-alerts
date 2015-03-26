@@ -19,7 +19,7 @@ from dzAlerts.daemons.alert import send_alerts
 from pyLibrary import struct
 from pyLibrary import convert
 from pyLibrary.debugs import startup
-from pyLibrary.sql.db import DB
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
 from pyLibrary.maths import Math
@@ -231,15 +231,15 @@ def settings(request):
 
 
 def test_1(settings):
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         test_alert(db).test_send_zero_alerts()
 
 
 def test_2(settings):
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         test_alert(db).test_send_one_alert()
 
 
 def test_3(settings):
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         test_alert(db).test_send_many_alerts()

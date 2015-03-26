@@ -18,7 +18,7 @@ from dzAlerts.daemons.email_send import email_send
 from pyLibrary.debugs import startup
 from pyLibrary.env.emailer import Emailer
 from pyLibrary.debugs.logs import Log
-from pyLibrary.sql.db import DB, SQL
+from pyLibrary.sql.mysql import MySQL, SQL
 from pyLibrary.dot import nvl, Dict
 from pyLibrary.times.durations import Duration
 
@@ -33,7 +33,7 @@ def main():
         dzAlerts.daemons.alert.NOW = datetime(2014, 8, 28)
         dzAlerts.daemons.alert.LOOK_BACK = Duration(days=90)
 
-        with DB(settings.alerts) as db:
+        with MySQL(settings.alerts) as db:
             REVISION = '70ce13bca890'
             db.execute("DELETE FROM hierarchy WHERE parent IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
             db.execute("DELETE FROM hierarchy WHERE child IN (SELECT id FROM alerts WHERE revision={{rev}})", {"rev": REVISION})
@@ -60,7 +60,7 @@ def main():
 
         eideticker_alert_revision(settings)
 
-        with DB(settings.alerts) as db:
+        with MySQL(settings.alerts) as db:
             send_alerts(
                 settings=settings,
                 db=db

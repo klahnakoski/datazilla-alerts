@@ -19,7 +19,7 @@ from pyLibrary import struct
 
 from pyLibrary import convert
 from pyLibrary.debugs import startup
-from pyLibrary.sql.db import SQL, DB
+from pyLibrary.sql.mysql import SQL, MySQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
 from pyLibrary.maths.stats import closeEnough
@@ -239,7 +239,7 @@ def test_1(settings):
         for t in convert.table2list(test_data1.header, test_data1.rows)
     ]
 
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         tester = test_alert_exception(db)
         tester.test_alert_generated(settings, test_data1)
 
@@ -279,7 +279,7 @@ def not_test_2(settings):
         for t in convert.table2list(test_data2.header, test_data2.rows)
     ]
 
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         tester = test_alert_exception(db)
         tester.test_alert_generated(test_data2)
 

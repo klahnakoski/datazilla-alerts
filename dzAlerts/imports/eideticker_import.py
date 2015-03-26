@@ -15,7 +15,7 @@ from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.debugs.logs import Log
 from pyLibrary.parsers import URL
-from pyLibrary.queries.es_query import ESQuery
+from pyLibrary.queries.qb_usingES import FromES
 from pyLibrary.strings import expand_template
 from pyLibrary.dot import nvl, Dict, wrap
 from pyLibrary.dot.lists import DictList
