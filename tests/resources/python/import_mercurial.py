@@ -20,7 +20,7 @@ from pyLibrary.sql.sql import find_holes
 from pyLibrary import convert
 from pyLibrary.debugs import startup, elasticsearch
 from pyLibrary.maths.randoms import Random
-from pyLibrary.sql.db import DB
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.env.files import File
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
@@ -210,7 +210,7 @@ def get_changesets(date_range=None, revision_range=None, repo=None):
 
 
 def update_repo(repo, settings):
-    with DB(settings.database) as db:
+    with MySQL(settings.database) as db:
         try:
             pull_repo(repo)
 

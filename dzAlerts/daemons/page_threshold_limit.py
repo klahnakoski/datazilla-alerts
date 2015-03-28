@@ -13,10 +13,10 @@ from __future__ import division
 from datetime import datetime
 
 from pyLibrary.queries import qb
-from pyLibrary.queries.db_query import esfilter2sqlwhere
+from pyLibrary.queries.qb_usingMySQL import esfilter2sqlwhere
 from pyLibrary.dot import nvl
 from pyLibrary import convert
-from pyLibrary.sql.db import SQL
+from pyLibrary.sql import SQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.times.durations import Duration
 

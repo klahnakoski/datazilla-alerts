@@ -19,11 +19,12 @@ from dzAlerts.daemons import b2g_alert_revision, talos_alert_revision, eideticke
 from pyLibrary import convert
 from pyLibrary.debugs import startup
 from pyLibrary.queries import qb
-from pyLibrary.queries.db_query import esfilter2sqlwhere
+from pyLibrary.queries.qb_usingMySQL import esfilter2sqlwhere
+from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyLibrary.maths import Math
 from pyLibrary.debugs.logs import Log
-from pyLibrary.sql.db import DB, SQL
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.dot import nvl
 from pyLibrary.testing.fuzzytestcase import assertAlmostEqualValue
 from pyLibrary.thread.threads import Thread
@@ -160,7 +161,7 @@ if __name__ == '__main__':
     try:
         Log.note("Running alerts off of schema {{schema|upper}}", {"schema": settings.perftest.schema})
 
-        with DB(settings.alerts) as db:
+        with MySQL(settings.alerts) as db:
             send_alerts(
                 settings=settings,
                 db=db

@@ -12,7 +12,7 @@ from __future__ import division
 import pytest
 from dzAlerts.daemons.email_send import email_send
 from pyLibrary.debugs import startup
-from pyLibrary.sql.db import DB
+from pyLibrary.sql.mysql import MySQL
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import qb
 from util import testing
@@ -134,16 +134,16 @@ def settings(request):
 
 
 def test_1(settings):
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         test_email_send(db, settings).test_zero_receivers()
 
 
 def test_2(settings):
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         test_email_send(db, settings).test_one_receivers()
 
 
 def test_3(settings):
-    with DB(settings.perftest) as db:
+    with MySQL(settings.perftest) as db:
         test_email_send(db, settings).test_many_receivers()
 
