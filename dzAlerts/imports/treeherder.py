@@ -98,7 +98,10 @@ class TreeHerderImport(object):
             output.run.job_group = sig_properties.job_group_name
             output.run.job_type = sig_properties.job_type_name
 
-        th = convert.json2value(r.blob).blob
+        if isinstance(r.blob, basestring):
+            th = convert.json2value(r.blob).blob
+        else:
+            th = r.blob.blob
 
         if not th.metadata.test_build.revision:
             Log.error("missing revision")
