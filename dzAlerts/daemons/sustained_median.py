@@ -106,7 +106,7 @@ def get_parameters_specific(settings, fields, g):
     return test_param
 
 
-def alert_sustained_median(settings, qb, alerts_db):
+def alert_sustained_median(settings, qb_es, alerts_db):
     """
     find single points that deviate from the trend
     """
@@ -150,7 +150,7 @@ def alert_sustained_median(settings, qb, alerts_db):
 
     with Timer("pull combinations"):
         disabled, exists, fields = get_settings_pre(settings, qb)
-        source_ref = qb.normalize_edges(settings.param.source_ref)
+        source_ref = qb_es.normalize_edges(settings.param.source_ref)
 
         temp = Query({
             "from": settings.query["from"],
@@ -173,7 +173,7 @@ def alert_sustained_median(settings, qb, alerts_db):
             "limit": nvl(settings.param.combo_limit, 1000)
         }, qb)
 
-        new_test_points = qb.query(temp)
+        new_test_points = qb_es.query(temp)
 
     # BRING IN ALL NEEDED DATA
     if verbose:

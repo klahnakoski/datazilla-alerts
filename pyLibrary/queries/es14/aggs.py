@@ -446,7 +446,7 @@ def count_dim(aggs, decoders):
 
 
 format_dispatch = {}
-from pyLibrary.queries.es14.aggs_format import format_cube
+from pyLibrary.queries.es14.format import format_cube
 
 _ = format_cube
 
