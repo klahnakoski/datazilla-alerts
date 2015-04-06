@@ -72,24 +72,24 @@ def format_table(decoders, aggs, start, query, select):
             coord = tuple(d.get_index(row) for d in decoders)
             is_sent[coord] = 1
 
-            output = [d.get_value(c) for c, d in zip(coord, decoders)]
+            record = [d.get_value(c) for c, d in zip(coord, decoders)]
             for s in select:
                 if s.aggregate == "count" and (s.value == None or s.value == "."):
-                    output.append(agg.doc_count)
+                    record.append(agg.doc_count)
                 else:
-                    output.append(agg[literal_field(s.name)].value)
-            yield output
+                    record.append(agg[literal_field(s.name)].value)
+            yield record
 
         # EMIT THE MISSING CELLS IN THE CUBE
-        for c, v in is_sent:
-            if not v:
-                output = [d.get_value(c[i]) for i, d in enumerate(decoders)]
-                for s in select:
-                    if s.aggregate == "count":
-                        output.append(0)
-                    else:
-                        output.append(None)
-                yield output
+        # for c, v in is_sent:
+        #     if not v:
+        #         record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
+        #         for s in select:
+        #             if s.aggregate == "count":
+        #                 record.append(0)
+        #             else:
+        #                 record.append(None)
+        #         yield record
 
     return Dict(
         meta={"format": "table"},
