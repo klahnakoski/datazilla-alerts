@@ -106,7 +106,7 @@ def get_parameters_specific(settings, fields, g):
     return test_param
 
 
-def alert_sustained_median(settings, qb_es, alerts_db):
+def alert_sustained_median(settings, source, alerts_db):
     """
     find single points that deviate from the trend
     """
@@ -149,8 +149,8 @@ def alert_sustained_median(settings, qb_es, alerts_db):
         return False
 
     with Timer("pull combinations"):
-        disabled, exists, fields = get_settings_pre(settings, qb)
-        source_ref = qb_es.normalize_edges(settings.param.source_ref)
+        disabled, exists, fields = get_settings_pre(settings, source)
+        source_ref = source.normalize_edges(settings.param.source_ref)
 
         temp = Query({
             "from": settings.query["from"],
@@ -171,21 +171,21 @@ def alert_sustained_median(settings, qb_es, alerts_db):
             ]},
             "format": "table",  # SPARSENESS REQUIRED
             "limit": nvl(settings.param.combo_limit, 1000)
-        }, qb)
+        }, source)
 
-        new_test_points = qb_es.query(temp)
+        new_test_points = source.query(temp)
 
     # BRING IN ALL NEEDED DATA
     if verbose:
         Log.note("Pull all data for {{num}} groups:\n{{groups}}", {
-            "num": len(new_test_points),
+            "num": len(new_test_points.data),
             "groups": query.edges
         })
 
     all_touched = set()
     evaled_tests = set()
     alerts = []   # PUT ALL THE EXCEPTION ITEMS HERE
-    for g, min_push_date in qb.groupby(new_test_points, query.edges):
+    for g, min_push_date in qb.groupby(new_test_points.data, query.edges):
         if not min_push_date:
             continue
         try:
@@ -197,7 +197,7 @@ def alert_sustained_median(settings, qb_es, alerts_db):
             else:
                 first_sample = MAX(MIN(min_push_date), oldest_ts)
             # FOR THIS g, HOW FAR BACK IN TIME MUST WE GO TO COVER OUR WINDOW_SIZE?
-            first_in_window = qb.query({
+            first_in_window = source.query({
                 "select": {"name": "min_date", "value": test_param.sort.name, "aggregate": "min"},
                 "from": {
                     "from": settings.query["from"],
@@ -220,7 +220,7 @@ def alert_sustained_median(settings, qb_es, alerts_db):
             min_date = MIN(first_sample, first_in_window.min_date)
 
             # LOAD TEST RESULTS FROM DATABASE
-            all_test_results = qb.query({
+            all_test_results = source.query({
                 "from": {
                     "from": settings.query["from"],
                     "select": [
