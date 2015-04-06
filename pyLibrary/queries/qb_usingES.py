@@ -24,7 +24,7 @@ from pyLibrary.queries.es09.terms import es_terms, is_terms
 from pyLibrary.queries.es09.terms_stats import es_terms_stats, is_terms_stats
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.es14.util import aggregates1_4
-from pyLibrary.queries.query import Query, _normalize_where
+from pyLibrary.queries.query import Query, _normalize_where, qb
 from pyLibrary.debugs.logs import Log, Except
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot import nvl, split_field

@@ -262,7 +262,7 @@ class Index(object):
                             "error": item.index.error,
                             "line": lines[i * 2 + 1]
                         })
-                elif self.cluster.version.startswith("1.4."):
+                elif self.cluster.version.startswith("1.4.") or self.cluster.version.startswith("1.5."):
                     if item.index.status not in [200, 201]:
                         Log.error("{{error}} while loading line:\n{{line}}", {
                             "error": item.index.error,
@@ -304,7 +304,7 @@ class Index(object):
                 Log.error("Can not set refresh interval ({{error}})", {
                     "error": utf82unicode(response.content)
                 })
-        elif self.cluster.version.startswith("1.4."):
+        elif self.cluster.version.startswith("1.4.") or self.cluster.version.startswith("1.5."):
             response = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data=convert.unicode2utf8('{"index":{"refresh_interval":' + convert.value2json(interval) + '}}')
@@ -677,11 +677,10 @@ class Alias(object):
                 properties = index.mappings["test_results"]
             # DONE BUG CORRECTION
 
-
             if not properties:
                 Log.error("ElasticSearch index ({{index}}) does not have type ({{type}})", {
-                    "index":self.settings.index,
-                    "type":self.settings.type
+                    "index": self.settings.index,
+                    "type": self.settings.type
                 })
             return properties
         else:
