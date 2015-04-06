@@ -185,7 +185,7 @@ class TreeHerderImport(object):
                     t = self.treeherder2talos(r, url)
                 except Exception, e:
                     Log.note("CORRUPTED: perf_id {{perf_id}}  reason={{reason}}", {"perf_id": r.id, "reason": e.message})
-                    es_sink.add({"value":{
+                    es_sink.add({"value": {
                         "treeherder": {
                             "branch": self.current_branch,
                             "perf_id": r.id,
