@@ -1,6 +1,6 @@
 {
 	"elasticsearch" : {
-		"host" : "http://172.31.0.145",
+		"host" : "http://192.168.0.98",
 		"port" : 9200,
 		"index" : "talos",
 		"type" : "test_results",
@@ -25,6 +25,8 @@
 		"timeout": 600
 	},
 	"param" : {
+		"schema_file" : "./resources/schema/test_schema.json",
+		"output_file" : "./results/recent.tab"
 	},
 	"constants": {
 		"pyLibrary.env.http.default_headers":{
@@ -40,7 +42,7 @@
 			},
 			{
 				"log_type": "elasticsearch",
-				"host": "http://172.31.0.145",
+				"host": "http://192.168.0.98",
 				"index": "debug",
 				"type": "treeherder_import"
 			},
@@ -48,10 +50,11 @@
 				"log_type": "email",
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[Developer Alert][STAGING] Problem in Treeherder import",
+				"subject": "[ALERT][92Main] Problem in Treeherder import",
 				"$ref": "file://~/private_dzalerts.json#email"
 
 			}
 		]
 	}
 }
+
